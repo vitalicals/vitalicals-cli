@@ -1,0 +1,18 @@
+[package]
+name = "shadowsats-cli"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[[bin]]
+name = "shadowsats-cli"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+cli.workspace = true
+tokio = { workspace = true, features = ["macros"] }

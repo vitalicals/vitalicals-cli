@@ -1,0 +1,57 @@
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+authors = ["tulliusder <tulliusder@protonmail.com>"]
+repository = "https://github.com/tulliusder/shadowsats-cli"
+description = "An CLI for shadowsats"
+homepage = "https://github.com/tulliusder/shadowsats-cli"
+keywords = ["bitcoin"]
+readme = "README.md"
+license = "GPL-3.0-only"
+
+[workspace]
+resolver = "2"
+
+members = [
+    "bin/shadowsats-cli",
+
+    "cli",
+
+    "interfaces/electrum",
+
+    "btc/script-builder",
+
+    "primitives",
+]
+
+[workspace.dependencies]
+anyhow = "1.0"
+array-bytes = "6.1"
+clap = { version = "4.4.11", features = ["derive"] }
+serde = "1.0"
+serde_json = "1.0"
+fdlimit = "0.2.1"
+futures = "0.3.26"
+ciborium = "0.2.1"
+futures-channel = "0.3"
+futures-timer = "3.0.1"
+futures-util = "0.3"
+thiserror = "1.0.48"
+log = "0.4"
+env_logger = "0.10.0"
+tokio = { version = "1.22.0", features = ["signal", "rt-multi-thread", "parking_lot"] }
+
+bdk = { version = "0.27.1", default-features = false, features = ["all-keys"] }
+bdk-macros = "0.6"
+
+cli = { path = "./cli" }
+
+[profile.release]
+# Polkadot runtime requires unwinding.
+panic = "unwind"
+opt-level = 3
+
+[profile.production]
+inherits = "release"
+lto = true
+codegen-units = 1
