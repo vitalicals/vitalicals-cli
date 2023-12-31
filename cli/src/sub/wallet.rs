@@ -1,14 +1,5 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use clap::Subcommand;
-
-use bdk::bitcoin::Network;
-use bdk::database::MemoryDatabase;
-use bdk::keys::{
-    bip39::{Language, Mnemonic, WordCount},
-    DerivableKey, ExtendedKey, GeneratableKey, GeneratedKey,
-};
-use bdk::template::Bip84;
-use bdk::{miniscript, KeychainKind};
 
 use wallet::Wallet;
 
@@ -53,7 +44,7 @@ impl WalletSubCommands {
 fn create_wallet(cli: &Cli) -> Result<()> {
     let network = cli.network();
 
-    Wallet::create(network, &cli.datadir)?;
+    Wallet::create(network, cli.endpoint.clone(), &cli.datadir)?;
 
     Ok(())
 }
@@ -61,14 +52,15 @@ fn create_wallet(cli: &Cli) -> Result<()> {
 fn import_mnemonic(cli: &Cli, mnemonic: String) -> Result<()> {
     let network = cli.network();
 
-    Wallet::create_by_mnemonic(network, &cli.datadir, mnemonic)?;
+    Wallet::create_by_mnemonic(network, cli.endpoint.clone(), &cli.datadir, mnemonic)?;
 
     Ok(())
 }
 
 fn balance(cli: &Cli) -> Result<()> {
     let network = cli.network();
-    let wallet = Wallet::load(network, &cli.datadir).context("load wallet failed")?;
+    let wallet =
+        Wallet::load(network, cli.endpoint.clone(), &cli.datadir).context("load wallet failed")?;
 
     let balance = wallet.wallet.get_balance().context("get balance failed")?;
     println!("balance: {}", balance);
@@ -78,7 +70,8 @@ fn balance(cli: &Cli) -> Result<()> {
 
 fn address(cli: &Cli) -> Result<()> {
     let network = cli.network();
-    let wallet = Wallet::load(network, &cli.datadir).context("load wallet failed")?;
+    let wallet =
+        Wallet::load(network, cli.endpoint.clone(), &cli.datadir).context("load wallet failed")?;
 
     println!("primary_address: {}", wallet.primary_address);
     println!("funding_address: {}", wallet.funding_address);

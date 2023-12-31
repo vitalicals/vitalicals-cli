@@ -18,11 +18,11 @@ use bdk::{miniscript, KeychainKind};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WalletFile {
-    network: Network,
-    descriptor: String,
-    change_descriptor: String,
-    primary_address: (u32, Address<NetworkUnchecked>),
-    funding_address: (u32, Address<NetworkUnchecked>),
+    pub network: Network,
+    pub descriptor: String,
+    pub change_descriptor: String,
+    pub primary_address: (u32, Address<NetworkUnchecked>),
+    pub funding_address: (u32, Address<NetworkUnchecked>),
 }
 
 impl WalletFile {
@@ -45,37 +45,10 @@ impl WalletFile {
                 Address::new(primary.address.network, primary.address.payload.clone()),
             ),
             funding_address: (
-                primary.index,
+                funding.index,
                 Address::new(funding.address.network, funding.address.payload.clone()),
             ),
         }
-    }
-
-    pub fn into_wallet(self) -> Result<crate::wallet::Wallet> {
-        let wallet = Wallet::new(
-            self.descriptor.as_str(),
-            Some(self.change_descriptor.as_str()),
-            self.network,
-            MemoryDatabase::default(),
-        )?;
-
-        let primary_address = AddressInfo {
-            index: self.primary_address.0,
-            address: self.primary_address.1.assume_checked(),
-            keychain: KeychainKind::External,
-        };
-
-        let funding_address = AddressInfo {
-            index: self.funding_address.0,
-            address: self.funding_address.1.assume_checked(),
-            keychain: KeychainKind::External,
-        };
-
-        Ok(crate::wallet::Wallet::new(
-            wallet,
-            primary_address,
-            funding_address,
-        ))
     }
 
     pub fn path_to_wallet(root: &std::path::PathBuf, network: Network) -> std::path::PathBuf {

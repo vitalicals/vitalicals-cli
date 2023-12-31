@@ -27,6 +27,10 @@ struct Cli {
     )]
     pub network: String,
 
+    /// The url for electrum.
+    #[arg(short = 'e', long = "endpoint")]
+    pub endpoint: String,
+
     /// Sets the wallet data directory.
     /// Default value : "~/.shadowsats-cli
     #[clap(
