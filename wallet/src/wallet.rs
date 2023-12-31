@@ -1,7 +1,7 @@
 //! The wallet wrapper implementation by bdk
 //!
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 
 use bdk::bitcoin::Network;
 use bdk::database::MemoryDatabase;
@@ -18,8 +18,8 @@ use crate::file::WalletFile;
 /// Wallet
 pub struct Wallet {
     pub wallet: BdkWallet<MemoryDatabase>,
-    pub(crate) primary_address: AddressInfo,
-    pub(crate) funding_address: AddressInfo,
+    pub primary_address: AddressInfo,
+    pub funding_address: AddressInfo,
 }
 
 impl Wallet {
@@ -54,8 +54,14 @@ impl Wallet {
         // Convert mnemonic to string
         let mnemonic_words = mnemonic.to_string();
 
-        println!("mnemonic_words: {}", mnemonic_words);
+        Self::create_by_mnemonic(network, path, mnemonic_words)
+    }
 
+    pub fn create_by_mnemonic(
+        network: Network,
+        path: &std::path::PathBuf,
+        mnemonic_words: String,
+    ) -> Result<Self> {
         // Parse a mnemonic
         let mnemonic = Mnemonic::parse(&mnemonic_words)?;
         // Generate the extended key
@@ -71,7 +77,7 @@ impl Wallet {
         )?;
 
         println!(
-            "mnemonic: {}\n\nrecv desc (pub key): {:#?}\n\nchng desc (pub key): {:#?}",
+            "mnemonic: {}\nrecv desc (pub key): {:#?}\nchng desc (pub key): {:#?}",
             mnemonic_words,
             wallet
                 .get_descriptor_for_keychain(KeychainKind::External)
@@ -92,5 +98,11 @@ impl Wallet {
         let to_file = WalletFile::from_wallet(self);
 
         to_file.save(root)
+    }
+
+    pub fn load(network: Network, root: &std::path::PathBuf) -> Result<Self> {
+        let from_file = WalletFile::load(root, network).context("load file failed")?;
+
+        from_file.into_wallet()
     }
 }

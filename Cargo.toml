@@ -17,6 +17,7 @@ members = [
 
     "cli",
     "wallet",
+    "client",
 
     "interfaces/electrum",
 
@@ -47,6 +48,7 @@ bdk = { version = "0.29.0", features = ["rpc", "all-keys"] }
 bdk-macros = "0.6"
 
 cli = { path = "./cli" }
+client = { path = "./client" }
 wallet = { path = "./wallet" }
 
 [profile.release]

@@ -79,7 +79,12 @@ impl WalletFile {
     }
 
     pub fn path_to_wallet(root: &std::path::PathBuf, network: Network) -> std::path::PathBuf {
-        root.join(network.to_core_arg()).join("wallet.json")
+        let path = root.join(network.to_core_arg());
+        std::fs::create_dir_all(path.clone()).unwrap_or_else(|why| {
+            println!("! {:?}", why.kind());
+        });
+
+        path.join("wallet.json")
     }
 
     pub fn path_to_tmp_wallet(root: &std::path::PathBuf, network: Network) -> std::path::PathBuf {
