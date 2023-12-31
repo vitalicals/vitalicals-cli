@@ -38,6 +38,19 @@ struct Cli {
     pub datadir: std::path::PathBuf,
 }
 
+impl Cli {
+    /// Get the network parameters.
+    pub fn network(&self) -> Network {
+        match self.network.as_str() {
+            "bitcoin" => Network::Bitcoin,
+            "testnet" => Network::Testnet,
+            "signet" => Network::Signet,
+            "regtest" => Network::Regtest,
+            _ => panic!("Invalid network params {}", self.network),
+        }
+    }
+}
+
 #[derive(Debug, Subcommand)]
 enum SubCommands {
     /// Query shadowsats status.
@@ -55,6 +68,10 @@ enum SubCommands {
     /// Wallet cmds
     #[command(subcommand)]
     Wallet(wallet::WalletSubCommands),
+
+    /// Wallet cmds
+    #[command(subcommand)]
+    Utils(utils::UtilsSubCommands),
 }
 
 pub async fn run() -> Result<()> {
@@ -77,10 +94,11 @@ pub async fn run() -> Result<()> {
         println!("! {:?}", why.kind());
     });
 
-    match cli.command {
-        SubCommands::Query(cmd) => cmd.run(),
-        SubCommands::Mint(cmd) => cmd.run(),
-        SubCommands::Transfer(cmd) => cmd.run(),
-        SubCommands::Wallet(cmd) => cmd.run(),
+    match &cli.command {
+        SubCommands::Query(cmd) => cmd.run(&cli),
+        SubCommands::Mint(cmd) => cmd.run(&cli),
+        SubCommands::Transfer(cmd) => cmd.run(&cli),
+        SubCommands::Wallet(cmd) => cmd.run(&cli),
+        SubCommands::Utils(cmd) => cmd.run(&cli),
     }
 }

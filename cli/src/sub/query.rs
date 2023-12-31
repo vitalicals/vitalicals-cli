@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::Subcommand;
 
+use crate::Cli;
+
 #[derive(Debug, Subcommand)]
 pub enum QuerySubCommands {
     /// Query shadowsats status.
@@ -11,7 +13,7 @@ pub enum QuerySubCommands {
 }
 
 impl QuerySubCommands {
-    pub fn run(&self) -> Result<()> {
+    pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
         Ok(())
     }
 }

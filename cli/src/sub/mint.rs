@@ -1,6 +1,7 @@
 use anyhow::Result;
-
 use clap::Subcommand;
+
+use crate::Cli;
 
 #[derive(Debug, Subcommand)]
 pub enum MintSubCommands {
@@ -12,7 +13,7 @@ pub enum MintSubCommands {
 }
 
 impl MintSubCommands {
-    pub fn run(&self) -> Result<()> {
+    pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
         Ok(())
     }
 }

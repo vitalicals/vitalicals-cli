@@ -1,4 +1,4 @@
-use bdk::bitcoin::{Amount, BlockHash, BlockHeader, Script, ScriptHash, Txid};
+use bdk::bitcoin::{blockdata::block::Header, Amount, Block, BlockHash, Script, ScriptHash, Txid};
 
 use crate::{Id, LocationRef};
 
@@ -36,10 +36,10 @@ pub struct ResourceMintInfo {
     reveal_location: LocationRef,
     reveal_location_tx_num: u32,
     reveal_location_height: u64,
-    reveal_location_header: BlockHeader,
+    reveal_location_header: Header,
     reveal_location_blockhash: BlockHash,
     reveal_location_scripthash: ScriptHash,
-    reveal_location_script: Script,
+    reveal_location_script: Vec<u8>,
     reveal_location_value: Amount,
     args: ResourceMintArgs,
 }
