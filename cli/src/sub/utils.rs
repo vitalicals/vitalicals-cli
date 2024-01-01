@@ -1,68 +1,95 @@
-use anyhow::Result;
-use bdk::wallet::AddressIndex;
-use clap::Subcommand;
+use std::str::FromStr;
 
-use bdk::bitcoin::Network;
-use bdk::database::MemoryDatabase;
-use bdk::keys::{
-    bip39::{Language, Mnemonic, WordCount},
-    DerivableKey, ExtendedKey, GeneratableKey, GeneratedKey,
+use anyhow::{Context, Result};
+use bdk::{
+	bitcoin::{address::NetworkUnchecked, Address, Network},
+	blockchain::Blockchain,
+	FeeRate, SignOptions,
 };
-use bdk::template::Bip84;
-use bdk::{miniscript, KeychainKind, Wallet};
+use clap::Subcommand;
 
 use crate::Cli;
 
 #[derive(Debug, Subcommand)]
 pub enum UtilsSubCommands {
-    /// Query shadowsats status.
-    GenerateKey {},
+	/// Send an amount to a given address.
+	SendToAddress {
+		/// The bitcoin address to send to.
+		address: String,
+
+		/// The sat amount in BTC to send.
+		amount: u64,
+
+		/// Specify a fee rate in sat/vB.
+		#[arg(short, long)]
+		fee_rate: Option<f32>,
+
+		/// Signal that this transaction can be replaced by a transaction (BIP 125).
+		#[arg(long)]
+		replaceable: bool,
+	},
 }
 
 impl UtilsSubCommands {
-    pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
-        let network = cli.network();
+	pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
+		let network = cli.network();
 
-        generate_key(network)
-    }
+		match self {
+			Self::SendToAddress { address, amount, fee_rate, replaceable } => {
+				let address = Address::<NetworkUnchecked>::from_str(address)
+					.context("parse address failed")?
+					.require_network(network)
+					.context("the address is not for the network")?;
+
+				send_to_address(network, cli, address, *amount, fee_rate, *replaceable)
+			},
+		}
+	}
 }
 
-pub fn generate_key(network: Network) -> Result<()> {
-    log::info!("Hello, world!");
+fn send_to_address(
+	network: Network,
+	cli: &Cli,
+	address: Address,
+	amount: u64,
+	fee_rate: &Option<f32>,
+	replaceable: bool,
+) -> Result<()> {
+	let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
+		.context("load wallet failed")?;
+	let bdk_wallet = &wallet.wallet;
+	let bdk_blockchain = &wallet.blockchain;
 
-    // Generate fresh mnemonic
-    let mnemonic: GeneratedKey<_, miniscript::Segwitv0> =
-        Mnemonic::generate((WordCount::Words12, Language::English)).unwrap();
-    // Convert mnemonic to string
-    let mnemonic_words = mnemonic.to_string();
-    // Parse a mnemonic
-    let mnemonic = Mnemonic::parse(&mnemonic_words).unwrap();
-    // Generate the extended key
-    let xkey: ExtendedKey = mnemonic.into_extended_key().unwrap();
-    // Get xprv from the extended key
-    let xprv = xkey.into_xprv(network).unwrap();
+	let mut builder = bdk_wallet.build_tx();
+	builder.set_recipients(vec![(address.script_pubkey(), amount)]);
 
-    // Create a BDK wallet structure using BIP 84 descriptor ("m/84h/1h/0h/0" and "m/84h/1h/0h/1")
-    let wallet = Wallet::new(
-        Bip84(xprv, KeychainKind::External),
-        Some(Bip84(xprv, KeychainKind::Internal)),
-        network,
-        MemoryDatabase::default(),
-    )?;
+	if replaceable {
+		builder.enable_rbf();
+	}
 
-    println!(
-        "mnemonic: {}\n\nrecv desc (pub key): {:#?}\n\nchng desc (pub key): {:#?}",
-        mnemonic_words,
-        wallet
-            .get_descriptor_for_keychain(KeychainKind::External)
-            .to_string(),
-        wallet
-            .get_descriptor_for_keychain(KeychainKind::Internal)
-            .to_string()
-    );
+	if let Some(fee_rate) = fee_rate {
+		builder.fee_rate(FeeRate::from_sat_per_vb(*fee_rate));
+	}
 
-    let address = wallet.get_address(AddressIndex::New)?;
-    log::info!("address: {:?}", address);
+	let (mut psbt, details) = builder.finish().context("build tx failed")?;
+	println!("Transaction details: {:#?}", details);
+	println!("Unsigned PSBT: {}", serde_json::to_string_pretty(&psbt)?);
+	println!("Unsigned PSBT: {}", psbt);
 
-    Ok(())
+	// Sign and finalize the PSBT with the signing wallet
+	bdk_wallet.sign(&mut psbt, SignOptions::default())?;
+
+	bdk_wallet.finalize_psbt(&mut psbt, SignOptions::default())?;
+
+	println!("Signed PSBT: {}", serde_json::to_string_pretty(&psbt)?);
+	println!("Signed PSBT: {}", psbt);
+
+	// Broadcast the transaction
+	let raw_transaction = psbt.extract_tx();
+	let txid = raw_transaction.txid();
+
+	bdk_blockchain.broadcast(&raw_transaction)?;
+	println!("Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = txid);
+
+	Ok(())
 }

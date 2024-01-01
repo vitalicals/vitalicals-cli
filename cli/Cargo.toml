@@ -12,6 +12,8 @@ clap = { workspace = true, features = ["derive"] }
 tokio.workspace = true
 futures.workspace = true
 env_logger.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 bdk = { workspace = true }
 
