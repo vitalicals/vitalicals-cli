@@ -13,7 +13,7 @@ use bdk::{
 		DerivableKey, ExtendedKey, GeneratableKey, GeneratedKey,
 	},
 	miniscript,
-	template::Bip84,
+	template::Bip86,
 	KeychainKind, SyncOptions, Wallet as BdkWallet,
 };
 
@@ -66,8 +66,8 @@ impl Wallet {
 			network,
 			endpoint,
 			root,
-			Bip84(xprv, KeychainKind::External),
-			Some(Bip84(xprv, KeychainKind::Internal)),
+			Bip86(xprv, KeychainKind::External),
+			Some(Bip86(xprv, KeychainKind::Internal)),
 		)
 		.context("load_wallet")?;
 
@@ -98,8 +98,8 @@ impl Wallet {
 			network,
 			endpoint,
 			root,
-			Bip84(xpriv, KeychainKind::External),
-			Some(Bip84(xpriv, KeychainKind::Internal)),
+			Bip86(xpriv, KeychainKind::External),
+			Some(Bip86(xpriv, KeychainKind::Internal)),
 		)
 		.context("load wallet")?;
 
