@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
 
-use bdk::{bitcoin::Network, KeychainKind};
+use bdk::bitcoin::Network;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WalletFile {
