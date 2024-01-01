@@ -14,6 +14,7 @@ futures.workspace = true
 env_logger.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+hex.workspace = true
 
 bdk = { workspace = true }
 

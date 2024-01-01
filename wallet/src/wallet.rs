@@ -21,7 +21,7 @@ use crate::{database::*, file::WalletFile};
 
 /// Wallet
 pub struct Wallet {
-	pub(crate) xprv: String,
+	pub xprv: String,
 	pub wallet: BdkWallet<AnyDatabase>,
 	pub blockchain: AnyBlockchain,
 }

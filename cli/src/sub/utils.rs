@@ -1,10 +1,27 @@
-use std::str::FromStr;
+use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use bdk::{
-	bitcoin::{address::NetworkUnchecked, Address, Network},
+	bitcoin::{
+		absolute,
+		address::{NetworkUnchecked, Payload},
+		bip32::ExtendedPrivKey,
+		key::TapTweak,
+		opcodes::{
+			all::{OP_ENDIF, OP_IF, OP_PUSHBYTES_4},
+			OP_0,
+		},
+		psbt::{Input, PartiallySignedTransaction, PsbtSighashType},
+		script::PushBytesBuf,
+		secp256k1::{All, KeyPair, Secp256k1, SecretKey, XOnlyPublicKey},
+		sighash::{self, SighashCache, TapSighash, TapSighashType},
+		taproot::{self, LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder},
+		Address, Network, OutPoint, Script, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Witness,
+	},
 	blockchain::Blockchain,
-	FeeRate, SignOptions,
+	miniscript::Descriptor,
+	wallet::AddressIndex,
+	FeeRate, KeychainKind, SignOptions,
 };
 use clap::Subcommand;
 
@@ -28,6 +45,27 @@ pub enum UtilsSubCommands {
 		#[arg(long)]
 		replaceable: bool,
 	},
+
+	/// inscribe to a given address.
+	InscribeToAddress {
+		/// The bitcoin address to send to.
+		#[arg(long)]
+		address: Option<String>,
+
+		/// The sat amount in BTC to send.
+		amount: u64,
+
+		/// Specify a fee rate in sat/vB.
+		#[arg(short, long)]
+		fee_rate: Option<f32>,
+
+		/// Signal that this transaction can be replaced by a transaction (BIP 125).
+		#[arg(long)]
+		replaceable: bool,
+
+		/// The datas to inscribe
+		datas: String,
+	},
 }
 
 impl UtilsSubCommands {
@@ -42,6 +80,27 @@ impl UtilsSubCommands {
 					.context("the address is not for the network")?;
 
 				send_to_address(network, cli, address, *amount, fee_rate, *replaceable)
+			},
+			Self::InscribeToAddress { address, amount, fee_rate, replaceable, datas } => {
+				let address = address
+					.as_ref()
+					.map(|address| {
+						Address::<NetworkUnchecked>::from_str(address.as_str())
+							.context("parse address failed")?
+							.require_network(network)
+							.context("the address is not for the network")
+					})
+					.transpose()?;
+
+				inscribe_to_address(
+					network,
+					cli,
+					address,
+					*amount,
+					fee_rate,
+					*replaceable,
+					datas.as_str(),
+				)
 			},
 		}
 	}
@@ -92,4 +151,265 @@ fn send_to_address(
 	println!("Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = txid);
 
 	Ok(())
+}
+
+fn inscribe_to_address(
+	network: Network,
+	cli: &Cli,
+	to_address: Option<Address>,
+	amount: u64,
+	fee_rate: &Option<f32>,
+	replaceable: bool,
+	datas: &str,
+) -> Result<()> {
+	let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
+		.context("load wallet failed")?;
+	let bdk_wallet = &wallet.wallet;
+	let bdk_blockchain = &wallet.blockchain;
+
+	let descriptor = bdk_wallet.get_descriptor_for_keychain(KeychainKind::External);
+	let master_xpriv =
+		ExtendedPrivKey::from_str(wallet.xprv.as_str()).context("ExtendedPrivKey from str")?;
+	let tr = match descriptor {
+		Descriptor::Tr(tr) => tr,
+		_ => bail!("not tr descriptor"),
+	};
+    let derivation_path = tr.internal_key().full_derivation_path().unwrap();
+
+	let des = descriptor.at_derivation_index(1)?;
+	let tr_der = match des {
+		Descriptor::Tr(tr) => tr,
+		_ => bail!("not tr descriptor"),
+	};
+	let internal_key = tr_der.spend_info().internal_key();
+
+	let data_header = hex::decode("61746f6d").expect("the data should ok");
+	let data_header =
+		PushBytesBuf::try_from(data_header).expect("the push data should into the buffer");
+	let datas = hex::decode(datas).context("datas hex failed")?;
+	let datas = PushBytesBuf::try_from(datas).expect("the push data should into the buffer");
+
+	let script = ScriptBuf::builder()
+		.push_opcode(OP_0)
+		.push_opcode(OP_IF)
+		.push_slice(data_header.as_push_bytes())
+		.push_slice(datas.as_push_bytes())
+		.push_opcode(OP_ENDIF);
+
+	println!("script {}", script.as_script());
+	println!("script {}", script.as_script().is_v1_p2tr());
+
+	let script = script.into_script();
+
+	let secp = Secp256k1::new();
+	let new_address_script = script.to_v1_p2tr(&secp, internal_key);
+
+	println!("new_address_script {}", new_address_script);
+	println!("new_address_script {}", new_address_script.is_v1_p2tr());
+
+	let to_address = if let Some(to) = to_address {
+		to
+	} else {
+		bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
+	};
+
+	let taproot_spend_info = TaprootBuilder::new()
+		.add_leaf(0, script.clone())
+		.context("TaprootBuilderadd_leaf ")?
+		.finalize(&secp, internal_key)
+		.map_err(|_| anyhow!("TaprootBuilder error"))?;
+
+	let payload = Payload::p2tr(&secp, internal_key, taproot_spend_info.merkle_root());
+	let commit_address = Address::new(network, payload);
+	println!("to {} then to {}", commit_address, to_address);
+
+	// commit transaction
+	let commit_outpoint = {
+		let mut builder = bdk_wallet.build_tx();
+		builder.set_recipients(vec![(new_address_script.clone(), amount)]);
+
+		if let Some(fee_rate) = fee_rate {
+			builder.fee_rate(FeeRate::from_sat_per_vb(*fee_rate));
+		}
+
+		let (mut psbt, details) = builder.finish().context("build tx failed")?;
+
+		println!("unsigned_tx PSBT: {}", serde_json::to_string_pretty(&psbt.unsigned_tx.output)?);
+		println!("unsigned_tx PSBT: {}", serde_json::to_string_pretty(&psbt.outputs)?);
+
+		let index = {
+			let mut res = 0;
+
+			let outputs = &psbt.unsigned_tx.output;
+			for (index, output) in outputs.iter().enumerate() {
+				if new_address_script.to_string() == output.script_pubkey.to_string() {
+					res = index;
+				}
+			}
+
+			res as u32
+		};
+
+		// Sign and finalize the PSBT with the signing wallet
+		bdk_wallet.sign(&mut psbt, SignOptions::default())?;
+		bdk_wallet.finalize_psbt(&mut psbt, SignOptions::default())?;
+
+		println!("Signed PSBT: {}", serde_json::to_string_pretty(&psbt.unsigned_tx.output)?);
+		println!("Signed PSBT: {}", serde_json::to_string_pretty(&psbt.outputs)?);
+
+		// Broadcast the transaction
+		let raw_transaction = psbt.extract_tx();
+		println!("raw_transaction: {}", serde_json::to_string_pretty(&raw_transaction)?);
+		let txid = raw_transaction.txid();
+
+		bdk_blockchain.broadcast(&raw_transaction)?;
+		println!("Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = txid);
+
+		bdk_wallet.sync(bdk_blockchain, Default::default()).context("sync")?;
+
+		OutPoint::new(txid, index)
+	};
+
+	print!("output {}", commit_outpoint);
+
+	// reveal the transaction
+	{
+		let next_tx = Transaction {
+			version: 1,
+			lock_time: absolute::LockTime::ZERO,
+			input: vec![TxIn {
+				previous_output: commit_outpoint,
+				script_sig: ScriptBuf::new(),
+				sequence: Sequence(0xFFFFFFFD),
+				witness: Witness::default(),
+			}],
+			output: vec![TxOut { value: 800, script_pubkey: to_address.script_pubkey() }],
+		};
+
+		let mut psbt = PartiallySignedTransaction::from_unsigned_tx(next_tx)?;
+
+        let leaf_hash = script.tapscript_leaf_hash();
+		let mut origins = BTreeMap::new();
+        origins.insert(
+            internal_key,
+            (vec![leaf_hash], (master_xpriv.fingerprint(&secp), derivation_path)),
+        );
+
+		let ty = PsbtSighashType::from_str("SIGHASH_ALL")?;
+		let mut tap_scripts = BTreeMap::new();
+		tap_scripts.insert(
+			taproot_spend_info
+				.control_block(&(script.clone(), LeafVersion::TapScript))
+				.unwrap(),
+			(script, LeafVersion::TapScript),
+		);
+
+		let input = Input {
+			witness_utxo: { Some(TxOut { value: amount, script_pubkey: new_address_script }) },
+			tap_key_origins: origins,
+			tap_merkle_root: taproot_spend_info.merkle_root(),
+			sighash_type: Some(ty),
+			tap_internal_key: Some(internal_key),
+			tap_scripts,
+			..Default::default()
+		};
+
+		psbt.version = 1;
+		psbt.inputs = vec![input];
+
+		println!("unsigned_tx PSBT: {}", serde_json::to_string_pretty(&psbt.unsigned_tx.input)?);
+		println!("unsigned_tx PSBT: {}", serde_json::to_string_pretty(&psbt.inputs)?);
+
+		// Sign and finalize the PSBT with the signing wallet
+		let unsigned_tx = psbt.unsigned_tx.clone();
+		let input_value = psbt.inputs[0].witness_utxo.as_ref().unwrap().value;
+		let input_script_pubkey =
+			psbt.inputs[0].witness_utxo.as_ref().unwrap().script_pubkey.clone();
+
+		// SIGNER
+		for (x_only_pubkey, (leaf_hashes, (_, derivation_path))) in
+			&psbt.inputs[0].tap_key_origins.clone()
+		{
+			let secret_key = master_xpriv.derive_priv(&secp, &derivation_path)?.to_priv().inner;
+			for lh in leaf_hashes {
+				let hash_ty = TapSighashType::All;
+				let hash = SighashCache::new(&unsigned_tx).taproot_script_spend_signature_hash(
+					0,
+					&sighash::Prevouts::All(&[TxOut {
+						value: input_value,
+						script_pubkey: input_script_pubkey.clone(),
+					}]),
+					*lh,
+					hash_ty,
+				)?;
+				sign_psbt_taproot(
+					&secret_key,
+					*x_only_pubkey,
+					Some(*lh),
+					&mut psbt.inputs[0],
+					hash,
+					hash_ty,
+					&secp,
+				);
+			}
+		}
+
+		psbt.inputs.iter_mut().for_each(|input| {
+			let mut script_witness: Witness = Witness::new();
+			for (_, signature) in input.tap_script_sigs.iter() {
+				script_witness.push(signature.to_vec());
+			}
+			for (control_block, (script, _)) in input.tap_scripts.iter() {
+				script_witness.push(script.to_bytes());
+				script_witness.push(control_block.serialize());
+			}
+			input.final_script_witness = Some(script_witness);
+		});
+
+		println!("sign PSBT: {}", serde_json::to_string_pretty(&psbt.unsigned_tx.input)?);
+		println!("sign PSBT: {}", serde_json::to_string_pretty(&psbt.inputs)?);
+
+		println!("psbt: {}", serde_json::to_string_pretty(&psbt)?);
+
+		// Broadcast the transaction
+		let raw_transaction = psbt.extract_tx();
+
+		println!("raw_transaction: {}", serde_json::to_string_pretty(&raw_transaction)?);
+
+		let txid = raw_transaction.txid();
+
+		bdk_blockchain.broadcast(&raw_transaction)?;
+		println!("Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = txid);
+	}
+
+	Ok(())
+}
+
+// Calling this with `leaf_hash` = `None` will sign for key-spend
+fn sign_psbt_taproot(
+	secret_key: &SecretKey,
+	pubkey: XOnlyPublicKey,
+	leaf_hash: Option<TapLeafHash>,
+	psbt_input: &mut Input,
+	hash: TapSighash,
+	hash_ty: TapSighashType,
+	secp: &Secp256k1<All>,
+) {
+	let keypair = KeyPair::from_seckey_slice(secp, secret_key.as_ref()).unwrap();
+	let keypair = match leaf_hash {
+		None => keypair.tap_tweak(secp, psbt_input.tap_merkle_root).to_inner(),
+		Some(_) => keypair, // no tweak for script spend
+	};
+
+	let sig = secp.sign_schnorr(&hash.into(), &keypair);
+
+	let final_signature = taproot::Signature { sig, hash_ty };
+
+	if let Some(lh) = leaf_hash {
+		println!("dddd");
+		psbt_input.tap_script_sigs.insert((pubkey, lh), final_signature);
+	} else {
+		println!("dddd2");
+		psbt_input.tap_key_sig = Some(final_signature);
+	}
 }
