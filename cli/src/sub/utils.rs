@@ -367,8 +367,6 @@ fn inscribe_to_address(
 		println!("sign PSBT: {}", serde_json::to_string_pretty(&psbt.unsigned_tx.input)?);
 		println!("sign PSBT: {}", serde_json::to_string_pretty(&psbt.inputs)?);
 
-		println!("psbt: {}", serde_json::to_string_pretty(&psbt)?);
-
 		// Broadcast the transaction
 		let raw_transaction = psbt.extract_tx();
 
@@ -404,10 +402,8 @@ fn sign_psbt_taproot(
 	let final_signature = taproot::Signature { sig, hash_ty };
 
 	if let Some(lh) = leaf_hash {
-		println!("dddd");
 		psbt_input.tap_script_sigs.insert((pubkey, lh), final_signature);
 	} else {
-		println!("dddd2");
 		psbt_input.tap_key_sig = Some(final_signature);
 	}
 }
