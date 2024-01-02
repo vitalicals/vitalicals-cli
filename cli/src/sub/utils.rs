@@ -8,15 +8,15 @@ use bdk::{
 		bip32::ExtendedPrivKey,
 		key::TapTweak,
 		opcodes::{
-			all::{OP_ENDIF, OP_IF, OP_PUSHBYTES_4},
+			all::{OP_CHECKSIG, OP_ENDIF, OP_IF},
 			OP_0,
 		},
 		psbt::{Input, PartiallySignedTransaction, PsbtSighashType},
 		script::PushBytesBuf,
 		secp256k1::{All, KeyPair, Secp256k1, SecretKey, XOnlyPublicKey},
 		sighash::{self, SighashCache, TapSighash, TapSighashType},
-		taproot::{self, LeafVersion, TapLeafHash, TapNodeHash, TaprootBuilder},
-		Address, Network, OutPoint, Script, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Witness,
+		taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder},
+		Address, Network, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Witness,
 	},
 	blockchain::Blockchain,
 	miniscript::Descriptor,
@@ -159,13 +159,15 @@ fn inscribe_to_address(
 	to_address: Option<Address>,
 	amount: u64,
 	fee_rate: &Option<f32>,
-	replaceable: bool,
+	_replaceable: bool,
 	datas: &str,
 ) -> Result<()> {
 	let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
 		.context("load wallet failed")?;
 	let bdk_wallet = &wallet.wallet;
 	let bdk_blockchain = &wallet.blockchain;
+
+	let secp = Secp256k1::new();
 
 	let descriptor = bdk_wallet.get_descriptor_for_keychain(KeychainKind::External);
 	let master_xpriv =
@@ -174,14 +176,8 @@ fn inscribe_to_address(
 		Descriptor::Tr(tr) => tr,
 		_ => bail!("not tr descriptor"),
 	};
-    let derivation_path = tr.internal_key().full_derivation_path().unwrap();
-
-	let des = descriptor.at_derivation_index(1)?;
-	let tr_der = match des {
-		Descriptor::Tr(tr) => tr,
-		_ => bail!("not tr descriptor"),
-	};
-	let internal_key = tr_der.spend_info().internal_key();
+	let derivation_path = tr.internal_key().full_derivation_path().unwrap();
+	let (internal_key, _) = master_xpriv.derive_priv(&secp, &derivation_path)?.to_keypair(&secp).x_only_public_key();
 
 	let data_header = hex::decode("61746f6d").expect("the data should ok");
 	let data_header =
@@ -190,6 +186,8 @@ fn inscribe_to_address(
 	let datas = PushBytesBuf::try_from(datas).expect("the push data should into the buffer");
 
 	let script = ScriptBuf::builder()
+		.push_x_only_key(&internal_key)
+		.push_opcode(OP_CHECKSIG)
 		.push_opcode(OP_0)
 		.push_opcode(OP_IF)
 		.push_slice(data_header.as_push_bytes())
@@ -197,15 +195,12 @@ fn inscribe_to_address(
 		.push_opcode(OP_ENDIF);
 
 	println!("script {}", script.as_script());
-	println!("script {}", script.as_script().is_v1_p2tr());
+	let reveal_script = script.into_script();
 
-	let script = script.into_script();
+	let script_p2tr = reveal_script.to_v1_p2tr(&secp, internal_key);
 
-	let secp = Secp256k1::new();
-	let new_address_script = script.to_v1_p2tr(&secp, internal_key);
-
-	println!("new_address_script {}", new_address_script);
-	println!("new_address_script {}", new_address_script.is_v1_p2tr());
+	println!("script_p2tr {}", script_p2tr);
+	println!("script_p2tr {}", script_p2tr.is_v1_p2tr());
 
 	let to_address = if let Some(to) = to_address {
 		to
@@ -214,10 +209,16 @@ fn inscribe_to_address(
 	};
 
 	let taproot_spend_info = TaprootBuilder::new()
-		.add_leaf(0, script.clone())
+		.add_leaf(0, reveal_script.clone())
 		.context("TaprootBuilderadd_leaf ")?
 		.finalize(&secp, internal_key)
 		.map_err(|_| anyhow!("TaprootBuilder error"))?;
+
+	let script_pubkey = ScriptBuf::new_v1_p2tr(
+		&secp,
+		taproot_spend_info.internal_key(),
+		taproot_spend_info.merkle_root(),
+	);
 
 	let payload = Payload::p2tr(&secp, internal_key, taproot_spend_info.merkle_root());
 	let commit_address = Address::new(network, payload);
@@ -226,13 +227,13 @@ fn inscribe_to_address(
 	// commit transaction
 	let commit_outpoint = {
 		let mut builder = bdk_wallet.build_tx();
-		builder.set_recipients(vec![(new_address_script.clone(), amount)]);
+		builder.set_recipients(vec![(script_pubkey.clone(), amount)]);
 
 		if let Some(fee_rate) = fee_rate {
 			builder.fee_rate(FeeRate::from_sat_per_vb(*fee_rate));
 		}
 
-		let (mut psbt, details) = builder.finish().context("build tx failed")?;
+		let (mut psbt, _details) = builder.finish().context("build tx failed")?;
 
 		println!("unsigned_tx PSBT: {}", serde_json::to_string_pretty(&psbt.unsigned_tx.output)?);
 		println!("unsigned_tx PSBT: {}", serde_json::to_string_pretty(&psbt.outputs)?);
@@ -242,7 +243,7 @@ fn inscribe_to_address(
 
 			let outputs = &psbt.unsigned_tx.output;
 			for (index, output) in outputs.iter().enumerate() {
-				if new_address_script.to_string() == output.script_pubkey.to_string() {
+				if script_p2tr.to_string() == output.script_pubkey.to_string() {
 					res = index;
 				}
 			}
@@ -288,24 +289,24 @@ fn inscribe_to_address(
 
 		let mut psbt = PartiallySignedTransaction::from_unsigned_tx(next_tx)?;
 
-        let leaf_hash = script.tapscript_leaf_hash();
+		let leaf_hash = reveal_script.tapscript_leaf_hash();
 		let mut origins = BTreeMap::new();
-        origins.insert(
-            internal_key,
-            (vec![leaf_hash], (master_xpriv.fingerprint(&secp), derivation_path)),
-        );
+		origins.insert(
+			internal_key,
+			(vec![leaf_hash], (master_xpriv.fingerprint(&secp), derivation_path.clone())),
+		);
 
 		let ty = PsbtSighashType::from_str("SIGHASH_ALL")?;
 		let mut tap_scripts = BTreeMap::new();
 		tap_scripts.insert(
 			taproot_spend_info
-				.control_block(&(script.clone(), LeafVersion::TapScript))
+				.control_block(&(reveal_script.clone(), LeafVersion::TapScript))
 				.unwrap(),
-			(script, LeafVersion::TapScript),
+			(reveal_script, LeafVersion::TapScript),
 		);
 
 		let input = Input {
-			witness_utxo: { Some(TxOut { value: amount, script_pubkey: new_address_script }) },
+			witness_utxo: { Some(TxOut { value: amount, script_pubkey: script_pubkey.clone() }) },
 			tap_key_origins: origins,
 			tap_merkle_root: taproot_spend_info.merkle_root(),
 			sighash_type: Some(ty),
@@ -364,6 +365,16 @@ fn inscribe_to_address(
 				script_witness.push(control_block.serialize());
 			}
 			input.final_script_witness = Some(script_witness);
+
+			// Clear all the data fields as per the spec.
+			input.partial_sigs = BTreeMap::new();
+			input.sighash_type = None;
+			input.redeem_script = None;
+			input.witness_script = None;
+			input.bip32_derivation = BTreeMap::new();
+			input.tap_script_sigs = BTreeMap::new();
+			input.tap_scripts = BTreeMap::new();
+			input.tap_key_sig = None;
 		});
 
 		println!("sign PSBT: {}", serde_json::to_string_pretty(&psbt.unsigned_tx.input)?);
