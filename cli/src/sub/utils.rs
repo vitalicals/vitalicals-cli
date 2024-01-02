@@ -177,7 +177,10 @@ fn inscribe_to_address(
 		_ => bail!("not tr descriptor"),
 	};
 	let derivation_path = tr.internal_key().full_derivation_path().unwrap();
-	let (internal_key, _) = master_xpriv.derive_priv(&secp, &derivation_path)?.to_keypair(&secp).x_only_public_key();
+	let (internal_key, _) = master_xpriv
+		.derive_priv(&secp, &derivation_path)?
+		.to_keypair(&secp)
+		.x_only_public_key();
 
 	let data_header = hex::decode("61746f6d").expect("the data should ok");
 	let data_header =
@@ -196,7 +199,6 @@ fn inscribe_to_address(
 
 	println!("script {}", script.as_script());
 	let reveal_script = script.into_script();
-
 	let script_p2tr = reveal_script.to_v1_p2tr(&secp, internal_key);
 
 	println!("script_p2tr {}", script_p2tr);
@@ -265,8 +267,6 @@ fn inscribe_to_address(
 
 		bdk_blockchain.broadcast(&raw_transaction)?;
 		println!("Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = txid);
-
-		bdk_wallet.sync(bdk_blockchain, Default::default()).context("sync")?;
 
 		OutPoint::new(txid, index)
 	};
