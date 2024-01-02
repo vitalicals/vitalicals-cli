@@ -1,10 +1,14 @@
 //! The wallet wrapper implementation by bdk
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use std::str::FromStr;
 
 use bdk::{
-	bitcoin::{bip32, Network},
+	bitcoin::{
+		bip32::{self, DerivationPath, ExtendedPrivKey},
+		secp256k1::{All, Secp256k1, XOnlyPublicKey},
+		Network,
+	},
 	blockchain::AnyBlockchain,
 	database::AnyDatabase,
 	descriptor::IntoWalletDescriptor,
@@ -12,7 +16,7 @@ use bdk::{
 		bip39::{Language, Mnemonic, WordCount},
 		DerivableKey, ExtendedKey, GeneratableKey, GeneratedKey,
 	},
-	miniscript,
+	miniscript::{self, Descriptor},
 	template::Bip86,
 	KeychainKind, SyncOptions, Wallet as BdkWallet,
 };
@@ -22,6 +26,7 @@ use crate::{database::*, file::WalletFile};
 /// Wallet
 pub struct Wallet {
 	pub xprv: String,
+	pub xpriv: ExtendedPrivKey,
 	pub wallet: BdkWallet<AnyDatabase>,
 	pub blockchain: AnyBlockchain,
 }
@@ -32,7 +37,8 @@ impl Wallet {
 		wallet: BdkWallet<AnyDatabase>,
 		blockchain: AnyBlockchain,
 	) -> Result<Self> {
-		Ok(Self { xprv, wallet, blockchain })
+		let xpriv = ExtendedPrivKey::from_str(xprv.as_str()).context("ExtendedPrivKey from str")?;
+		Ok(Self { xprv, xpriv, wallet, blockchain })
 	}
 
 	pub fn create(network: Network, endpoint: String, path: &std::path::PathBuf) -> Result<Wallet> {
@@ -103,7 +109,7 @@ impl Wallet {
 		)
 		.context("load wallet")?;
 
-		Ok(Self { xprv: from_file.xpriv, wallet, blockchain })
+		Ok(Self { xpriv, xprv: from_file.xpriv, wallet, blockchain })
 	}
 
 	fn load_wallet<E: IntoWalletDescriptor>(
@@ -121,5 +127,34 @@ impl Wallet {
 		wallet.sync(&blockchain, SyncOptions::default()).context("sync")?;
 
 		Ok((wallet, blockchain))
+	}
+}
+
+impl Wallet {
+	pub fn full_derivation_path(&self) -> Result<DerivationPath> {
+		let descriptor = self.wallet.get_descriptor_for_keychain(KeychainKind::External);
+
+		let tr = match descriptor {
+			Descriptor::Tr(tr) => tr,
+			_ => bail!("not tr descriptor"),
+		};
+		let derivation_path = tr.internal_key().full_derivation_path().unwrap();
+
+		Ok(derivation_path)
+	}
+
+	pub fn xpriv(&self) -> &ExtendedPrivKey {
+		&self.xpriv
+	}
+
+	pub fn derive_x_only_public_key(&self, secp: &Secp256k1<All>) -> Result<XOnlyPublicKey> {
+		let derivation_path = self.full_derivation_path().context("get full derivation")?;
+		let (internal_key, _) = self
+			.xpriv
+			.derive_priv(secp, &derivation_path)?
+			.to_keypair(secp)
+			.x_only_public_key();
+
+		Ok(internal_key)
 	}
 }

@@ -1,11 +1,10 @@
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use bdk::{
 	bitcoin::{
 		absolute,
 		address::{NetworkUnchecked, Payload},
-		bip32::ExtendedPrivKey,
 		key::TapTweak,
 		opcodes::{
 			all::{OP_CHECKSIG, OP_ENDIF, OP_IF},
@@ -19,9 +18,8 @@ use bdk::{
 		Address, Network, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Witness,
 	},
 	blockchain::Blockchain,
-	miniscript::Descriptor,
 	wallet::AddressIndex,
-	FeeRate, KeychainKind, SignOptions,
+	FeeRate, SignOptions,
 };
 use clap::Subcommand;
 
@@ -169,18 +167,9 @@ fn inscribe_to_address(
 
 	let secp = Secp256k1::new();
 
-	let descriptor = bdk_wallet.get_descriptor_for_keychain(KeychainKind::External);
-	let master_xpriv =
-		ExtendedPrivKey::from_str(wallet.xprv.as_str()).context("ExtendedPrivKey from str")?;
-	let tr = match descriptor {
-		Descriptor::Tr(tr) => tr,
-		_ => bail!("not tr descriptor"),
-	};
-	let derivation_path = tr.internal_key().full_derivation_path().unwrap();
-	let (internal_key, _) = master_xpriv
-		.derive_priv(&secp, &derivation_path)?
-		.to_keypair(&secp)
-		.x_only_public_key();
+	let master_xpriv = wallet.xpriv();
+	let derivation_path = wallet.full_derivation_path().context("get full derivation")?;
+	let internal_key = wallet.derive_x_only_public_key(&secp)?;
 
 	let data_header = hex::decode("61746f6d").expect("the data should ok");
 	let data_header =
@@ -197,12 +186,10 @@ fn inscribe_to_address(
 		.push_slice(datas.as_push_bytes())
 		.push_opcode(OP_ENDIF);
 
-	println!("script {}", script.as_script());
 	let reveal_script = script.into_script();
 	let script_p2tr = reveal_script.to_v1_p2tr(&secp, internal_key);
 
 	println!("script_p2tr {}", script_p2tr);
-	println!("script_p2tr {}", script_p2tr.is_v1_p2tr());
 
 	let to_address = if let Some(to) = to_address {
 		to
@@ -293,7 +280,7 @@ fn inscribe_to_address(
 		let mut origins = BTreeMap::new();
 		origins.insert(
 			internal_key,
-			(vec![leaf_hash], (master_xpriv.fingerprint(&secp), derivation_path.clone())),
+			(vec![leaf_hash], (master_xpriv.fingerprint(&secp), derivation_path)),
 		);
 
 		let ty = PsbtSighashType::from_str("SIGHASH_ALL")?;
@@ -306,7 +293,7 @@ fn inscribe_to_address(
 		);
 
 		let input = Input {
-			witness_utxo: { Some(TxOut { value: amount, script_pubkey: script_pubkey.clone() }) },
+			witness_utxo: { Some(TxOut { value: amount, script_pubkey }) },
 			tap_key_origins: origins,
 			tap_merkle_root: taproot_spend_info.merkle_root(),
 			sighash_type: Some(ty),

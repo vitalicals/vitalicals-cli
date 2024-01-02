@@ -1,4 +1,4 @@
-use bdk::bitcoin::{blockdata::block::Header, Amount, Block, BlockHash, Script, ScriptHash, Txid};
+use bdk::bitcoin::{blockdata::block::Header, Amount, BlockHash, ScriptHash, Txid};
 
 use crate::{Id, LocationRef};
 

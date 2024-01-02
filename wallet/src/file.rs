@@ -36,7 +36,7 @@ impl WalletFile {
 		root.join(network.to_core_arg()).join(format!("wallet-backup-{}.json", in_ms))
 	}
 
-	pub fn load(root: &std::path::PathBuf, network: Network) -> Result<Self> {
+	pub fn load(root: &Path, network: Network) -> Result<Self> {
 		let path = Self::path_to_wallet(root, network);
 
 		let res: WalletFile =
@@ -46,7 +46,7 @@ impl WalletFile {
 		Ok(res)
 	}
 
-	pub fn save(&self, root: &std::path::PathBuf) -> Result<()> {
+	pub fn save(&self, root: &Path) -> Result<()> {
 		let path = Self::path_to_wallet(root, self.network);
 
 		let datas = serde_json::to_string_pretty(self)?;
