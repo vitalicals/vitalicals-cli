@@ -12,5 +12,9 @@ clap = { workspace = true, features = ["derive"] }
 tokio.workspace = true
 futures.workspace = true
 env_logger.workspace = true
+hex.workspace = true
+hex-literal.workspace = true
 
-bdk = { workspace = true }
+bdk.workspace = true
+
+vital-primitives.workspace = true

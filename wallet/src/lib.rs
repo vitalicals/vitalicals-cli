@@ -2,4 +2,4 @@ mod database;
 mod file;
 mod wallet;
 
-pub use wallet::Wallet;
+pub use crate::wallet::Wallet;

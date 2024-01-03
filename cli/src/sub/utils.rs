@@ -6,12 +6,7 @@ use bdk::{
 		absolute,
 		address::{NetworkUnchecked, Payload},
 		key::TapTweak,
-		opcodes::{
-			all::{OP_CHECKSIG, OP_ENDIF, OP_IF},
-			OP_0,
-		},
 		psbt::{Input, PartiallySignedTransaction, PsbtSighashType},
-		script::PushBytesBuf,
 		secp256k1::{All, KeyPair, Secp256k1, SecretKey, XOnlyPublicKey},
 		sighash::{self, SighashCache, TapSighash, TapSighashType},
 		taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder},
@@ -22,6 +17,8 @@ use bdk::{
 	FeeRate, SignOptions,
 };
 use clap::Subcommand;
+
+use btc_script_builder::InscriptionScriptBuilder;
 
 use crate::Cli;
 
@@ -171,22 +168,9 @@ fn inscribe_to_address(
 	let derivation_path = wallet.full_derivation_path().context("get full derivation")?;
 	let internal_key = wallet.derive_x_only_public_key(&secp)?;
 
-	let data_header = hex::decode("61746f6d").expect("the data should ok");
-	let data_header =
-		PushBytesBuf::try_from(data_header).expect("the push data should into the buffer");
-	let datas = hex::decode(datas).context("datas hex failed")?;
-	let datas = PushBytesBuf::try_from(datas).expect("the push data should into the buffer");
-
-	let script = ScriptBuf::builder()
-		.push_x_only_key(&internal_key)
-		.push_opcode(OP_CHECKSIG)
-		.push_opcode(OP_0)
-		.push_opcode(OP_IF)
-		.push_slice(data_header.as_push_bytes())
-		.push_slice(datas.as_push_bytes())
-		.push_opcode(OP_ENDIF);
-
-	let reveal_script = script.into_script();
+	let reveal_script = InscriptionScriptBuilder::new(hex::decode(datas).context("decode datas")?)
+		.into_script(&internal_key)
+		.context("build script")?;
 	let script_p2tr = reveal_script.to_v1_p2tr(&secp, internal_key);
 
 	println!("script_p2tr {}", script_p2tr);

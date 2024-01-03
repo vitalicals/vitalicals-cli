@@ -19,3 +19,4 @@ hex.workspace = true
 bdk = { workspace = true }
 
 wallet.workspace = true
+btc-script-builder.workspace = true

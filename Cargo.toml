@@ -40,7 +40,8 @@ futures-timer = "3.0.1"
 futures-util = "0.3"
 thiserror = "1.0.48"
 log = "0.4"
-bitcoin = { version = "0.30", features = ["serde", "base64", "rand-std"] }
+hex-literal = "0.4"
+bitcoin = { version = "0.31.0", features = ["serde", "base64", "rand-std"] }
 env_logger = "0.10.0"
 tokio = { version = "1.22.0", features = ["signal", "rt-multi-thread", "parking_lot"] }
 hex = { version = "0.4.3", features = ["alloc"] }
@@ -51,6 +52,9 @@ bdk-macros = "0.6"
 cli = { path = "./cli" }
 client = { path = "./client" }
 wallet = { path = "./wallet" }
+
+vital-primitives = { path = "./primitives" }
+btc-script-builder = { path = "./btc/script-builder"}
 
 [profile.release]
 # Polkadot runtime requires unwinding.
