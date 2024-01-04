@@ -1,5 +1,5 @@
 mod id;
-mod resource;
+pub mod resource;
 mod types;
 
 pub mod consts;

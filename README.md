@@ -1,2 +1,2 @@
-# shadowsats-cli
-a client cli for shadowsats
+# Vitalicals-cli
+a client cli for vitalicals

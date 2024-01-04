@@ -1,4 +1,8 @@
 [toolchain]
-channel = "nightly-2023-05-23"
+# Stable
+#channel = "1.74.1" # rust version 1.74.1 (a28077b28 2023-12-04)
+# Nightly
+channel = "nightly-2023-12-26" # rustc 1.77.0-nightly (2df6406b8 2023-12-26)
 components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
 profile = "minimal"

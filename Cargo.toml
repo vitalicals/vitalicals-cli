@@ -2,9 +2,9 @@
 version = "0.0.1"
 edition = "2021"
 authors = ["tulliusder <tulliusder@protonmail.com>"]
-repository = "https://github.com/tulliusder/shadowsats-cli"
-description = "An CLI for shadowsats"
-homepage = "https://github.com/tulliusder/shadowsats-cli"
+repository = "https://github.com/tulliusder/vitalicals-cli"
+description = "An CLI for vitalicals"
+homepage = "https://github.com/tulliusder/vitalicals-cli"
 keywords = ["bitcoin"]
 readme = "README.md"
 license = "GPL-3.0-only"
@@ -13,7 +13,7 @@ license = "GPL-3.0-only"
 resolver = "2"
 
 members = [
-    "bin/shadowsats-cli",
+    "bin/vitalicals-cli",
 
     "cli",
     "wallet",
@@ -22,7 +22,7 @@ members = [
     "interfaces/electrum",
 
     "btc/script-builder",
-    "btc/p2tr-builder/",
+    "btc/p2tr-builder",
 
     "primitives",
 ]
