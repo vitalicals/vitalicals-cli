@@ -15,36 +15,41 @@ use bdk::{
 		taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo},
 		Address, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Weight, Witness,
 	},
-	blockchain::AnyBlockchain,
 	FeeRate, SignOptions,
 };
 
+use btc_script_builder::InscriptionScriptBuilder;
 use wallet::Wallet;
 
 pub struct P2trBuilder<'a> {
-	reveal_script: ScriptBuf,
-
 	to_address: Address,
 	amount: u64,
-	wallet: &'a Wallet,
-	internal_key: XOnlyPublicKey,
-
 	fee_rate: Option<FeeRate>,
-	secp: &'a Secp256k1<All>,
+	wallet: &'a Wallet,
 
+	internal_key: XOnlyPublicKey,
+	reveal_script: ScriptBuf,
+	secp: Secp256k1<All>,
 	master_xpriv: ExtendedPrivKey,
 	derivation_path: DerivationPath,
 }
 
 impl<'a> P2trBuilder<'a> {
 	pub fn new(
-		reveal_script: ScriptBuf,
+		data: Vec<u8>,
 		to: Address,
 		amount: u64,
-		secp: &'a Secp256k1<All>,
-		internal_key: XOnlyPublicKey,
+		fee_rate: Option<f32>,
 		wallet: &'a Wallet,
 	) -> Result<Self> {
+		let secp = Secp256k1::new();
+
+		let internal_key = wallet.derive_x_only_public_key(&secp)?;
+		let reveal_script = InscriptionScriptBuilder::new(data)
+		.into_script(&internal_key)
+		.context("build script")?;
+
+
 		let master_xpriv = *wallet.xpriv();
 		let derivation_path = wallet.full_derivation_path().context("get full derivation")?;
 
@@ -52,7 +57,7 @@ impl<'a> P2trBuilder<'a> {
 			reveal_script,
 			to_address: to,
 			amount,
-			fee_rate: None,
+			fee_rate: fee_rate.map(|f| FeeRate::from_sat_per_vb(f)),
 			wallet,
 			secp,
 			internal_key,
@@ -62,7 +67,7 @@ impl<'a> P2trBuilder<'a> {
 	}
 
 	fn secp(&self) -> &Secp256k1<All> {
-		self.secp
+		&self.secp
 	}
 
 	/// Generate a commit tx psbt
@@ -235,11 +240,11 @@ impl<'a> P2trBuilder<'a> {
 		let taproot_spend_info = TaprootBuilder::new()
 			.add_leaf(0, self.reveal_script.clone())
 			.context("TaprootBuilder add_leaf ")?
-			.finalize(self.secp, self.internal_key)
+			.finalize(self.secp(), self.internal_key)
 			.map_err(|_| anyhow!("TaprootBuilder error"))?;
 
 		let commit_script_pubkey = ScriptBuf::new_v1_p2tr(
-			self.secp,
+			self.secp(),
 			taproot_spend_info.internal_key(),
 			taproot_spend_info.merkle_root(),
 		);

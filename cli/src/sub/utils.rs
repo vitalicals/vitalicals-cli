@@ -163,25 +163,17 @@ fn inscribe_to_address(
 	let bdk_wallet = &wallet.wallet;
 	let bdk_blockchain = &wallet.blockchain;
 
-	let secp = Secp256k1::new();
-	let internal_key = wallet.derive_x_only_public_key(&secp)?;
-
 	let to_address = if let Some(to) = to_address {
 		to
 	} else {
 		bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
 	};
 
-	let reveal_script = InscriptionScriptBuilder::new(hex::decode(datas).context("decode datas")?)
-		.into_script(&internal_key)
-		.context("build script")?;
-
-	let builder = btc_p2tr_builder::P2trBuilder::new(
-		reveal_script,
+	let builder = P2trBuilder::new(
+		hex::decode(datas).context("decode datas")?,
 		to_address,
 		amount,
-		&secp,
-		internal_key,
+		*fee_rate,
 		&wallet,
 	)
 	.context("builder build")?;
