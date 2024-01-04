@@ -18,6 +18,7 @@ use bdk::{
 };
 use clap::Subcommand;
 
+use btc_p2tr_builder::P2trBuilder;
 use btc_script_builder::InscriptionScriptBuilder;
 
 use crate::Cli;
@@ -149,6 +150,69 @@ fn send_to_address(
 }
 
 fn inscribe_to_address(
+	network: Network,
+	cli: &Cli,
+	to_address: Option<Address>,
+	amount: u64,
+	fee_rate: &Option<f32>,
+	_replaceable: bool,
+	datas: &str,
+) -> Result<()> {
+	let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
+		.context("load wallet failed")?;
+	let bdk_wallet = &wallet.wallet;
+	let bdk_blockchain = &wallet.blockchain;
+
+	let secp = Secp256k1::new();
+	let internal_key = wallet.derive_x_only_public_key(&secp)?;
+
+	let to_address = if let Some(to) = to_address {
+		to
+	} else {
+		bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
+	};
+
+	let reveal_script = InscriptionScriptBuilder::new(hex::decode(datas).context("decode datas")?)
+		.into_script(&internal_key)
+		.context("build script")?;
+
+	let builder = btc_p2tr_builder::P2trBuilder::new(
+		reveal_script,
+		to_address,
+		amount,
+		&secp,
+		internal_key,
+		&wallet,
+	)
+	.context("builder build")?;
+
+	let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
+
+	let commit_raw_transaction = commit_psbt.extract_tx();
+	let commit_txid = commit_raw_transaction.txid();
+
+	println!("reveal_psbt: {}", serde_json::to_string_pretty(&reveal_psbt.unsigned_tx.input)?);
+	println!("reveal_psbt: {}", serde_json::to_string_pretty(&reveal_psbt.inputs)?);
+
+	let reveal_raw_transaction = reveal_psbt.extract_tx();
+	println!(
+		"reveal_psbt raw_transaction: {}",
+		serde_json::to_string_pretty(&reveal_raw_transaction)?
+	);
+
+	let reveal_txid = reveal_raw_transaction.txid();
+
+	bdk_blockchain.broadcast(&commit_raw_transaction)?;
+	println!("Commit Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = commit_txid);
+
+	bdk_blockchain.broadcast(&reveal_raw_transaction)?;
+	println!("Reveal Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = reveal_txid);
+
+	Ok(())
+}
+
+#[allow(dead_code)]
+fn inscribe_to_address_impl(
 	network: Network,
 	cli: &Cli,
 	to_address: Option<Address>,

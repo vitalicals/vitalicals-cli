@@ -157,4 +157,8 @@ impl Wallet {
 
 		Ok(internal_key)
 	}
+
+	pub fn network(&self) -> Network {
+		self.wallet.network()
+	}
 }

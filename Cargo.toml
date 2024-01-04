@@ -22,6 +22,7 @@ members = [
     "interfaces/electrum",
 
     "btc/script-builder",
+    "btc/p2tr-builder/",
 
     "primitives",
 ]
@@ -54,7 +55,8 @@ client = { path = "./client" }
 wallet = { path = "./wallet" }
 
 vital-primitives = { path = "./primitives" }
-btc-script-builder = { path = "./btc/script-builder"}
+btc-script-builder = { path = "./btc/script-builder" }
+btc-p2tr-builder = { path = "./btc/p2tr-builder" }
 
 [profile.release]
 # Polkadot runtime requires unwinding.
