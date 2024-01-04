@@ -1,7 +1,7 @@
 //! The wallet wrapper implementation by bdk
 
 use anyhow::{anyhow, bail, Context, Result};
-use std::str::FromStr;
+use std::{path::Path, str::FromStr};
 
 use bdk::{
     bitcoin::{
@@ -90,7 +90,7 @@ impl Wallet {
         Ok(res)
     }
 
-    pub fn save(&self, root: &std::path::PathBuf) -> Result<()> {
+    pub fn save(&self, root: &Path) -> Result<()> {
         let to_file = WalletFile::from_wallet(self);
 
         to_file.save(root)

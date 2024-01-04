@@ -1,18 +1,12 @@
 use bdk::bitcoin::OutPoint;
 
 /// The id of vitalicals 's Resource
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(Default, PartialEq, Eq, Clone, Copy)]
 pub struct LocationRef(OutPoint);
 
 impl ToString for LocationRef {
     fn to_string(&self) -> String {
         format!("{}i{}", self.0.txid, self.0.vout)
-    }
-}
-
-impl Default for LocationRef {
-    fn default() -> Self {
-        Self(OutPoint::default())
     }
 }
 

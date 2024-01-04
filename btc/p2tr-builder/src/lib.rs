@@ -56,7 +56,7 @@ impl<'a> P2trBuilder<'a> {
             reveal_script,
             to_address: to,
             amount,
-            fee_rate: fee_rate.map(|f| FeeRate::from_sat_per_vb(f)),
+            fee_rate: fee_rate.map(FeeRate::from_sat_per_vb),
             wallet,
             secp,
             internal_key,

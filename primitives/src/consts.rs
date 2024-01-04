@@ -1,7 +1,7 @@
 use hex_literal::hex;
 
 /// The tag string for inscribe
-pub const INSCRIBE_TAG_STR: &'static str = "vital";
+pub const INSCRIBE_TAG_STR: &str = "vital";
 
 /// The tag len for vital
 pub const INSCRIBE_TAG_LEN: usize = INSCRIBE_TAG_STR.len();
