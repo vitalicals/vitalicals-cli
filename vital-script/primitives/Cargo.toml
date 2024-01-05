@@ -1,0 +1,18 @@
+[package]
+name = "vital-script-primitives"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+log.workspace = true
+anyhow.workspace = true
+clap = { workspace = true, features = ["derive"] }
+tokio.workspace = true
+futures.workspace = true
+env_logger.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+bdk = { workspace = true }
