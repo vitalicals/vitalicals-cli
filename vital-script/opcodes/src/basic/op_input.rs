@@ -1,7 +1,7 @@
-use primitive_types::{H256, U256};
+use vital_script_primitives::{H256, U256};
+use vital_script_primitives::names::{Name, ShortName};
 
 use super::BasicOpcode;
-use crate::names::{Name, ShortName};
 
 /// Input VRC20 Res Assert for (ShortName, u32 amount)
 pub struct InputShortVRC20Assert32 {

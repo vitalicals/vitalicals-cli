@@ -5,4 +5,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod names;
-pub mod opcodes;
+
+pub use primitive_types::{H256, U256};

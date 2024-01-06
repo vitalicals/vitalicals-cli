@@ -1,5 +1,6 @@
+use vital_script_primitives::names::{Name, ShortName};
+
 use super::BasicOpcode;
-use crate::names::{Name, ShortName};
 
 /// Transfer all VRC20 Res to a output for (ShortName)
 pub struct TransferAllShortVRC20 {

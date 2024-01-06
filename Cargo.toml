@@ -21,6 +21,7 @@ members = [
 
     "vital-script",
     "vital-script/primitives",
+    "vital-script/opcodes",
 
     "interfaces/electrum",
 
@@ -60,7 +61,10 @@ client = { path = "./client" }
 wallet = { path = "./wallet" }
 
 vital-primitives = { path = "./primitives" }
+
 vital-script = { path = "./vital-script" }
+vital-script-primitives = { path = "./vital-script/primitives" }
+vital-script-opcodes = { path = "./vital-script/opcodes" }
 
 btc-script-builder = { path = "./btc/script-builder" }
 btc-p2tr-builder = { path = "./btc/p2tr-builder" }
