@@ -53,6 +53,8 @@ hex = { version = "0.4.3", features = ["alloc"] }
 bdk = { version = "0.29.0", features = ["rpc", "all-keys"] }
 bdk-macros = "0.6"
 
+primitive-types = "0.12"
+
 cli = { path = "./cli" }
 client = { path = "./client" }
 wallet = { path = "./wallet" }

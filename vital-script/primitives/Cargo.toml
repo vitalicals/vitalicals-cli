@@ -7,15 +7,10 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-log = { workspaces = true, optional = true }
-
-[dev-dependencies]
-log.workspace = true
-env_logger.workspace = true
+primitive-types = { workspace = true }
 
 [features]
 default = ["std"]
-std = []
-log = [
-    "dep:log"
+std = [
+    "primitive-types/std",
 ]
