@@ -6,13 +6,16 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-log.workspace = true
 anyhow.workspace = true
-clap = { workspace = true, features = ["derive"] }
-tokio.workspace = true
-futures.workspace = true
-env_logger.workspace = true
-serde.workspace = true
-serde_json.workspace = true
+log = { workspaces = true, optional = true }
 
-bdk = { workspace = true }
+[dev-dependencies]
+log.workspace = true
+env_logger.workspace = true
+
+[features]
+default = ["std"]
+std = []
+log = [
+    "dep:log"
+]
