@@ -1,3 +1,5 @@
+use crate::opcode::BasicOp;
+
 use super::BasicOpcode;
 
 /// Output Index Assert by 1 indexs
@@ -7,7 +9,7 @@ pub struct OutputIndexAssert {
 
 impl BasicOpcode for OutputIndexAssert {
     fn id(&self) -> u8 {
-        0x0a
+        BasicOp::OutputIndexAssert as u8
     }
 }
 
@@ -18,7 +20,7 @@ pub struct OutputIndexFlag16Assert {
 
 impl BasicOpcode for OutputIndexFlag16Assert {
     fn id(&self) -> u8 {
-        0x0b
+        BasicOp::OutputIndexFlag16Assert as u8
     }
 }
 
@@ -29,6 +31,6 @@ pub struct OutputIndexFlag32Assert {
 
 impl BasicOpcode for OutputIndexFlag32Assert {
     fn id(&self) -> u8 {
-        0x0c
+        BasicOp::OutputIndexFlag32Assert as u8
     }
 }

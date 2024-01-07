@@ -1,16 +1,18 @@
 use vital_script_primitives::names::{Name, ShortName};
 
+use crate::opcode::BasicOp;
+
 use super::BasicOpcode;
 
 /// Transfer all VRC20 Res to a output for (ShortName)
-pub struct TransferAllShortVRC20 {
+pub struct TransferAllVRC20S {
     pub name: ShortName,
     pub output_index: u8,
 }
 
-impl BasicOpcode for TransferAllShortVRC20 {
+impl BasicOpcode for TransferAllVRC20S {
     fn id(&self) -> u8 {
-        0x16
+        BasicOp::TransferAllVRC20S as u8
     }
 }
 
@@ -22,33 +24,33 @@ pub struct TransferAllVRC20 {
 
 impl BasicOpcode for TransferAllVRC20 {
     fn id(&self) -> u8 {
-        0x17
+        BasicOp::TransferAllVRC20 as u8
     }
 }
 
 /// Transfer VRC20 Res with a amount to a output for (ShortName, u32)
-pub struct Transfer32ShortVRC20 {
+pub struct TransferVRC20Sa32 {
     pub name: ShortName,
     pub amount: u32,
     pub output_index: u8,
 }
 
-impl BasicOpcode for Transfer32ShortVRC20 {
+impl BasicOpcode for TransferVRC20Sa32 {
     fn id(&self) -> u8 {
-        0x18
+        BasicOp::TransferVRC20Sa32 as u8
     }
 }
 
 /// Transfer VRC20 Res with a amount to a output for (Name, u32)
-pub struct Transfer32VRC20 {
+pub struct TransferVRC20A32 {
     pub name: Name,
     pub amount: u32,
     pub output_index: u8,
 }
 
-impl BasicOpcode for Transfer32VRC20 {
+impl BasicOpcode for TransferVRC20A32 {
     fn id(&self) -> u8 {
-        0x19
+        BasicOp::TransferVRC20A32 as u8
     }
 }
 
