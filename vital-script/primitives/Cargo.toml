@@ -1,0 +1,16 @@
+[package]
+name = "vital-script-primitives"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+primitive-types = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "primitive-types/std",
+]

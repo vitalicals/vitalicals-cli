@@ -19,6 +19,11 @@ members = [
     "wallet",
     "client",
 
+    "vital-script",
+    "vital-script/primitives",
+    "vital-script/opcodes",
+    "vital-script/runner",
+
     "interfaces/electrum",
 
     "btc/script-builder",
@@ -50,11 +55,19 @@ hex = { version = "0.4.3", features = ["alloc"] }
 bdk = { version = "0.29.0", features = ["rpc", "all-keys"] }
 bdk-macros = "0.6"
 
+primitive-types = "0.12"
+
 cli = { path = "./cli" }
 client = { path = "./client" }
 wallet = { path = "./wallet" }
 
 vital-primitives = { path = "./primitives" }
+
+vital-script = { path = "./vital-script" }
+vital-script-primitives = { path = "./vital-script/primitives" }
+vital-script-opcodes = { path = "./vital-script/opcodes" }
+vital-script-runner = { path = "./vital-script/runner" }
+
 btc-script-builder = { path = "./btc/script-builder" }
 btc-p2tr-builder = { path = "./btc/p2tr-builder" }
 
