@@ -23,4 +23,6 @@ pub enum BasicOp {
 
     TransferVRC20Sa32 = 0x18,
     TransferVRC20A32 = 0x19,
+    // Mint
+    // Burn
 }

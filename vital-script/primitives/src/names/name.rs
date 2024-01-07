@@ -15,7 +15,7 @@ pub const NAME_BYTES_LEN: usize = 8;
 /// |   0    |    1      |     2     |    3   |   4    |    5       |     6     |   7    |   8    |    9      |  len |
 ///
 /// The len just for 0 - 3
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
 
 impl Name {
