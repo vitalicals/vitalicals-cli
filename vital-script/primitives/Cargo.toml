@@ -10,7 +10,7 @@ anyhow.workspace = true
 primitive-types = { workspace = true }
 
 [features]
-default = ["std"]
+default = []
 std = [
     "primitive-types/std",
 ]

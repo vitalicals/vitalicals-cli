@@ -7,7 +7,7 @@ use vital_script_primitives::resources::Resource;
 pub trait Env {
     type Id: PartialEq + Eq;
 
-    fn get_resources(&self, input_id: &Self::Id) -> Result<Resource>;
+    fn get_resources(&self, input_id: &Self::Id) -> Result<Option<Resource>>;
 
     fn mint_resource(&self, output: &Self::Id, res: Resource) -> Result<()>;
     fn burn_resource(&self, input: &Self::Id, res: Resource) -> Result<()>;

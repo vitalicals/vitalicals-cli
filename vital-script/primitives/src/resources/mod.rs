@@ -8,6 +8,8 @@ pub mod vrc721;
 pub use vrc20::*;
 pub use vrc721::*;
 
+pub type Tag = Name;
+
 #[derive(Debug, PartialEq, Eq)]
 #[repr(u16)]
 pub enum ResourceClass {
@@ -19,9 +21,10 @@ pub enum ResourceClass {
 #[derive(Debug, PartialEq, Eq)]
 pub struct ResourceType {
     pub class: ResourceClass,
-    pub name: Name,
+    pub name: Tag,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum Resource {
     Name(Name),
     VRC20(VRC20),

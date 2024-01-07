@@ -170,6 +170,7 @@ impl TryFrom<String> for ShortName {
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod tests {
     use crate::names::char2u8;
 

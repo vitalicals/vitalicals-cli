@@ -11,7 +11,7 @@ vital-script-opcodes.workspace = true
 vital-script-primitives.workspace = true
 
 [features]
-default = ["std"]
+default = []
 std = [
     "vital-script-opcodes/std",
     "vital-script-primitives/std",

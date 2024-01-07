@@ -15,7 +15,7 @@ pub const NAME_BYTES_LEN: usize = 8;
 /// |   0    |    1      |     2     |    3   |   4    |    5       |     6     |   7    |   8    |    9      |  len |
 ///
 /// The len just for 0 - 3
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
 
 impl Name {
@@ -228,10 +228,13 @@ impl TryFrom<String> for Name {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "std")]
     use crate::names::char2u8;
 
+    #[cfg(feature = "std")]
     use super::Name;
 
+    #[cfg(feature = "std")]
     fn test_name_new_by(name: &str) {
         let n = Name::try_from(name.to_string()).expect(format!("try from {}", name).as_str());
 
@@ -251,6 +254,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_name_new() {
         test_name_new_by("");
         test_name_new_by("a");
@@ -298,6 +302,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_name_new_failed() {
         assert!(Name::try_from(" ".to_string()).is_err());
         assert!(Name::try_from("a a".to_string()).is_err());
