@@ -1,9 +1,10 @@
+use anyhow::Result;
 use vital_script_primitives::{
     names::{Name, ShortName},
     H256, U256,
 };
 
-use crate::opcode::BasicOp;
+use crate::opcodes::BasicOp;
 
 use super::BasicOpcode;
 

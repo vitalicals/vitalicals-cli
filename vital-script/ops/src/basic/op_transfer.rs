@@ -1,6 +1,6 @@
 use vital_script_primitives::names::{Name, ShortName};
 
-use crate::opcode::BasicOp;
+use crate::opcodes::BasicOp;
 
 use super::BasicOpcode;
 

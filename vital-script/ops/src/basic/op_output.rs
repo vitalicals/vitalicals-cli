@@ -1,4 +1,4 @@
-use crate::opcode::BasicOp;
+use crate::opcodes::BasicOp;
 
 use super::BasicOpcode;
 

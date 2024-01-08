@@ -1,5 +1,5 @@
 [package]
-name = "vital-script-opcodes"
+name = "vital-script-ops"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

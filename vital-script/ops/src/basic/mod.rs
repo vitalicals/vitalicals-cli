@@ -1,4 +1,4 @@
-//! The basic opcodes.
+//! The basic ops.
 
 mod op_input;
 mod op_output;
