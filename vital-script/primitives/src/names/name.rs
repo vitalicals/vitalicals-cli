@@ -226,6 +226,23 @@ impl TryFrom<String> for Name {
     }
 }
 
+impl From<ShortName> for Name {
+    fn from(value: ShortName) -> Self {
+        let mut res = Name::default();
+
+        for i in 0..SHORT_NAME_LEN_MAX {
+            let v = value.index_value(i);
+            if v == 0 {
+                break;
+            } else {
+                res.push(u8_to_char(v).expect("should valid")).expect("short should ok");
+            }
+        }
+
+        res
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "std")]

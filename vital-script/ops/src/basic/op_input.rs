@@ -1,6 +1,7 @@
-use anyhow::Result;
+use vital_script_instruction::{assert_input::InstructionInputAssert, Instruction};
 use vital_script_primitives::{
     names::{Name, ShortName},
+    resources::{Resource, VRC20, VRC721},
     H256, U256,
 };
 
@@ -19,6 +20,13 @@ impl BasicOpcode for InputVRC20AssertSa32 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertSa32 as u8
     }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
+        })
+    }
 }
 
 /// Input VRC20 Res Assert for (ShortName, u64 amount)
@@ -31,6 +39,13 @@ pub struct InputVRC20AssertSa64 {
 impl BasicOpcode for InputVRC20AssertSa64 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertSa64 as u8
+    }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
+        })
     }
 }
 
@@ -45,6 +60,13 @@ impl BasicOpcode for InputVRC20AssertSa128 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertSa128 as u8
     }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
+        })
+    }
 }
 
 /// Input VRC20 Res Assert for (ShortName, u256 amount)
@@ -57,6 +79,13 @@ pub struct InputVRC20AssertSa256 {
 impl BasicOpcode for InputVRC20AssertSa256 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertSa256 as u8
+    }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount)),
+        })
     }
 }
 
@@ -71,6 +100,13 @@ impl BasicOpcode for InputVRC20AssertA32 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertA32 as u8
     }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
+        })
+    }
 }
 
 /// Input VRC20 Res Assert for (Name, u64 amount)
@@ -83,6 +119,13 @@ pub struct InputVRC20AssertA64 {
 impl BasicOpcode for InputVRC20AssertA64 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertA64 as u8
+    }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
+        })
     }
 }
 
@@ -97,6 +140,13 @@ impl BasicOpcode for InputVRC20AssertA128 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertA128 as u8
     }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
+        })
+    }
 }
 
 /// Input VRC20 Res Assert for (Name, u256 amount)
@@ -110,6 +160,13 @@ impl BasicOpcode for InputVRC20AssertA256 {
     fn id(&self) -> u8 {
         BasicOp::InputVRC20AssertA256 as u8
     }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
+        })
+    }
 }
 
 /// Input VRC721 Res Assert for (Name, hash256 )
@@ -122,5 +179,12 @@ pub struct InputVRC721Assert {
 impl BasicOpcode for InputVRC721Assert {
     fn id(&self) -> u8 {
         BasicOp::InputVRC721Assert as u8
+    }
+
+    fn into_instruction(self) -> Instruction {
+        Instruction::Input(InstructionInputAssert {
+            index: self.index,
+            resource: Resource::VRC721(VRC721::new(self.name, self.hash)),
+        })
     }
 }

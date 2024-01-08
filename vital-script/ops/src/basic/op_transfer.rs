@@ -1,3 +1,4 @@
+use vital_script_instruction::Instruction;
 use vital_script_primitives::names::{Name, ShortName};
 
 use crate::opcodes::BasicOp;
@@ -14,6 +15,10 @@ impl BasicOpcode for TransferAllVRC20S {
     fn id(&self) -> u8 {
         BasicOp::TransferAllVRC20S as u8
     }
+
+    fn into_instruction(self) -> Instruction {
+        todo!()
+    }
 }
 
 /// Transfer all VRC20 Res to a output for (Name)
@@ -25,6 +30,10 @@ pub struct TransferAllVRC20 {
 impl BasicOpcode for TransferAllVRC20 {
     fn id(&self) -> u8 {
         BasicOp::TransferAllVRC20 as u8
+    }
+
+    fn into_instruction(self) -> Instruction {
+        todo!()
     }
 }
 
@@ -39,6 +48,10 @@ impl BasicOpcode for TransferVRC20Sa32 {
     fn id(&self) -> u8 {
         BasicOp::TransferVRC20Sa32 as u8
     }
+
+    fn into_instruction(self) -> Instruction {
+        todo!()
+    }
 }
 
 /// Transfer VRC20 Res with a amount to a output for (Name, u32)
@@ -51,6 +64,10 @@ pub struct TransferVRC20A32 {
 impl BasicOpcode for TransferVRC20A32 {
     fn id(&self) -> u8 {
         BasicOp::TransferVRC20A32 as u8
+    }
+
+    fn into_instruction(self) -> Instruction {
+        todo!()
     }
 }
 

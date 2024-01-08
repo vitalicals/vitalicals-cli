@@ -8,6 +8,10 @@ pub use op_input::*;
 pub use op_output::*;
 pub use op_transfer::*;
 
+use vital_script_instruction::Instruction;
+
 pub trait BasicOpcode {
     fn id(&self) -> u8;
+
+    fn into_instruction(self) -> Instruction;
 }

@@ -3,14 +3,14 @@
 use anyhow::{bail, Context as AnyhowContext, Result};
 use vital_script_primitives::{resources::Resource, traits::*};
 
-use crate::Instruction;
+use crate::VitalInstruction;
 
 pub struct InstructionInputAssert {
-    index: u8,
-    resource: Resource,
+    pub index: u8,
+    pub resource: Resource,
 }
 
-impl Instruction for InstructionInputAssert {
+impl VitalInstruction for InstructionInputAssert {
     fn exec(self, context: &mut impl Context) -> Result<()> {
         // 1. ensure if current input index is not asserted.
         context.runner().try_assert_input(self.index)?;

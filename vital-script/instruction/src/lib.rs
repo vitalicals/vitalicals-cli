@@ -15,6 +15,20 @@ pub mod resource_move;
 
 use vital_script_primitives::traits::Context;
 
-pub trait Instruction {
+pub trait VitalInstruction {
     fn exec(self, context: &mut impl Context) -> Result<()>;
+}
+
+pub enum Instruction {
+    Input(assert_input::InstructionInputAssert),
+    Output(assert_output::InstructionOutputAssert),
+}
+
+impl VitalInstruction for Instruction {
+    fn exec(self, context: &mut impl Context) -> Result<()> {
+        match self {
+            Self::Input(i) => i.exec(context),
+            Self::Output(i) => i.exec(context),
+        }
+    }
 }
