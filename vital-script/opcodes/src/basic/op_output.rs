@@ -15,7 +15,7 @@ impl BasicOpcode for OutputIndexAssert {
 
 /// Output Index Assert By A u16 as FlagMask
 pub struct OutputIndexFlag16Assert {
-    pub index_flag: u16,
+    pub index_flag: [u8; 2],
 }
 
 impl BasicOpcode for OutputIndexFlag16Assert {
@@ -26,7 +26,7 @@ impl BasicOpcode for OutputIndexFlag16Assert {
 
 /// Output Index Assert By A u32 as FlagMask
 pub struct OutputIndexFlag32Assert {
-    pub index_flag: u32,
+    pub index_flag: [u8; 4],
 }
 
 impl BasicOpcode for OutputIndexFlag32Assert {

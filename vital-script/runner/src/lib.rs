@@ -12,6 +12,8 @@ use anyhow::Result;
 
 pub mod traits;
 
+mod inputs;
+mod outputs;
 mod resource_cache;
 
 pub struct Runner {}
