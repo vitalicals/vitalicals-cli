@@ -12,7 +12,8 @@ use anyhow::Result;
 
 pub mod traits;
 
-mod inputs;
+mod context;
+
 mod outputs;
 mod resource_cache;
 

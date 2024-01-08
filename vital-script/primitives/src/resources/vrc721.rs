@@ -1,7 +1,7 @@
 //! The VRC721 Token
 
 use super::Tag;
-use crate::{names::Name, H256};
+use crate::H256;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct VRC721 {

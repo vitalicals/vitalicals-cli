@@ -1,11 +1,9 @@
-//! The input resources for runner.
-
 use alloc::vec::Vec;
 use anyhow::{bail, Result};
-
 use vital_script_primitives::{
     names::Name,
     resources::{self, Resource, Tag, VRC20, VRC721},
+    traits::context::InputResourcesContext as InputResourcesContextT,
     H256, U256,
 };
 
@@ -13,6 +11,30 @@ const VEC_CAP_SIZE: usize = 8;
 
 const INPUT_MAX: usize = 64;
 const OUTPUT_MAX: usize = 64;
+
+pub struct InputResourcesContext {
+    inputs: InputResources,
+}
+
+impl InputResourcesContextT for InputResourcesContext {
+    fn push(&mut self, input_index: u8, resource: Resource) -> Result<()> {
+        match resource {
+            Resource::Name(name) => self.inputs.push_name(input_index, name),
+            Resource::VRC20(v) => self.inputs.push_vrc20(input_index, v.name, v.amount),
+            Resource::VRC721(v) => self.inputs.push_vrc721(input_index, v.name, v.hash),
+        }
+
+        Ok(())
+    }
+
+    fn cost(&mut self, resource: Resource) -> Result<()> {
+        match resource {
+            Resource::Name(name) => self.inputs.cost_name(name),
+            Resource::VRC20(v) => self.inputs.cost_vrc20(v),
+            Resource::VRC721(v) => self.inputs.cost_vrc721(v),
+        }
+    }
+}
 
 pub struct NameInput {
     index: u8,
@@ -86,7 +108,7 @@ pub struct InputResources {
     vrc721s: Vec<VRC721Inputs>,
 }
 
-impl<'a> InputResources {
+impl InputResources {
     pub fn new(cap: usize) -> Self {
         Self {
             names: Vec::with_capacity(cap),

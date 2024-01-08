@@ -1,7 +1,7 @@
 //! The VRC20 Token
 
 use super::Tag;
-use crate::{names::Name, U256};
+use crate::U256;
 
 #[derive(Default, Debug, PartialEq, Eq)]
 pub struct VRC20 {

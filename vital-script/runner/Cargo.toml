@@ -9,10 +9,12 @@ version.workspace = true
 anyhow.workspace = true
 vital-script-ops.workspace = true
 vital-script-primitives.workspace = true
+vital-script-instruction.workspace = true
 
 [features]
 default = ["std"]
 std = [
     "vital-script-ops/std",
+    "vital-script-instruction/std",
     "vital-script-primitives/std",
 ]
