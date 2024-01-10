@@ -3,7 +3,7 @@
 use super::Tag;
 use crate::H256;
 
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct VRC721 {
     pub name: Tag,
     pub hash: H256,

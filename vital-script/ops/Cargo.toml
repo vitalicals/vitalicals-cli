@@ -10,12 +10,13 @@ anyhow.workspace = true
 bytes.workspace = true
 
 vital-script-primitives.workspace = true
-vital-script-instruction.workspace = true
+
+[dev-dependencies]
+hex.workspace = true
 
 [features]
 default = ["std"]
 std = [
     "bytes/std",
     "vital-script-primitives/std",
-    "vital-script-instruction/std",
 ]

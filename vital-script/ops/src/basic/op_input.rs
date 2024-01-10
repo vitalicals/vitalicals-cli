@@ -1,13 +1,16 @@
 use anyhow::{bail, Context, Result};
 use bytes::{Buf, Bytes};
-use vital_script_instruction::{assert_input::InstructionInputAssert, Instruction};
 use vital_script_primitives::{
     names::{Name, ShortName},
     resources::{Resource, VRC20, VRC721},
     H256, U256,
 };
 
-use crate::{consts::*, opcodes::BasicOp};
+use crate::{
+    consts::*,
+    instruction::{assert_input::InstructionInputAssert, Instruction},
+    opcodes::BasicOp,
+};
 
 use super::BasicOpcode;
 
@@ -27,6 +30,11 @@ impl BasicOpcode for InputVRC20AssertSa32 {
             index: self.index,
             resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
         })
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
+            .concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
@@ -60,6 +68,11 @@ impl BasicOpcode for InputVRC20AssertSa64 {
         })
     }
 
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
+            .concat()
+    }
+
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
         if datas.remaining() < Self::OPERAND_SIZE {
             bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
@@ -89,6 +102,11 @@ impl BasicOpcode for InputVRC20AssertSa128 {
             index: self.index,
             resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
         })
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
+            .concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
@@ -122,6 +140,13 @@ impl BasicOpcode for InputVRC20AssertSa256 {
         })
     }
 
+    fn encode(self) -> Vec<u8> {
+        let mut amount_bytes = [0_u8; 32];
+        self.amount.to_big_endian(&mut amount_bytes);
+
+        [vec![Self::ID], amount_bytes.to_vec(), self.name.0.to_vec(), vec![self.index]].concat()
+    }
+
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
         if datas.remaining() < Self::OPERAND_SIZE {
             bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
@@ -151,6 +176,11 @@ impl BasicOpcode for InputVRC20AssertA32 {
             index: self.index,
             resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
         })
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
+            .concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
@@ -184,6 +214,11 @@ impl BasicOpcode for InputVRC20AssertA64 {
         })
     }
 
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
+            .concat()
+    }
+
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
         if datas.remaining() < Self::OPERAND_SIZE {
             bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
@@ -213,6 +248,11 @@ impl BasicOpcode for InputVRC20AssertA128 {
             index: self.index,
             resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
         })
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
+            .concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
@@ -246,6 +286,13 @@ impl BasicOpcode for InputVRC20AssertA256 {
         })
     }
 
+    fn encode(self) -> Vec<u8> {
+        let mut amount_bytes = [0_u8; 32];
+        self.amount.to_big_endian(&mut amount_bytes);
+
+        [vec![Self::ID], amount_bytes.to_vec(), self.name.0.to_vec(), vec![self.index]].concat()
+    }
+
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
         if datas.remaining() < Self::OPERAND_SIZE {
             bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
@@ -275,6 +322,16 @@ impl BasicOpcode for InputVRC721Assert {
             index: self.index,
             resource: Resource::VRC721(VRC721::new(self.name, self.hash)),
         })
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [
+            vec![Self::ID],
+            self.hash.to_fixed_bytes().to_vec(),
+            self.name.0.to_vec(),
+            vec![self.index],
+        ]
+        .concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {

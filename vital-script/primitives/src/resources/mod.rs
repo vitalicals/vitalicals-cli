@@ -2,6 +2,9 @@
 
 use anyhow::{bail, Result};
 
+#[cfg(feature = "std")]
+use primitive_types::U256;
+
 pub use crate::names::Name;
 
 pub mod vrc20;
@@ -26,7 +29,7 @@ pub struct ResourceType {
     pub name: Tag,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resource {
     Name(Name),
     VRC20(VRC20),
@@ -34,6 +37,13 @@ pub enum Resource {
 }
 
 impl Resource {
+    #[cfg(feature = "std")]
+    pub fn vrc20(name: impl Into<String>, amount: U256) -> Result<Self> {
+        let name = Name::try_from(name.into())?;
+
+        Ok(Self::VRC20(VRC20::new(name, amount)))
+    }
+
     pub fn resource_type(&self) -> ResourceType {
         let (class, name) = match self {
             Self::Name(n) => (ResourceClass::Name, *n),

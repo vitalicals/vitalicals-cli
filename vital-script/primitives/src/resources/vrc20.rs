@@ -3,7 +3,7 @@
 use super::Tag;
 use crate::U256;
 
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct VRC20 {
     pub name: Tag,
     pub amount: U256,

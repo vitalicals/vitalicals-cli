@@ -147,6 +147,29 @@ impl ShortName {
     }
 }
 
+impl TryFrom<Name> for ShortName {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Name) -> Result<Self> {
+        let len = value.len();
+        if len > SHORT_NAME_LEN_MAX {
+            bail!("the name is too long")
+        }
+
+        let mut res = ShortName::default();
+        for i in 0..SHORT_NAME_LEN_MAX {
+            let v = value.index_value(i);
+            if v == 0 {
+                break;
+            } else {
+                res.push(u8_to_char(v).expect("should valid")).expect("short should ok");
+            }
+        }
+
+        Ok(res)
+    }
+}
+
 #[cfg(feature = "std")]
 impl std::string::ToString for ShortName {
     fn to_string(&self) -> String {

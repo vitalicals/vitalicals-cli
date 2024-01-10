@@ -1,9 +1,10 @@
 use anyhow::{bail, Result};
 use bytes::{Buf, Bytes};
 
-use vital_script_instruction::{assert_output::InstructionOutputAssert, Instruction};
-
-use crate::opcodes::BasicOp;
+use crate::{
+    instruction::{assert_output::InstructionOutputAssert, Instruction},
+    opcodes::BasicOp,
+};
 
 use super::BasicOpcode;
 
@@ -34,6 +35,10 @@ impl BasicOpcode for OutputIndexAssert {
         Instruction::Output(InstructionOutputAssert { indexs: vec![self.index] })
     }
 
+    fn encode(self) -> Vec<u8> {
+        vec![Self::ID, self.index]
+    }
+
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
         if datas.remaining() < Self::OPERAND_SIZE {
             bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
@@ -58,6 +63,10 @@ impl BasicOpcode for OutputIndexFlag16Assert {
         let indexs = [u8_to_pos(self.index_flag[0], 0), u8_to_pos(self.index_flag[1], 1)].concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
+    }
+
+    fn encode(self) -> Vec<u8> {
+        vec![Self::ID, self.index_flag[0], self.index_flag[1]]
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
@@ -85,6 +94,16 @@ impl BasicOpcode for OutputIndexFlag32Assert {
         let indexs = [0_u8, 1, 2, 3].map(|c| u8_to_pos(self.index_flag[c as usize], c)).concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
+    }
+
+    fn encode(self) -> Vec<u8> {
+        vec![
+            Self::ID,
+            self.index_flag[0],
+            self.index_flag[1],
+            self.index_flag[2],
+            self.index_flag[3],
+        ]
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {

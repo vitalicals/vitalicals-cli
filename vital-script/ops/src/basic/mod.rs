@@ -10,7 +10,7 @@ pub use op_input::*;
 pub use op_output::*;
 pub use op_transfer::*;
 
-use vital_script_instruction::Instruction;
+use crate::instruction::Instruction;
 
 pub trait BasicOpcode: Sized {
     const OPERAND_SIZE: usize;
@@ -18,5 +18,6 @@ pub trait BasicOpcode: Sized {
 
     fn into_instruction(self) -> Instruction;
 
+    fn encode(self) -> Vec<u8>;
     fn decode_operand(datas: &mut Bytes) -> Result<Self>;
 }

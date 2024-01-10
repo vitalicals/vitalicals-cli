@@ -3,9 +3,9 @@
 use anyhow::{bail, Context, Result};
 use bytes::Bytes;
 
-use vital_script_instruction::Instruction;
+use crate::instruction::Instruction;
 
-use crate::basic::BasicOpcode;
+pub use crate::basic::BasicOpcode;
 
 #[repr(u8)]
 pub enum BasicOp {
@@ -14,14 +14,14 @@ pub enum BasicOp {
     OutputIndexFlag32Assert = 0x0c,
 
     InputVRC20AssertSa32 = 0x0d,
-    InputVRC20AssertSa64 = 0x0e,
-    InputVRC20AssertSa128 = 0x0f,
-    InputVRC20AssertSa256 = 0x10,
+    InputVRC20AssertSa64,  // = 0x0e,
+    InputVRC20AssertSa128, // = 0x0f,
+    InputVRC20AssertSa256, // = 0x10,
 
     InputVRC20AssertA32 = 0x11,
-    InputVRC20AssertA64 = 0x12,
-    InputVRC20AssertA128 = 0x13,
-    InputVRC20AssertA256 = 0x14,
+    InputVRC20AssertA64,  // = 0x12,
+    InputVRC20AssertA128, // = 0x13,
+    InputVRC20AssertA256, // = 0x14,
 
     InputVRC721Assert = 0x15,
 

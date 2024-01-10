@@ -1,6 +1,6 @@
 //! The name type
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use bytes::{Buf, Bytes};
 
 use crate::names::*;
@@ -220,11 +220,11 @@ impl std::string::ToString for Name {
 
 #[cfg(feature = "std")]
 impl TryFrom<String> for Name {
-    type Error = String;
+    type Error = anyhow::Error;
 
     fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
         if value.len() > NAME_LEN_MAX {
-            return Err("the string len too large".to_string());
+            bail!("the string len too large");
         }
 
         let mut res = Name::default();
@@ -234,7 +234,7 @@ impl TryFrom<String> for Name {
         }
 
         for c in value.chars() {
-            res.push(c).map_err(|err| err.to_string())?;
+            res.push(c).map_err(|err| anyhow!(err.to_string()))?;
         }
 
         Ok(res)

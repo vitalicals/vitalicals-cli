@@ -21,7 +21,6 @@ members = [
 
     "vital-script",
     "vital-script/primitives",
-    "vital-script/instruction",
     "vital-script/ops",
     "vital-script/runner",
 
@@ -68,7 +67,6 @@ vital-primitives = { path = "./primitives" }
 
 vital-script = { path = "./vital-script" }
 vital-script-primitives = { path = "./vital-script/primitives" }
-vital-script-instruction = { path = "./vital-script/instruction" }
 vital-script-ops = { path = "./vital-script/ops" }
 vital-script-runner = { path = "./vital-script/runner" }
 

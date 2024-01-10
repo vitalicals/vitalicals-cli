@@ -1,10 +1,10 @@
 use alloc::vec::Vec;
 use anyhow::{bail, Context, Result};
 use bytes::{Buf, Bytes};
-use vital_script_instruction::Instruction;
 
 use crate::{
     basic::{self},
+    instruction::Instruction,
     opcodes::BasicOp,
 };
 

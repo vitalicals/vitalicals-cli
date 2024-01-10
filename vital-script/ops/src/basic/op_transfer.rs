@@ -1,9 +1,8 @@
 use anyhow::{bail, Context, Result};
 use bytes::{Buf, Bytes};
-use vital_script_instruction::Instruction;
 use vital_script_primitives::names::{Name, ShortName};
 
-use crate::{consts::*, opcodes::BasicOp};
+use crate::{consts::*, instruction::Instruction, opcodes::BasicOp};
 
 use super::BasicOpcode;
 
@@ -19,6 +18,10 @@ impl BasicOpcode for TransferAllVRC20S {
 
     fn into_instruction(self) -> Instruction {
         todo!()
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.name.0.to_vec(), vec![self.output_index]].concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
@@ -45,6 +48,10 @@ impl BasicOpcode for TransferAllVRC20 {
 
     fn into_instruction(self) -> Instruction {
         todo!()
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [vec![Self::ID], self.name.0.to_vec(), vec![self.output_index]].concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
@@ -74,6 +81,16 @@ impl BasicOpcode for TransferVRC20Sa32 {
         todo!()
     }
 
+    fn encode(self) -> Vec<u8> {
+        [
+            vec![Self::ID],
+            self.name.0.to_vec(),
+            self.amount.to_be_bytes().to_vec(),
+            vec![self.output_index],
+        ]
+        .concat()
+    }
+
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
         if datas.remaining() < Self::OPERAND_SIZE {
             bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
@@ -100,6 +117,16 @@ impl BasicOpcode for TransferVRC20A32 {
 
     fn into_instruction(self) -> Instruction {
         todo!()
+    }
+
+    fn encode(self) -> Vec<u8> {
+        [
+            vec![Self::ID],
+            self.name.0.to_vec(),
+            self.amount.to_be_bytes().to_vec(),
+            vec![self.output_index],
+        ]
+        .concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
