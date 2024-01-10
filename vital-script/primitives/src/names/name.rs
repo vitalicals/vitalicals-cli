@@ -1,6 +1,7 @@
 //! The name type
 
 use anyhow::{bail, Result};
+use bytes::{Buf, Bytes};
 
 use crate::names::*;
 
@@ -19,8 +20,22 @@ pub const NAME_BYTES_LEN: usize = 8;
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
 
 impl Name {
+    pub const SIZE: usize = NAME_BYTES_LEN;
+
     pub fn new(v: [u8; NAME_BYTES_LEN]) -> Self {
         Self(v)
+    }
+
+    pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::SIZE {
+            bail!("ShortName bytes not enough");
+        }
+
+        let mut v = [0_u8; Self::SIZE];
+
+        datas.copy_to_slice(&mut v);
+
+        Ok(Self::new(v))
     }
 
     pub fn is_valid(&self) -> bool {

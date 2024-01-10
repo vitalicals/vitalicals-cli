@@ -1,6 +1,7 @@
 //! The short name type
 
 use anyhow::{bail, Result};
+use bytes::{Buf, Bytes};
 
 use crate::names::*;
 
@@ -18,8 +19,22 @@ pub const SHORT_NAME_LEN_MAX: usize = 5;
 pub struct ShortName(pub [u8; 4]);
 
 impl ShortName {
-    pub fn new(v: [u8; 4]) -> Self {
+    pub const SIZE: usize = 4;
+
+    pub fn new(v: [u8; Self::SIZE]) -> Self {
         Self(v)
+    }
+
+    pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::SIZE {
+            bail!("ShortName bytes not enough");
+        }
+
+        let mut v = [0_u8; Self::SIZE];
+
+        datas.copy_to_slice(&mut v);
+
+        Ok(Self::new(v))
     }
 
     pub fn is_valid(&self) -> bool {

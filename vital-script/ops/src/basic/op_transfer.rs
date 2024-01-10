@@ -1,7 +1,9 @@
+use anyhow::{bail, Context, Result};
+use bytes::{Buf, Bytes};
 use vital_script_instruction::Instruction;
 use vital_script_primitives::names::{Name, ShortName};
 
-use crate::opcodes::BasicOp;
+use crate::{consts::*, opcodes::BasicOp};
 
 use super::BasicOpcode;
 
@@ -12,12 +14,22 @@ pub struct TransferAllVRC20S {
 }
 
 impl BasicOpcode for TransferAllVRC20S {
-    fn id(&self) -> u8 {
-        BasicOp::TransferAllVRC20S as u8
-    }
+    const ID: u8 = BasicOp::TransferAllVRC20S as u8;
+    const OPERAND_SIZE: usize = ShortName::SIZE + 1;
 
     fn into_instruction(self) -> Instruction {
         todo!()
+    }
+
+    fn decode_operand(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::OPERAND_SIZE {
+            bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
+        }
+
+        let name = ShortName::from_bytes(datas).context("name")?;
+        let output_index = datas.get_u8();
+
+        Ok(Self { name, output_index })
     }
 }
 
@@ -28,12 +40,22 @@ pub struct TransferAllVRC20 {
 }
 
 impl BasicOpcode for TransferAllVRC20 {
-    fn id(&self) -> u8 {
-        BasicOp::TransferAllVRC20 as u8
-    }
+    const OPERAND_SIZE: usize = Name::SIZE + 1;
+    const ID: u8 = BasicOp::TransferAllVRC20 as u8;
 
     fn into_instruction(self) -> Instruction {
         todo!()
+    }
+
+    fn decode_operand(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::OPERAND_SIZE {
+            bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
+        }
+
+        let name = Name::from_bytes(datas).context("name")?;
+        let output_index = datas.get_u8();
+
+        Ok(Self { name, output_index })
     }
 }
 
@@ -45,12 +67,23 @@ pub struct TransferVRC20Sa32 {
 }
 
 impl BasicOpcode for TransferVRC20Sa32 {
-    fn id(&self) -> u8 {
-        BasicOp::TransferVRC20Sa32 as u8
-    }
+    const OPERAND_SIZE: usize = ShortName::SIZE + U32_SIZE + 1;
+    const ID: u8 = BasicOp::TransferVRC20Sa32 as u8;
 
     fn into_instruction(self) -> Instruction {
         todo!()
+    }
+
+    fn decode_operand(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::OPERAND_SIZE {
+            bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
+        }
+
+        let name = ShortName::from_bytes(datas).context("name")?;
+        let amount = datas.get_u32();
+        let output_index = datas.get_u8();
+
+        Ok(Self { name, amount, output_index })
     }
 }
 
@@ -62,12 +95,23 @@ pub struct TransferVRC20A32 {
 }
 
 impl BasicOpcode for TransferVRC20A32 {
-    fn id(&self) -> u8 {
-        BasicOp::TransferVRC20A32 as u8
-    }
+    const OPERAND_SIZE: usize = ShortName::SIZE + U32_SIZE + 1;
+    const ID: u8 = BasicOp::TransferVRC20A32 as u8;
 
     fn into_instruction(self) -> Instruction {
         todo!()
+    }
+
+    fn decode_operand(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::OPERAND_SIZE {
+            bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
+        }
+
+        let name = Name::from_bytes(datas).context("name")?;
+        let amount = datas.get_u32();
+        let output_index = datas.get_u8();
+
+        Ok(Self { name, amount, output_index })
     }
 }
 

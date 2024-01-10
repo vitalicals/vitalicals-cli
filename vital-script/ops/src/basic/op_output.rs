@@ -1,3 +1,6 @@
+use anyhow::{bail, Result};
+use bytes::{Buf, Bytes};
+
 use vital_script_instruction::{assert_output::InstructionOutputAssert, Instruction};
 
 use crate::opcodes::BasicOp;
@@ -24,12 +27,21 @@ pub struct OutputIndexAssert {
 }
 
 impl BasicOpcode for OutputIndexAssert {
-    fn id(&self) -> u8 {
-        BasicOp::OutputIndexAssert as u8
-    }
+    const ID: u8 = BasicOp::OutputIndexAssert as u8;
+    const OPERAND_SIZE: usize = 1;
 
     fn into_instruction(self) -> Instruction {
         Instruction::Output(InstructionOutputAssert { indexs: vec![self.index] })
+    }
+
+    fn decode_operand(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::OPERAND_SIZE {
+            bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
+        }
+
+        let index = datas.get_u8();
+
+        Ok(Self { index })
     }
 }
 
@@ -39,14 +51,24 @@ pub struct OutputIndexFlag16Assert {
 }
 
 impl BasicOpcode for OutputIndexFlag16Assert {
-    fn id(&self) -> u8 {
-        BasicOp::OutputIndexFlag16Assert as u8
-    }
+    const ID: u8 = BasicOp::OutputIndexFlag16Assert as u8;
+    const OPERAND_SIZE: usize = 2;
 
     fn into_instruction(self) -> Instruction {
         let indexs = [u8_to_pos(self.index_flag[0], 0), u8_to_pos(self.index_flag[1], 1)].concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
+    }
+
+    fn decode_operand(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::OPERAND_SIZE {
+            bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
+        }
+
+        let mut index_flag = [0_u8; 2];
+        datas.copy_to_slice(&mut index_flag);
+
+        Ok(Self { index_flag })
     }
 }
 
@@ -56,13 +78,23 @@ pub struct OutputIndexFlag32Assert {
 }
 
 impl BasicOpcode for OutputIndexFlag32Assert {
-    fn id(&self) -> u8 {
-        BasicOp::OutputIndexFlag32Assert as u8
-    }
+    const ID: u8 = BasicOp::OutputIndexFlag32Assert as u8;
+    const OPERAND_SIZE: usize = 4;
 
     fn into_instruction(self) -> Instruction {
         let indexs = [0_u8, 1, 2, 3].map(|c| u8_to_pos(self.index_flag[c as usize], c)).concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
+    }
+
+    fn decode_operand(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::OPERAND_SIZE {
+            bail!("not enough bytes for {}, expect {}", Self::ID, Self::OPERAND_SIZE);
+        }
+
+        let mut index_flag = [0_u8; 4];
+        datas.copy_to_slice(&mut index_flag);
+
+        Ok(Self { index_flag })
     }
 }
