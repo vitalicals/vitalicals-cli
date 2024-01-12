@@ -6,5 +6,6 @@
 
 pub mod names;
 pub mod resources;
+pub mod traits;
 
 pub use primitive_types::{H256, U256};

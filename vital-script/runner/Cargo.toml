@@ -7,12 +7,12 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-vital-script-opcodes.workspace = true
+vital-script-ops.workspace = true
 vital-script-primitives.workspace = true
 
 [features]
 default = ["std"]
 std = [
-    "vital-script-opcodes/std",
+    "vital-script-ops/std",
     "vital-script-primitives/std",
 ]

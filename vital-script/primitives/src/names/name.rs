@@ -1,6 +1,7 @@
 //! The name type
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
+use bytes::{Buf, Bytes};
 
 use crate::names::*;
 
@@ -15,12 +16,26 @@ pub const NAME_BYTES_LEN: usize = 8;
 /// |   0    |    1      |     2     |    3   |   4    |    5       |     6     |   7    |   8    |    9      |  len |
 ///
 /// The len just for 0 - 3
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
 
 impl Name {
+    pub const SIZE: usize = NAME_BYTES_LEN;
+
     pub fn new(v: [u8; NAME_BYTES_LEN]) -> Self {
         Self(v)
+    }
+
+    pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::SIZE {
+            bail!("ShortName bytes not enough");
+        }
+
+        let mut v = [0_u8; Self::SIZE];
+
+        datas.copy_to_slice(&mut v);
+
+        Ok(Self::new(v))
     }
 
     pub fn is_valid(&self) -> bool {
@@ -205,11 +220,11 @@ impl std::string::ToString for Name {
 
 #[cfg(feature = "std")]
 impl TryFrom<String> for Name {
-    type Error = String;
+    type Error = anyhow::Error;
 
     fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
         if value.len() > NAME_LEN_MAX {
-            return Err("the string len too large".to_string());
+            bail!("the string len too large");
         }
 
         let mut res = Name::default();
@@ -219,19 +234,39 @@ impl TryFrom<String> for Name {
         }
 
         for c in value.chars() {
-            res.push(c).map_err(|err| err.to_string())?;
+            res.push(c).map_err(|err| anyhow!(err.to_string()))?;
         }
 
         Ok(res)
     }
 }
 
+impl From<ShortName> for Name {
+    fn from(value: ShortName) -> Self {
+        let mut res = Name::default();
+
+        for i in 0..SHORT_NAME_LEN_MAX {
+            let v = value.index_value(i);
+            if v == 0 {
+                break;
+            } else {
+                res.push(u8_to_char(v).expect("should valid")).expect("short should ok");
+            }
+        }
+
+        res
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "std")]
     use crate::names::char2u8;
 
+    #[cfg(feature = "std")]
     use super::Name;
 
+    #[cfg(feature = "std")]
     fn test_name_new_by(name: &str) {
         let n = Name::try_from(name.to_string()).expect(format!("try from {}", name).as_str());
 
@@ -251,6 +286,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_name_new() {
         test_name_new_by("");
         test_name_new_by("a");
@@ -298,6 +334,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_name_new_failed() {
         assert!(Name::try_from(" ".to_string()).is_err());
         assert!(Name::try_from("a a".to_string()).is_err());

@@ -1,9 +1,16 @@
 //! The VRC721 Token
 
-use crate::{names::Name, H256};
+use super::Tag;
+use crate::H256;
 
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct VRC721 {
-    pub name: Name,
+    pub name: Tag,
     pub hash: H256,
+}
+
+impl VRC721 {
+    pub fn new(name: Tag, hash: H256) -> Self {
+        Self { name, hash }
+    }
 }

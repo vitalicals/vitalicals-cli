@@ -1,6 +1,7 @@
 //! The short name type
 
 use anyhow::{bail, Result};
+use bytes::{Buf, Bytes};
 
 use crate::names::*;
 
@@ -18,8 +19,22 @@ pub const SHORT_NAME_LEN_MAX: usize = 5;
 pub struct ShortName(pub [u8; 4]);
 
 impl ShortName {
-    pub fn new(v: [u8; 4]) -> Self {
+    pub const SIZE: usize = 4;
+
+    pub fn new(v: [u8; Self::SIZE]) -> Self {
         Self(v)
+    }
+
+    pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {
+        if datas.remaining() < Self::SIZE {
+            bail!("ShortName bytes not enough");
+        }
+
+        let mut v = [0_u8; Self::SIZE];
+
+        datas.copy_to_slice(&mut v);
+
+        Ok(Self::new(v))
     }
 
     pub fn is_valid(&self) -> bool {
@@ -132,6 +147,29 @@ impl ShortName {
     }
 }
 
+impl TryFrom<Name> for ShortName {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Name) -> Result<Self> {
+        let len = value.len();
+        if len > SHORT_NAME_LEN_MAX {
+            bail!("the name is too long")
+        }
+
+        let mut res = ShortName::default();
+        for i in 0..SHORT_NAME_LEN_MAX {
+            let v = value.index_value(i);
+            if v == 0 {
+                break;
+            } else {
+                res.push(u8_to_char(v).expect("should valid")).expect("short should ok");
+            }
+        }
+
+        Ok(res)
+    }
+}
+
 #[cfg(feature = "std")]
 impl std::string::ToString for ShortName {
     fn to_string(&self) -> String {
@@ -170,6 +208,7 @@ impl TryFrom<String> for ShortName {
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod tests {
     use crate::names::char2u8;
 
