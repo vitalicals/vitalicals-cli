@@ -2,10 +2,8 @@
 
 use anyhow::{bail, Context as AnyhowContext, Result};
 use vital_script_primitives::{
-    names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
     resources::{Resource, VRC20, VRC721},
     traits::*,
-    U256,
 };
 
 use crate::{
@@ -42,7 +40,7 @@ impl VitalInstruction for InstructionInputAssert {
 
     fn into_ops_bytes(self) -> Result<Vec<u8>> {
         match self.resource {
-            Resource::Name(name) => {
+            Resource::Name(_name) => {
                 todo!("add input name assert")
             }
             Resource::VRC20(vrc20) => Self::into_input_vrc20(vrc20, self.index),
