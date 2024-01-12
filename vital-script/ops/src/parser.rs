@@ -61,6 +61,7 @@ impl Parser {
                     $(
                         BasicOp::$x => decode_operand!($x),
                     )*
+                    _ => panic!("Not supported opcode")
                 }
             }
         }

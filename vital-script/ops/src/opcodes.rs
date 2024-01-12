@@ -25,13 +25,34 @@ pub enum BasicOp {
 
     InputVRC721Assert = 0x15,
 
-    TransferAllVRC20S = 0x16,
+    TransferAllVRC20S = 0x16, // 22
     TransferAllVRC20 = 0x17,
 
-    TransferVRC20Sa32 = 0x18,
-    TransferVRC20A32 = 0x19,
-    // Mint
-    // Burn
+    TransferVRC20Sa32 = 0x18, // 24
+    TransferVRC20Sa64,        // = 0x19,
+    TransferVRC20Sa128,       // = 0x1a,
+    TransferVRC20Sa256,       // = 0x1b,
+
+    TransferVRC20A32,  // = 0x1c,
+    TransferVRC20A64,  // = 0x1d,
+    TransferVRC20A128, // = 0x1e,
+    TransferVRC20A256, // = 0x1f,
+
+    TransferVRC721 = 0x20,
+
+    MintShortName, // = 0x21,
+    MintName,      // = 0x22,
+
+    MintShortVRC20, // = 0x23,
+    MintVRC20,      // = 0x24,
+    MintVRC721,     // = 0x25,
+
+    DMintShortVRC20, // = 0x26,
+    DMintVRC20,      // = 0x27,
+    DMintVRC721,     // = 0x28,
+
+                     // Mint
+                     // Burn
 }
 
 impl BasicOp {
