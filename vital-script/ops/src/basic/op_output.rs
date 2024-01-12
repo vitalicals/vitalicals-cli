@@ -6,7 +6,7 @@ use crate::{
     opcodes::BasicOp,
 };
 
-use super::BasicOpcode;
+use super::*;
 
 #[inline]
 fn u8_to_pos(i: u8, c: u8) -> Vec<u8> {
@@ -27,13 +27,16 @@ pub struct OutputIndexAssert {
     pub index: u8,
 }
 
-impl BasicOpcode for OutputIndexAssert {
+impl Opcode for OutputIndexAssert {
     const ID: u8 = BasicOp::OutputIndexAssert as u8;
-    const OPERAND_SIZE: usize = 1;
 
     fn into_instruction(self) -> Instruction {
         Instruction::Output(InstructionOutputAssert { indexs: vec![self.index] })
     }
+}
+
+impl BasicOpcodeCodec for OutputIndexAssert {
+    const OPERAND_SIZE: usize = 1;
 
     fn encode(self) -> Vec<u8> {
         vec![Self::ID, self.index]
@@ -55,15 +58,18 @@ pub struct OutputIndexFlag16Assert {
     pub index_flag: [u8; 2],
 }
 
-impl BasicOpcode for OutputIndexFlag16Assert {
+impl Opcode for OutputIndexFlag16Assert {
     const ID: u8 = BasicOp::OutputIndexFlag16Assert as u8;
-    const OPERAND_SIZE: usize = 2;
 
     fn into_instruction(self) -> Instruction {
         let indexs = [u8_to_pos(self.index_flag[0], 0), u8_to_pos(self.index_flag[1], 1)].concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
     }
+}
+
+impl BasicOpcodeCodec for OutputIndexFlag16Assert {
+    const OPERAND_SIZE: usize = 2;
 
     fn encode(self) -> Vec<u8> {
         vec![Self::ID, self.index_flag[0], self.index_flag[1]]
@@ -86,15 +92,18 @@ pub struct OutputIndexFlag32Assert {
     pub index_flag: [u8; 4],
 }
 
-impl BasicOpcode for OutputIndexFlag32Assert {
+impl Opcode for OutputIndexFlag32Assert {
     const ID: u8 = BasicOp::OutputIndexFlag32Assert as u8;
-    const OPERAND_SIZE: usize = 4;
 
     fn into_instruction(self) -> Instruction {
         let indexs = [0_u8, 1, 2, 3].map(|c| u8_to_pos(self.index_flag[c as usize], c)).concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
     }
+}
+
+impl BasicOpcodeCodec for OutputIndexFlag32Assert {
+    const OPERAND_SIZE: usize = 4;
 
     fn encode(self) -> Vec<u8> {
         vec![

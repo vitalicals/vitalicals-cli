@@ -12,7 +12,7 @@ use crate::{
     opcodes::BasicOp,
 };
 
-use super::BasicOpcode;
+use super::*;
 
 /// Input VRC20 Res Assert for (ShortName, u32 amount)
 pub struct InputVRC20AssertSa32 {
@@ -21,8 +21,7 @@ pub struct InputVRC20AssertSa32 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertSa32 {
-    const OPERAND_SIZE: usize = U32_SIZE + ShortName::SIZE + 1;
+impl Opcode for InputVRC20AssertSa32 {
     const ID: u8 = BasicOp::InputVRC20AssertSa32 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -31,6 +30,10 @@ impl BasicOpcode for InputVRC20AssertSa32 {
             resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertSa32 {
+    const OPERAND_SIZE: usize = U32_SIZE + ShortName::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
@@ -57,8 +60,7 @@ pub struct InputVRC20AssertSa64 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertSa64 {
-    const OPERAND_SIZE: usize = U64_SIZE + ShortName::SIZE + 1;
+impl Opcode for InputVRC20AssertSa64 {
     const ID: u8 = BasicOp::InputVRC20AssertSa64 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -67,6 +69,10 @@ impl BasicOpcode for InputVRC20AssertSa64 {
             resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertSa64 {
+    const OPERAND_SIZE: usize = U64_SIZE + ShortName::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
@@ -93,8 +99,7 @@ pub struct InputVRC20AssertSa128 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertSa128 {
-    const OPERAND_SIZE: usize = U128_SIZE + ShortName::SIZE + 1;
+impl Opcode for InputVRC20AssertSa128 {
     const ID: u8 = BasicOp::InputVRC20AssertSa128 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -103,6 +108,10 @@ impl BasicOpcode for InputVRC20AssertSa128 {
             resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertSa128 {
+    const OPERAND_SIZE: usize = U128_SIZE + ShortName::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
@@ -129,8 +138,7 @@ pub struct InputVRC20AssertSa256 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertSa256 {
-    const OPERAND_SIZE: usize = U256_SIZE + ShortName::SIZE + 1;
+impl Opcode for InputVRC20AssertSa256 {
     const ID: u8 = BasicOp::InputVRC20AssertSa256 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -139,6 +147,10 @@ impl BasicOpcode for InputVRC20AssertSa256 {
             resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount)),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertSa256 {
+    const OPERAND_SIZE: usize = U256_SIZE + ShortName::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         let mut amount_bytes = [0_u8; 32];
@@ -167,8 +179,7 @@ pub struct InputVRC20AssertA32 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertA32 {
-    const OPERAND_SIZE: usize = U32_SIZE + Name::SIZE + 1;
+impl Opcode for InputVRC20AssertA32 {
     const ID: u8 = BasicOp::InputVRC20AssertA32 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -177,6 +188,10 @@ impl BasicOpcode for InputVRC20AssertA32 {
             resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertA32 {
+    const OPERAND_SIZE: usize = U32_SIZE + Name::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
@@ -203,8 +218,7 @@ pub struct InputVRC20AssertA64 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertA64 {
-    const OPERAND_SIZE: usize = U64_SIZE + Name::SIZE + 1;
+impl Opcode for InputVRC20AssertA64 {
     const ID: u8 = BasicOp::InputVRC20AssertA64 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -213,6 +227,10 @@ impl BasicOpcode for InputVRC20AssertA64 {
             resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertA64 {
+    const OPERAND_SIZE: usize = U64_SIZE + Name::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
@@ -239,8 +257,7 @@ pub struct InputVRC20AssertA128 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertA128 {
-    const OPERAND_SIZE: usize = U128_SIZE + Name::SIZE + 1;
+impl Opcode for InputVRC20AssertA128 {
     const ID: u8 = BasicOp::InputVRC20AssertA128 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -249,6 +266,10 @@ impl BasicOpcode for InputVRC20AssertA128 {
             resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertA128 {
+    const OPERAND_SIZE: usize = U128_SIZE + Name::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         [vec![Self::ID], self.amount.to_be_bytes().to_vec(), self.name.0.to_vec(), vec![self.index]]
@@ -275,8 +296,7 @@ pub struct InputVRC20AssertA256 {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC20AssertA256 {
-    const OPERAND_SIZE: usize = U256_SIZE + Name::SIZE + 1;
+impl Opcode for InputVRC20AssertA256 {
     const ID: u8 = BasicOp::InputVRC20AssertA256 as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -285,6 +305,10 @@ impl BasicOpcode for InputVRC20AssertA256 {
             resource: Resource::VRC20(VRC20::new(self.name, self.amount)),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC20AssertA256 {
+    const OPERAND_SIZE: usize = U256_SIZE + Name::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         let mut amount_bytes = [0_u8; 32];
@@ -313,8 +337,7 @@ pub struct InputVRC721Assert {
     pub index: u8,
 }
 
-impl BasicOpcode for InputVRC721Assert {
-    const OPERAND_SIZE: usize = H256_SIZE + Name::SIZE + 1;
+impl Opcode for InputVRC721Assert {
     const ID: u8 = BasicOp::InputVRC721Assert as u8;
 
     fn into_instruction(self) -> Instruction {
@@ -323,6 +346,10 @@ impl BasicOpcode for InputVRC721Assert {
             resource: Resource::VRC721(VRC721::new(self.name, self.hash)),
         })
     }
+}
+
+impl BasicOpcodeCodec for InputVRC721Assert {
+    const OPERAND_SIZE: usize = H256_SIZE + Name::SIZE + 1;
 
     fn encode(self) -> Vec<u8> {
         [

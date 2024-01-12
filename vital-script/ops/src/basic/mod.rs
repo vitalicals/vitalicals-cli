@@ -16,12 +16,19 @@ pub use op_transfer::*;
 
 use crate::instruction::Instruction;
 
-pub trait BasicOpcode: Sized {
-    const OPERAND_SIZE: usize;
+pub trait Opcode: Sized {
     const ID: u8;
 
     fn into_instruction(self) -> Instruction;
+}
+
+pub trait BasicOpcodeCodec: Opcode {
+    const OPERAND_SIZE: usize;
 
     fn encode(self) -> Vec<u8>;
     fn decode_operand(datas: &mut Bytes) -> Result<Self>;
 }
+
+pub trait BasicOpcode: Opcode + BasicOpcodeCodec {}
+
+impl<T> BasicOpcode for T where T: BasicOpcodeCodec {}

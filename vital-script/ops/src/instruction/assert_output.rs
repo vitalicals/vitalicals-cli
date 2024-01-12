@@ -5,7 +5,9 @@ use anyhow::{bail, Result};
 use vital_script_primitives::traits::*;
 
 use crate::{
-    basic::{BasicOpcode, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert},
+    basic::{
+        BasicOpcodeCodec, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert,
+    },
     instruction::VitalInstruction,
 };
 
