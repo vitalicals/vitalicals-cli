@@ -23,6 +23,7 @@ members = [
     "vital-script/primitives",
     "vital-script/ops",
     "vital-script/runner",
+    "vital-script/derive",
 
     "interfaces/electrum",
 
