@@ -27,12 +27,14 @@ pub struct OutputIndexAssert {
     pub index: u8,
 }
 
+impl From<OutputIndexAssert> for Instruction {
+    fn from(value: OutputIndexAssert) -> Self {
+        Instruction::Output(InstructionOutputAssert { indexs: vec![value.index] })
+    }
+}
+
 impl Opcode for OutputIndexAssert {
     const ID: u8 = BasicOp::OutputIndexAssert as u8;
-
-    fn into_instruction(self) -> Instruction {
-        Instruction::Output(InstructionOutputAssert { indexs: vec![self.index] })
-    }
 }
 
 impl BasicOpcodeCodec for OutputIndexAssert {
@@ -58,14 +60,17 @@ pub struct OutputIndexFlag16Assert {
     pub index_flag: [u8; 2],
 }
 
-impl Opcode for OutputIndexFlag16Assert {
-    const ID: u8 = BasicOp::OutputIndexFlag16Assert as u8;
-
-    fn into_instruction(self) -> Instruction {
-        let indexs = [u8_to_pos(self.index_flag[0], 0), u8_to_pos(self.index_flag[1], 1)].concat();
+impl From<OutputIndexFlag16Assert> for Instruction {
+    fn from(value: OutputIndexFlag16Assert) -> Self {
+        let indexs =
+            [u8_to_pos(value.index_flag[0], 0), u8_to_pos(value.index_flag[1], 1)].concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
     }
+}
+
+impl Opcode for OutputIndexFlag16Assert {
+    const ID: u8 = BasicOp::OutputIndexFlag16Assert as u8;
 }
 
 impl BasicOpcodeCodec for OutputIndexFlag16Assert {
@@ -92,14 +97,16 @@ pub struct OutputIndexFlag32Assert {
     pub index_flag: [u8; 4],
 }
 
-impl Opcode for OutputIndexFlag32Assert {
-    const ID: u8 = BasicOp::OutputIndexFlag32Assert as u8;
-
-    fn into_instruction(self) -> Instruction {
-        let indexs = [0_u8, 1, 2, 3].map(|c| u8_to_pos(self.index_flag[c as usize], c)).concat();
+impl From<OutputIndexFlag32Assert> for Instruction {
+    fn from(value: OutputIndexFlag32Assert) -> Self {
+        let indexs = [0_u8, 1, 2, 3].map(|c| u8_to_pos(value.index_flag[c as usize], c)).concat();
 
         Instruction::Output(InstructionOutputAssert { indexs })
     }
+}
+
+impl Opcode for OutputIndexFlag32Assert {
+    const ID: u8 = BasicOp::OutputIndexFlag32Assert as u8;
 }
 
 impl BasicOpcodeCodec for OutputIndexFlag32Assert {

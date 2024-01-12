@@ -21,15 +21,17 @@ pub struct InputVRC20AssertSa32 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertSa32 {
-    const ID: u8 = BasicOp::InputVRC20AssertSa32 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertSa32> for Instruction {
+    fn from(value: InputVRC20AssertSa32) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name.into(), value.amount.into())),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertSa32 {
+    const ID: u8 = BasicOp::InputVRC20AssertSa32 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertSa32 {
@@ -60,15 +62,17 @@ pub struct InputVRC20AssertSa64 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertSa64 {
-    const ID: u8 = BasicOp::InputVRC20AssertSa64 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertSa64> for Instruction {
+    fn from(value: InputVRC20AssertSa64) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name.into(), value.amount.into())),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertSa64 {
+    const ID: u8 = BasicOp::InputVRC20AssertSa64 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertSa64 {
@@ -99,15 +103,17 @@ pub struct InputVRC20AssertSa128 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertSa128 {
-    const ID: u8 = BasicOp::InputVRC20AssertSa128 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertSa128> for Instruction {
+    fn from(value: InputVRC20AssertSa128) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount.into())),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name.into(), value.amount.into())),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertSa128 {
+    const ID: u8 = BasicOp::InputVRC20AssertSa128 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertSa128 {
@@ -138,15 +144,17 @@ pub struct InputVRC20AssertSa256 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertSa256 {
-    const ID: u8 = BasicOp::InputVRC20AssertSa256 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertSa256> for Instruction {
+    fn from(value: InputVRC20AssertSa256) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name.into(), self.amount)),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name.into(), value.amount)),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertSa256 {
+    const ID: u8 = BasicOp::InputVRC20AssertSa256 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertSa256 {
@@ -179,15 +187,17 @@ pub struct InputVRC20AssertA32 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertA32 {
-    const ID: u8 = BasicOp::InputVRC20AssertA32 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertA32> for Instruction {
+    fn from(value: InputVRC20AssertA32) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name, value.amount.into())),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertA32 {
+    const ID: u8 = BasicOp::InputVRC20AssertA32 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertA32 {
@@ -218,15 +228,17 @@ pub struct InputVRC20AssertA64 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertA64 {
-    const ID: u8 = BasicOp::InputVRC20AssertA64 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertA64> for Instruction {
+    fn from(value: InputVRC20AssertA64) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name, value.amount.into())),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertA64 {
+    const ID: u8 = BasicOp::InputVRC20AssertA64 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertA64 {
@@ -257,15 +269,17 @@ pub struct InputVRC20AssertA128 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertA128 {
-    const ID: u8 = BasicOp::InputVRC20AssertA128 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertA128> for Instruction {
+    fn from(value: InputVRC20AssertA128) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name, self.amount.into())),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name, value.amount.into())),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertA128 {
+    const ID: u8 = BasicOp::InputVRC20AssertA128 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertA128 {
@@ -296,15 +310,17 @@ pub struct InputVRC20AssertA256 {
     pub index: u8,
 }
 
-impl Opcode for InputVRC20AssertA256 {
-    const ID: u8 = BasicOp::InputVRC20AssertA256 as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC20AssertA256> for Instruction {
+    fn from(value: InputVRC20AssertA256) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC20(VRC20::new(self.name, self.amount)),
+            index: value.index,
+            resource: Resource::VRC20(VRC20::new(value.name, value.amount)),
         })
     }
+}
+
+impl Opcode for InputVRC20AssertA256 {
+    const ID: u8 = BasicOp::InputVRC20AssertA256 as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC20AssertA256 {
@@ -337,15 +353,17 @@ pub struct InputVRC721Assert {
     pub index: u8,
 }
 
-impl Opcode for InputVRC721Assert {
-    const ID: u8 = BasicOp::InputVRC721Assert as u8;
-
-    fn into_instruction(self) -> Instruction {
+impl From<InputVRC721Assert> for Instruction {
+    fn from(value: InputVRC721Assert) -> Self {
         Instruction::Input(InstructionInputAssert {
-            index: self.index,
-            resource: Resource::VRC721(VRC721::new(self.name, self.hash)),
+            index: value.index,
+            resource: Resource::VRC721(VRC721::new(value.name, value.hash)),
         })
     }
+}
+
+impl Opcode for InputVRC721Assert {
+    const ID: u8 = BasicOp::InputVRC721Assert as u8;
 }
 
 impl BasicOpcodeCodec for InputVRC721Assert {

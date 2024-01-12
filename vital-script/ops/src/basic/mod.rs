@@ -16,10 +16,8 @@ pub use op_transfer::*;
 
 use crate::instruction::Instruction;
 
-pub trait Opcode: Sized {
+pub trait Opcode: Sized + Into<Instruction> {
     const ID: u8;
-
-    fn into_instruction(self) -> Instruction;
 }
 
 pub trait BasicOpcodeCodec: Opcode {

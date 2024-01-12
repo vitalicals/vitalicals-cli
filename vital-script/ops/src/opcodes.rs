@@ -82,6 +82,6 @@ impl BasicOp {
     where
         Op: BasicOpcode,
     {
-        Ok(Op::decode_operand(datas).context("decode operand")?.into_instruction())
+        Ok(Op::decode_operand(datas).context("decode operand")?.into())
     }
 }
