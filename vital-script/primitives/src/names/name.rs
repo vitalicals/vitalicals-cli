@@ -2,6 +2,8 @@
 
 use anyhow::{anyhow, bail, Result};
 use bytes::{Buf, Bytes};
+use parity_scale_codec::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 
 use crate::names::*;
 
@@ -17,6 +19,8 @@ pub const NAME_BYTES_LEN: usize = 8;
 ///
 /// The len just for 0 - 3
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Deserialize, Serialize)]
+#[derive(Encode, Decode)]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
 
 impl Name {

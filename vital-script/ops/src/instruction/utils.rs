@@ -1,6 +1,7 @@
 //! Some utils for into opcode.
 //!
 
+use alloc::vec::Vec;
 use anyhow::Result;
 use vital_script_primitives::{
     names::{ShortName, NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
@@ -45,6 +46,7 @@ impl Vrc20ResourceOperand {
     }
 
     pub fn to_input_vrc20_opcode_bytes(mut self, index: u8) -> Result<Vec<u8>> {
+        // TODO: to ops
         let opcode_header = BasicOp::InputVRC20AssertSa32 as u8;
         let opcode = opcode_header + self.name_typ_idx + self.amount_typ_idx;
 
