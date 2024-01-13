@@ -1,6 +1,5 @@
 use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode};
-use serde::{Deserialize, Serialize};
 
 use vital_script_derive::BasicOpcode;
 
@@ -21,8 +20,7 @@ fn u8_to_pos(i: u8, c: u8) -> Vec<u8> {
 }
 
 /// Output Index Assert by 1 indexs
-#[derive(Debug, Deserialize, Serialize)]
-#[derive(BasicOpcode, Encode, Decode)]
+#[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct OutputIndexAssert {
     pub index: u8,
 }
@@ -34,8 +32,7 @@ impl From<OutputIndexAssert> for Instruction {
 }
 
 /// Output Index Assert By A u16 as FlagMask
-#[derive(Debug, Deserialize, Serialize)]
-#[derive(BasicOpcode, Encode, Decode)]
+#[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct OutputIndexFlag16Assert {
     pub index_flag: [u8; 2],
 }
@@ -50,8 +47,7 @@ impl From<OutputIndexFlag16Assert> for Instruction {
 }
 
 /// Output Index Assert By A u32 as FlagMask
-#[derive(Debug, Deserialize, Serialize)]
-#[derive(BasicOpcode, Encode, Decode)]
+#[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct OutputIndexFlag32Assert {
     pub index_flag: [u8; 4],
 }

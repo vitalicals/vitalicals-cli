@@ -25,9 +25,7 @@ pub trait Opcode: Sized + Into<Instruction> {
     const ID: u8;
 }
 
-pub trait BasicOpcode:
-    Opcode + serde::de::DeserializeOwned + serde::Serialize + parity_scale_codec::Codec
-{
+pub trait BasicOpcode: Opcode + parity_scale_codec::Codec {
     fn encode_op(&self) -> Vec<u8> {
         (Self::ID, self).encode()
     }
@@ -38,10 +36,7 @@ pub trait BasicOpcode:
     }
 }
 
-impl<T> BasicOpcode for T where
-    T: Opcode + serde::de::DeserializeOwned + serde::Serialize + parity_scale_codec::Codec
-{
-}
+impl<T> BasicOpcode for T where T: Opcode + parity_scale_codec::Codec {}
 
 struct Reader<'a> {
     datas: &'a mut Bytes,
