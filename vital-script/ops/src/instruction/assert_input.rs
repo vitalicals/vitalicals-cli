@@ -1,12 +1,15 @@
 //! The input assert instruction
 
+use alloc::vec::Vec;
 use anyhow::{bail, Context as AnyhowContext, Result};
+use parity_scale_codec::Encode;
 use vital_script_primitives::{
     resources::{Resource, VRC20, VRC721},
     traits::*,
 };
 
 use crate::{
+    basic::InputVRC721Assert,
     instruction::{utils::*, VitalInstruction},
     opcodes::BasicOp,
 };
@@ -55,13 +58,8 @@ impl InstructionInputAssert {
     }
 
     fn into_input_vrc721(v: VRC721, index: u8) -> Result<Vec<u8>> {
-        let mut res = Vec::with_capacity(512);
+        let op = InputVRC721Assert { hash: v.hash, name: v.name, index };
 
-        res.push(BasicOp::InputVRC721Assert as u8);
-        res.append(&mut v.hash.0.to_vec());
-        res.append(&mut v.name.0.to_vec());
-        res.push(index);
-
-        Ok(res)
+        Ok(op.encode())
     }
 }

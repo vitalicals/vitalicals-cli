@@ -8,6 +8,8 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 bytes.workspace = true
+serde = { workspace = true, features = ["derive"] }
+parity-scale-codec = {workspace = true, features = ["derive", "max-encoded-len"] }
 
 vital-script-primitives.workspace = true
 
@@ -18,5 +20,7 @@ hex.workspace = true
 default = ["std"]
 std = [
     "bytes/std",
+    "serde/std",
+    "parity-scale-codec/std",
     "vital-script-primitives/std",
 ]

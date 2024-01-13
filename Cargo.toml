@@ -41,7 +41,7 @@ serde = "1.0"
 serde_json = "1.0"
 fdlimit = "0.2.1"
 futures = "0.3.26"
-ciborium = "0.2.1"
+parity-scale-codec = "3.6"
 futures-channel = "0.3"
 futures-timer = "3.0.1"
 futures-util = "0.3"
@@ -70,6 +70,7 @@ vital-script = { path = "./vital-script" }
 vital-script-primitives = { path = "./vital-script/primitives" }
 vital-script-ops = { path = "./vital-script/ops" }
 vital-script-runner = { path = "./vital-script/runner" }
+vital-script-derive = { path = "./vital-script/derive" }
 
 btc-script-builder = { path = "./btc/script-builder" }
 btc-p2tr-builder = { path = "./btc/p2tr-builder" }

@@ -5,9 +5,7 @@ use anyhow::{bail, Result};
 use vital_script_primitives::traits::*;
 
 use crate::{
-    basic::{
-        BasicOpcodeCodec, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert,
-    },
+    basic::{BasicOpcode, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert},
     instruction::VitalInstruction,
 };
 
@@ -34,7 +32,7 @@ impl VitalInstruction for InstructionOutputAssert {
         if self.indexs.len() == 1 {
             let op = OutputIndexAssert { index: self.indexs[0] };
 
-            return Ok(op.encode());
+            return Ok(op.encode_op());
         }
 
         // check if can use flags16
@@ -48,7 +46,7 @@ impl VitalInstruction for InstructionOutputAssert {
 
             let op = OutputIndexFlag16Assert { index_flag: mask.to_le_bytes() };
 
-            return Ok(op.encode());
+            return Ok(op.encode_op());
         }
 
         let is_all_less_than_32 = self.indexs.iter().all(|a| *a < 32_u8);
@@ -61,7 +59,7 @@ impl VitalInstruction for InstructionOutputAssert {
 
             let op = OutputIndexFlag32Assert { index_flag: mask.to_le_bytes() };
 
-            return Ok(op.encode());
+            return Ok(op.encode_op());
         }
 
         todo!("not support output index >= 32")

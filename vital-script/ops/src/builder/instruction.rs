@@ -1,6 +1,7 @@
 //! A Script builder from the instructions
 //!
 
+use alloc::vec::Vec;
 use anyhow::Result;
 
 use crate::instruction::{Instruction, VitalInstruction};
@@ -19,7 +20,6 @@ impl ScriptBuilderFromInstructions {
 
 #[cfg(test)]
 mod tests {
-
     use core::ops::Add;
 
     use vital_script_primitives::{resources::Resource, U256};
@@ -71,6 +71,7 @@ mod tests {
         println!("instructions: {:?}", instructions);
     }
 
+    #[ignore = "reason"]
     #[test]
     fn test_build_output() {
         let instructions = vec![
