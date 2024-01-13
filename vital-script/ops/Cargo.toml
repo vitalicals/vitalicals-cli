@@ -12,6 +12,7 @@ serde = { workspace = true, features = ["derive"] }
 parity-scale-codec = {workspace = true, features = ["derive", "max-encoded-len"] }
 
 vital-script-primitives.workspace = true
+vital-script-derive.workspace = true
 
 [dev-dependencies]
 hex.workspace = true

@@ -11,7 +11,6 @@ use vital_script_primitives::{
 use crate::{
     basic::InputVRC721Assert,
     instruction::{utils::*, VitalInstruction},
-    opcodes::BasicOp,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

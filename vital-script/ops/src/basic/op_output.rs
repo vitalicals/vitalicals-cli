@@ -1,15 +1,10 @@
 use alloc::vec::Vec;
-use anyhow::{bail, Result};
-use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    instruction::{assert_output::InstructionOutputAssert, Instruction},
-    opcodes::BasicOp,
-};
+use vital_script_derive::BasicOpcode;
 
-use super::*;
+use crate::instruction::{assert_output::InstructionOutputAssert, Instruction};
 
 #[inline]
 fn u8_to_pos(i: u8, c: u8) -> Vec<u8> {
@@ -27,7 +22,7 @@ fn u8_to_pos(i: u8, c: u8) -> Vec<u8> {
 
 /// Output Index Assert by 1 indexs
 #[derive(Debug, Deserialize, Serialize)]
-#[derive(Encode, Decode)]
+#[derive(BasicOpcode, Encode, Decode)]
 pub struct OutputIndexAssert {
     pub index: u8,
 }
@@ -38,13 +33,9 @@ impl From<OutputIndexAssert> for Instruction {
     }
 }
 
-impl Opcode for OutputIndexAssert {
-    const ID: u8 = BasicOp::OutputIndexAssert as u8;
-}
-
 /// Output Index Assert By A u16 as FlagMask
 #[derive(Debug, Deserialize, Serialize)]
-#[derive(Encode, Decode)]
+#[derive(BasicOpcode, Encode, Decode)]
 pub struct OutputIndexFlag16Assert {
     pub index_flag: [u8; 2],
 }
@@ -58,13 +49,9 @@ impl From<OutputIndexFlag16Assert> for Instruction {
     }
 }
 
-impl Opcode for OutputIndexFlag16Assert {
-    const ID: u8 = BasicOp::OutputIndexFlag16Assert as u8;
-}
-
 /// Output Index Assert By A u32 as FlagMask
 #[derive(Debug, Deserialize, Serialize)]
-#[derive(Encode, Decode)]
+#[derive(BasicOpcode, Encode, Decode)]
 pub struct OutputIndexFlag32Assert {
     pub index_flag: [u8; 4],
 }
@@ -75,8 +62,4 @@ impl From<OutputIndexFlag32Assert> for Instruction {
 
         Instruction::Output(InstructionOutputAssert { indexs })
     }
-}
-
-impl Opcode for OutputIndexFlag32Assert {
-    const ID: u8 = BasicOp::OutputIndexFlag32Assert as u8;
 }

@@ -1,9 +1,10 @@
 //! The basic ops.
-use std::io::{Read, Write};
+
+use std::io::Read;
 
 use alloc::vec::Vec;
 use anyhow::{anyhow, Result};
-use bytes::{buf::Writer, Buf, BufMut, Bytes};
+use bytes::{Buf, Bytes};
 
 mod op_dmint;
 mod op_input;
@@ -19,8 +20,6 @@ pub use op_transfer::*;
 use parity_scale_codec::Encode;
 
 use crate::instruction::Instruction;
-
-const CAP_SIZE: usize = 1024;
 
 pub trait Opcode: Sized + Into<Instruction> {
     const ID: u8;
@@ -68,7 +67,7 @@ impl<'a> parity_scale_codec::Input for Reader<'a> {
         self.datas
             .reader()
             .read(into)
-            .map_err(|err| parity_scale_codec::Error::from("io"))?;
+            .map_err(|_err| parity_scale_codec::Error::from("io"))?;
         Ok(())
     }
 }

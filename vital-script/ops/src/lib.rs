@@ -9,5 +9,3 @@ pub mod builder;
 pub mod instruction;
 pub mod opcodes;
 pub mod parser;
-
-mod consts;

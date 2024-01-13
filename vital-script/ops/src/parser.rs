@@ -1,7 +1,6 @@
 use alloc::vec::Vec;
 use anyhow::{bail, Context, Result};
 use bytes::{Buf, Bytes};
-use parity_scale_codec::Decode;
 
 use crate::{
     basic::{self},
