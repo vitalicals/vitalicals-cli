@@ -16,6 +16,8 @@ pub mod resource_deploy;
 pub mod resource_mint;
 pub mod resource_move;
 
+pub use resource_mint::*;
+
 use vital_script_primitives::traits::Context;
 
 pub trait VitalInstruction {
@@ -28,6 +30,7 @@ pub trait VitalInstruction {
 pub enum Instruction {
     Input(assert_input::InstructionInputAssert),
     Output(assert_output::InstructionOutputAssert),
+    Mint(resource_mint::InstructionResourceMint),
 }
 
 impl VitalInstruction for Instruction {
@@ -35,6 +38,7 @@ impl VitalInstruction for Instruction {
         match self {
             Self::Input(i) => i.exec(context),
             Self::Output(i) => i.exec(context),
+            Self::Mint(i) => i.exec(context),
         }
     }
 
@@ -42,6 +46,7 @@ impl VitalInstruction for Instruction {
         match self {
             Self::Input(i) => i.into_ops_bytes(),
             Self::Output(i) => i.into_ops_bytes(),
+            Self::Mint(i) => i.into_ops_bytes(),
         }
     }
 }
