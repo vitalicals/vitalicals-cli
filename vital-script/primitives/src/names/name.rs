@@ -1,6 +1,6 @@
 //! The name type
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
@@ -58,7 +58,7 @@ impl Name {
         }
 
         if length < NAME_LEN_MAX {
-            for i in length..NAME_LEN_MAX + 1 {
+            for i in length..NAME_LEN_MAX {
                 let v = self.index_value(i);
                 if v != 0 {
                     return false;
@@ -102,9 +102,7 @@ impl Name {
     }
 
     #[inline]
-    fn set_nocheck(&mut self, i: usize, c: char) -> Result<()> {
-        let v = char2u8(c)?;
-
+    fn set_value_nocheck(&mut self, i: usize, v: u8) -> Result<()> {
         // from 0 - n, note every 4 chars will impl by 3 u8,
         // so we can got the `class` which from 0-3, means thich char
         // and got the `start` which means the index of 3 u8.
@@ -151,6 +149,11 @@ impl Name {
         }
 
         Ok(())
+    }
+
+    #[inline]
+    fn set_nocheck(&mut self, i: usize, c: char) -> Result<()> {
+        self.set_value_nocheck(i, char2u8(c)?)
     }
 
     #[inline]
@@ -238,7 +241,11 @@ impl TryFrom<String> for Name {
         }
 
         for c in value.chars() {
-            res.push(c).map_err(|err| anyhow!(err.to_string()))?;
+            res.push(c)?;
+        }
+
+        if !res.is_valid() {
+            bail!("the string not valid");
         }
 
         Ok(res)
@@ -248,29 +255,32 @@ impl TryFrom<String> for Name {
 impl From<ShortName> for Name {
     fn from(value: ShortName) -> Self {
         let mut res = Name::default();
+        let mut l = 0;
 
         for i in 0..SHORT_NAME_LEN_MAX {
             let v = value.index_value(i);
+
             if v == 0 {
                 break;
             } else {
-                res.push(u8_to_char(v).expect("should valid")).expect("short should ok");
+                l += 1;
+                res.set_value_nocheck(i, v).expect("set");
             }
         }
+
+        res.set_len_nocheck(l);
 
         res
     }
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod tests {
-    #[cfg(feature = "std")]
-    use crate::names::char2u8;
+    use crate::names::{char2u8, ShortName};
 
-    #[cfg(feature = "std")]
     use super::Name;
 
-    #[cfg(feature = "std")]
     fn test_name_new_by(name: &str) {
         let n = Name::try_from(name.to_string()).expect(format!("try from {}", name).as_str());
 
@@ -290,7 +300,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn test_name_new() {
         test_name_new_by("");
         test_name_new_by("a");
@@ -338,12 +347,37 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "std")]
     fn test_name_new_failed() {
         assert!(Name::try_from(" ".to_string()).is_err());
         assert!(Name::try_from("a a".to_string()).is_err());
         assert!(Name::try_from("(".to_string()).is_err());
         assert!(Name::try_from("aaaaaaaaaaa".to_string()).is_err());
         assert!(Name::try_from("aaaaaaaaaaaaaaaaaaaa".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_name_from_short_name() {
+        assert_eq!(Name::from(ShortName::try_from("".to_string()).unwrap()).to_string(), "");
+        assert_eq!(Name::from(ShortName::try_from("a".to_string()).unwrap()).to_string(), "a");
+        assert_eq!(Name::from(ShortName::try_from("b".to_string()).unwrap()).to_string(), "b");
+        assert_eq!(Name::from(ShortName::try_from("22".to_string()).unwrap()).to_string(), "22");
+        assert_eq!(Name::from(ShortName::try_from("222".to_string()).unwrap()).to_string(), "222");
+        assert_eq!(Name::from(ShortName::try_from("333".to_string()).unwrap()).to_string(), "333");
+        assert_eq!(
+            Name::from(ShortName::try_from("....".to_string()).unwrap()).to_string(),
+            "...."
+        );
+        assert_eq!(
+            Name::from(ShortName::try_from("@@@@@".to_string()).unwrap()).to_string(),
+            "@@@@@"
+        );
+        assert_eq!(
+            Name::from(ShortName::try_from("abced".to_string()).unwrap()).to_string(),
+            "abced"
+        );
+        assert_eq!(
+            Name::from(ShortName::try_from("erc20".to_string()).unwrap()).to_string(),
+            "erc20"
+        );
     }
 }

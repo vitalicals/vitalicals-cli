@@ -44,6 +44,10 @@ impl Resource {
         Ok(Self::VRC20(VRC20::new(name, amount)))
     }
 
+    pub fn name(name: impl Into<Tag>) -> Self {
+        Self::Name(name.into())
+    }
+
     pub fn resource_type(&self) -> ResourceType {
         let (class, name) = match self {
             Self::Name(n) => (ResourceClass::Name, *n),
