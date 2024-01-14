@@ -1,9 +1,18 @@
-use anyhow::Result;
+use anyhow::{bail, Context as AnyhowContext, Result};
 
 use crate::resources::Resource;
 
 pub trait EnvContext {
     fn get_input_resource(&self, index: u8) -> Result<Resource>;
+    fn get_output_resource(&self, index: u8) -> Option<&Resource>;
+
+    fn set_resource_to_output(&mut self, index: u8, resource: Resource) -> Result<()>;
+
+    /// Apply changes to indexer, will do:
+    ///   - del all inputs 's resources bind
+    ///   - set all outputs 's resources bind
+    ///   - storage all uncosted inputs 's resources to space.
+    fn apply_resources(&mut self) -> Result<()>;
 }
 
 pub trait RunnerContext {
@@ -25,4 +34,25 @@ pub trait Context {
     fn env(&mut self) -> &mut Self::Env;
     fn runner(&mut self) -> &mut Self::Runner;
     fn input_resource(&mut self) -> &mut Self::InputResource;
+
+    fn send_resource_to_output(&mut self, index: u8, resource: Resource) -> Result<()> {
+        // 1. only the output asserted can be send resource into.
+        if !self.runner().is_output_available(index) {
+            bail!("the output is not asserted");
+        }
+
+        // 2. if a output had been sent a resource, need check if item can merged.
+        //    if the resource cannot be merged, it will return an error.
+        let output_resource = self.env().get_output_resource(index);
+        let resource = match output_resource {
+            Some(res) => resource.merge_into(res),
+            None => Ok(resource),
+        }
+        .context("the output cannot merge to")?;
+
+        // 3. set the resource to output
+        self.env().set_resource_to_output(index, resource).context("set")?;
+
+        Ok(())
+    }
 }

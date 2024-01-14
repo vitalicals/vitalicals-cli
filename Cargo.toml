@@ -48,7 +48,7 @@ futures-util = "0.3"
 thiserror = "1.0.48"
 log = "0.4"
 hex-literal = "0.4"
-bitcoin = { version = "0.31.0", features = ["serde", "base64", "rand-std"] }
+bitcoin = { version = "0.31.0" }
 env_logger = "0.10.0"
 tokio = { version = "1.22.0", features = ["signal", "rt-multi-thread", "parking_lot"] }
 hex = { version = "0.4.3", features = ["alloc"] }

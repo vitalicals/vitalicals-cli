@@ -18,7 +18,7 @@ pub mod resource_move;
 
 pub use resource_mint::*;
 
-use vital_script_primitives::traits::Context;
+use vital_script_primitives::{resources::Resource, traits::Context};
 
 pub trait VitalInstruction {
     fn exec(self, context: &mut impl Context) -> Result<()>;
@@ -48,5 +48,11 @@ impl VitalInstruction for Instruction {
             Self::Output(i) => i.into_ops_bytes(),
             Self::Mint(i) => i.into_ops_bytes(),
         }
+    }
+}
+
+impl Instruction {
+    pub fn mint(index: u8, resource: impl Into<Resource>) -> Self {
+        Self::Mint(InstructionResourceMint::new(index, resource))
     }
 }

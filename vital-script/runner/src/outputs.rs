@@ -58,7 +58,7 @@ impl OutputResources {
             if output.index == index {
                 if let Some(res) = output.resource.as_mut() {
                     // will check if the resource type is eq.
-                    res.merge(resource)?;
+                    res.merge(&resource)?;
                 } else {
                     output.resource = Some(resource);
                 }
@@ -76,10 +76,11 @@ impl OutputResources {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn test_u8_to_pos() {
-        assert_eq!(u8_to_pos(0, 0), vec![]);
+        assert!(u8_to_pos(0, 0).is_empty());
         assert_eq!(u8_to_pos(1, 0), vec![0]);
         assert_eq!(u8_to_pos(2, 0), vec![1]);
         assert_eq!(u8_to_pos(3, 0), vec![0, 1]);

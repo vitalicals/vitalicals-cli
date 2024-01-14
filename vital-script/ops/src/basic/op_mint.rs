@@ -7,7 +7,7 @@ use vital_script_primitives::{
     H256, U256,
 };
 
-use crate::instruction::{Instruction, InstructionResourceMint};
+use crate::instruction::Instruction;
 
 /// Mint short name
 #[derive(Debug, BasicOpcode, Encode, Decode)]
@@ -18,10 +18,7 @@ pub struct MintShortName {
 
 impl From<MintShortName> for Instruction {
     fn from(value: MintShortName) -> Self {
-        Instruction::Mint(InstructionResourceMint {
-            output_index: value.index,
-            resource: Resource::name(value.name),
-        })
+        Instruction::mint(value.index, value.name)
     }
 }
 
@@ -34,9 +31,6 @@ pub struct MintName {
 
 impl From<MintName> for Instruction {
     fn from(value: MintName) -> Self {
-        Instruction::Mint(InstructionResourceMint {
-            output_index: value.index,
-            resource: Resource::name(value.name),
-        })
+        Instruction::mint(value.index, value.name)
     }
 }
