@@ -73,6 +73,10 @@ impl BasicOp {
             0x16 => Ok(Self::TransferAllVRC20S),
             0x17 => Ok(Self::TransferAllVRC20),
             0x18 => Ok(Self::TransferVRC20Sa32),
+
+            0x21 => Ok(Self::MintShortName),
+            0x22 => Ok(Self::MintName),
+
             _ => bail!("not supported op {}", v),
         }
     }

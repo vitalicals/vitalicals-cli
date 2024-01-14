@@ -2,9 +2,16 @@ use alloc::collections::BTreeSet;
 use anyhow::{bail, Result};
 use vital_script_primitives::traits::context::RunnerContext as RunnerContextT;
 
+#[derive(Default)]
 pub struct RunnerContext {
     inputs: BTreeSet<u8>,
     outputs: BTreeSet<u8>,
+}
+
+impl RunnerContext {
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 impl RunnerContextT for RunnerContext {

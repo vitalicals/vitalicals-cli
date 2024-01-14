@@ -3,7 +3,6 @@
 #![recursion_limit = "128"]
 extern crate proc_macro;
 
-#[macro_use]
 extern crate syn;
 
 #[macro_use]
@@ -11,9 +10,8 @@ extern crate quote;
 
 mod decode_operand;
 mod encode;
-mod opcode;
 
-use syn::{spanned::Spanned, Data, DeriveInput, Error, Field, Fields};
+use syn::DeriveInput;
 
 /// Derive
 #[proc_macro_derive(BasicOpcode, attributes(codec))]

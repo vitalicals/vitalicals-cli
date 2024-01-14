@@ -20,7 +20,7 @@ pub struct InstructionInputAssert {
 }
 
 impl VitalInstruction for InstructionInputAssert {
-    fn exec(self, context: &mut impl Context) -> Result<()> {
+    fn exec(&self, context: &mut impl Context) -> Result<()> {
         // 1. ensure if current input index is not asserted.
         context.runner().try_assert_input(self.index)?;
 
@@ -34,7 +34,7 @@ impl VitalInstruction for InstructionInputAssert {
         // 3. push the resource into resources.
         context
             .input_resource()
-            .push(self.index, self.resource)
+            .push(self.index, self.resource.clone())
             .context("push input resource")?;
 
         Ok(())
@@ -53,7 +53,7 @@ impl VitalInstruction for InstructionInputAssert {
 
 impl InstructionInputAssert {
     fn into_input_vrc20(v: VRC20, index: u8) -> Result<Vec<u8>> {
-        Vrc20ResourceOperand::new(v).to_input_vrc20_opcode_bytes(index)
+        Vrc20ResourceOperand::new(v).into_input_vrc20_opcode_bytes(index)
     }
 
     fn into_input_vrc721(v: VRC721, index: u8) -> Result<Vec<u8>> {

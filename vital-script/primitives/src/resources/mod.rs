@@ -6,6 +6,7 @@ use anyhow::{bail, Result};
 use primitive_types::U256;
 
 pub use crate::names::Name;
+use crate::names::ShortName;
 
 pub mod vrc20;
 pub mod vrc721;
@@ -44,6 +45,10 @@ impl Resource {
         Ok(Self::VRC20(VRC20::new(name, amount)))
     }
 
+    pub fn name(name: impl Into<Tag>) -> Self {
+        Self::Name(name.into())
+    }
+
     pub fn resource_type(&self) -> ResourceType {
         let (class, name) = match self {
             Self::Name(n) => (ResourceClass::Name, *n),
@@ -54,7 +59,7 @@ impl Resource {
         ResourceType { class, name }
     }
 
-    pub fn merge(&mut self, other: Resource) -> Result<()> {
+    pub fn merge(&mut self, other: &Resource) -> Result<()> {
         match (self, other) {
             (Self::VRC20(v), Self::VRC20(o)) => {
                 v.amount += o.amount;
@@ -64,5 +69,41 @@ impl Resource {
                 bail!("the resource type not support merge")
             }
         }
+    }
+
+    pub fn merge_into(self, other: &Resource) -> Result<Self> {
+        match (self, other) {
+            (Self::VRC20(mut v), Self::VRC20(o)) => {
+                v.amount += o.amount;
+                Ok(Resource::VRC20(v))
+            }
+            _ => {
+                bail!("the resource type not support merge")
+            }
+        }
+    }
+}
+
+impl From<ShortName> for Resource {
+    fn from(value: ShortName) -> Self {
+        Self::Name(value.into())
+    }
+}
+
+impl From<Name> for Resource {
+    fn from(value: Name) -> Self {
+        Self::Name(value)
+    }
+}
+
+impl From<VRC20> for Resource {
+    fn from(value: VRC20) -> Self {
+        Self::VRC20(value)
+    }
+}
+
+impl From<VRC721> for Resource {
+    fn from(value: VRC721) -> Self {
+        Self::VRC721(value)
     }
 }

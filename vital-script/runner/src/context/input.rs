@@ -14,6 +14,13 @@ const OUTPUT_MAX: usize = 64;
 
 pub struct InputResourcesContext {
     inputs: InputResources,
+    inputs_indexs: Vec<u8>,
+}
+
+impl InputResourcesContext {
+    pub fn new(cap: usize) -> Self {
+        Self { inputs: InputResources::new(cap), inputs_indexs: Vec::with_capacity(cap) }
+    }
 }
 
 impl InputResourcesContextT for InputResourcesContext {
@@ -24,6 +31,8 @@ impl InputResourcesContextT for InputResourcesContext {
             Resource::VRC721(v) => self.inputs.push_vrc721(input_index, v.name, v.hash),
         }
 
+        self.inputs_indexs.push(input_index);
+
         Ok(())
     }
 
@@ -33,6 +42,14 @@ impl InputResourcesContextT for InputResourcesContext {
             Resource::VRC20(v) => self.inputs.cost_vrc20(v),
             Resource::VRC721(v) => self.inputs.cost_vrc721(v),
         }
+    }
+
+    fn all(&self) -> &[u8] {
+        &self.inputs_indexs
+    }
+
+    fn uncosted(&self) -> Vec<(u8, Resource)> {
+        self.inputs.uncosted_inputs()
     }
 }
 

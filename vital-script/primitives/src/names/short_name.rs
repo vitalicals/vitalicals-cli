@@ -42,7 +42,7 @@ impl ShortName {
 
     pub fn is_valid(&self) -> bool {
         // The u8[3] ls x is 00
-        if self.0[3] & 0xfc != 0 {
+        if self.0[3] & 0x03 != 0 {
             return false;
         }
 
@@ -56,7 +56,7 @@ impl ShortName {
         }
 
         if length < SHORT_NAME_LEN_MAX {
-            for i in length..SHORT_NAME_LEN_MAX + 1 {
+            for i in length..SHORT_NAME_LEN_MAX {
                 let v = self.index_value(i);
                 if v != 0 {
                     return false;
@@ -86,9 +86,7 @@ impl ShortName {
         self.set_nocheck(i, c)
     }
 
-    fn set_nocheck(&mut self, i: usize, c: char) -> Result<()> {
-        let v = char2u8(c)?;
-
+    fn set_value_nocheck(&mut self, i: usize, v: u8) -> Result<()> {
         match i {
             0 => {
                 self.0[0] |= v << 2;
@@ -120,6 +118,10 @@ impl ShortName {
         }
 
         Ok(())
+    }
+
+    fn set_nocheck(&mut self, i: usize, c: char) -> Result<()> {
+        self.set_value_nocheck(i, char2u8(c)?)
     }
 
     #[inline]
@@ -160,12 +162,12 @@ impl TryFrom<Name> for ShortName {
         }
 
         let mut res = ShortName::default();
-        for i in 0..SHORT_NAME_LEN_MAX {
+        for i in 0..len {
             let v = value.index_value(i);
             if v == 0 {
                 break;
             } else {
-                res.push(u8_to_char(v).expect("should valid")).expect("short should ok");
+                res.set_value_nocheck(i, v).expect("set");
             }
         }
 
@@ -189,11 +191,11 @@ impl std::string::ToString for ShortName {
 
 #[cfg(feature = "std")]
 impl TryFrom<String> for ShortName {
-    type Error = String;
+    type Error = anyhow::Error;
 
     fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
         if value.len() > SHORT_NAME_LEN_MAX {
-            return Err("the string len too large".to_string());
+            bail!("the string len too large");
         }
 
         let mut res = ShortName::default();
@@ -203,7 +205,11 @@ impl TryFrom<String> for ShortName {
         }
 
         for c in value.chars() {
-            res.push(c).map_err(|err| err.to_string())?;
+            res.push(c)?;
+        }
+
+        if !res.is_valid() {
+            bail!("the string not valid");
         }
 
         Ok(res)
@@ -213,7 +219,7 @@ impl TryFrom<String> for ShortName {
 #[cfg(test)]
 #[cfg(feature = "std")]
 mod tests {
-    use crate::names::char2u8;
+    use crate::{names::char2u8, resources::Name};
 
     use super::ShortName;
 
@@ -274,5 +280,69 @@ mod tests {
         assert!(ShortName::try_from("(".to_string()).is_err());
         assert!(ShortName::try_from("aaaaaa".to_string()).is_err());
         assert!(ShortName::try_from("aaaaaaaaaaaaaaaaaaaa".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_name_from_short_name() {
+        assert_eq!(
+            ShortName::try_from(Name::try_from("".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            ""
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("a".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "a"
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("b".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "b"
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("22".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "22"
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("222".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "222"
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("333".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "333"
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("....".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "...."
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("@@@@@".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "@@@@@"
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("abced".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "abced"
+        );
+        assert_eq!(
+            ShortName::try_from(Name::try_from("erc20".to_string()).unwrap())
+                .unwrap()
+                .to_string(),
+            "erc20"
+        );
     }
 }
