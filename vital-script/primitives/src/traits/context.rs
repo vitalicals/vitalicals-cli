@@ -3,16 +3,21 @@ use anyhow::{bail, Context as AnyhowContext, Result};
 use crate::resources::Resource;
 
 pub trait EnvContext {
+    fn get_ops(&self) -> &[(u8, Vec<u8>)];
+
     fn get_input_resource(&self, index: u8) -> Result<Resource>;
     fn get_output_resource(&self, index: u8) -> Option<&Resource>;
 
     fn set_resource_to_output(&mut self, index: u8, resource: Resource) -> Result<()>;
 
+    /// Del all inputs 's resources bind
+    fn remove_input_resources(&self, input_indexs: &[u8]) -> Result<()>;
+
     /// Apply changes to indexer, will do:
     ///   - del all inputs 's resources bind
     ///   - set all outputs 's resources bind
     ///   - storage all uncosted inputs 's resources to space.
-    fn apply_resources(&mut self) -> Result<()>;
+    fn apply_output_resources(&mut self) -> Result<()>;
 }
 
 pub trait RunnerContext {
@@ -24,6 +29,9 @@ pub trait RunnerContext {
 pub trait InputResourcesContext {
     fn push(&mut self, input_index: u8, resource: Resource) -> Result<()>;
     fn cost(&mut self, resource: Resource) -> Result<()>;
+
+    fn all(&self) -> &[u8];
+    fn uncosted(&self) -> Vec<(u8, Resource)>;
 }
 
 pub trait Context {

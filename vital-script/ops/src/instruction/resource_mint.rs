@@ -26,9 +26,9 @@ impl InstructionResourceMint {
 }
 
 impl VitalInstruction for InstructionResourceMint {
-    fn exec(self, context: &mut impl Context) -> Result<()> {
+    fn exec(&self, context: &mut impl Context) -> Result<()> {
         // TODO:: check if can mint
-        context.send_resource_to_output(self.output_index, self.resource)?;
+        context.send_resource_to_output(self.output_index, self.resource.clone())?;
 
         Ok(())
     }

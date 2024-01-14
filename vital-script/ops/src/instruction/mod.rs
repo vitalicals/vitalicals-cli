@@ -21,7 +21,11 @@ pub use resource_mint::*;
 use vital_script_primitives::{resources::Resource, traits::Context};
 
 pub trait VitalInstruction {
-    fn exec(self, context: &mut impl Context) -> Result<()>;
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
+    fn exec(&self, context: &mut impl Context) -> Result<()>;
 
     fn into_ops_bytes(self) -> Result<Vec<u8>>;
 }
@@ -34,7 +38,7 @@ pub enum Instruction {
 }
 
 impl VitalInstruction for Instruction {
-    fn exec(self, context: &mut impl Context) -> Result<()> {
+    fn exec(&self, context: &mut impl Context) -> Result<()> {
         match self {
             Self::Input(i) => i.exec(context),
             Self::Output(i) => i.exec(context),

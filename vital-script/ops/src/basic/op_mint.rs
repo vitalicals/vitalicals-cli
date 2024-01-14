@@ -1,11 +1,7 @@
 use parity_scale_codec::{Decode, Encode};
 
 use vital_script_derive::BasicOpcode;
-use vital_script_primitives::{
-    names::{Name, ShortName},
-    resources::{Resource, VRC20, VRC721},
-    H256, U256,
-};
+use vital_script_primitives::names::{Name, ShortName};
 
 use crate::instruction::Instruction;
 

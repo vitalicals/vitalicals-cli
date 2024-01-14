@@ -11,15 +11,24 @@ pub struct EnvContext<Functions: EnvFunctions> {
     cached_output_resources: BTreeMap<u8, Resource>,
 }
 
-impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
-    fn get_input_resource(&self, index: u8) -> Result<Resource> {
-        let out_point = self.env.get_input(index);
+impl<Functions: EnvFunctions> EnvContext<Functions> {
+    pub fn new(env_interface: Functions) -> Self {
+        Self { env: env_interface, cached_output_resources: BTreeMap::new() }
+    }
+}
 
-        Ok(self
-            .env
+impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
+    fn get_ops(&self) -> &[(u8, Vec<u8>)] {
+        self.env.get_ops()
+    }
+
+    fn get_input_resource(&self, index: u8) -> Result<Resource> {
+        let out_point = self.env.get_input(index).context("get input")?;
+
+        self.env
             .get_resources(&out_point)
             .context("get")?
-            .ok_or_else(|| anyhow!("not found {} {}", index, out_point))?)
+            .ok_or_else(|| anyhow!("not found {} {}", index, out_point))
     }
 
     fn get_output_resource(&self, index: u8) -> Option<&Resource> {
@@ -36,7 +45,28 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
         Ok(())
     }
 
-    fn apply_resources(&mut self) -> Result<()> {
-        todo!()
+    fn remove_input_resources(&self, input_indexs: &[u8]) -> Result<()> {
+        for index in input_indexs.iter() {
+            self.env
+                .unbind_resource(
+                    &self
+                        .env
+                        .get_input(*index)
+                        .with_context(|| format!("get input index {}", index))?,
+                )
+                .with_context(|| format!("unbind {}", index))?;
+        }
+
+        Ok(())
+    }
+
+    fn apply_output_resources(&mut self) -> Result<()> {
+        for (index, resource) in self.cached_output_resources.iter() {
+            self.env
+                .bind_resource(self.env.get_output(*index).context("get output")?, resource.clone())
+                .with_context(|| format!("bind resource {} to {:?}", index, resource))?;
+        }
+
+        Ok(())
     }
 }

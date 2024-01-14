@@ -45,7 +45,7 @@ impl Vrc20ResourceOperand {
         Self { name_bytes, name_typ_idx: name_typ_idx * 4, amount_bytes, amount_typ_idx }
     }
 
-    pub fn to_input_vrc20_opcode_bytes(mut self, index: u8) -> Result<Vec<u8>> {
+    pub fn into_input_vrc20_opcode_bytes(mut self, index: u8) -> Result<Vec<u8>> {
         // TODO: to ops
         let opcode_header = BasicOp::InputVRC20AssertSa32 as u8;
         let opcode = opcode_header + self.name_typ_idx + self.amount_typ_idx;

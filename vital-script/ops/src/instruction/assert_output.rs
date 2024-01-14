@@ -15,10 +15,10 @@ pub struct InstructionOutputAssert {
 }
 
 impl VitalInstruction for InstructionOutputAssert {
-    fn exec(self, context: &mut impl Context) -> Result<()> {
-        for index in self.indexs.into_iter() {
+    fn exec(&self, context: &mut impl Context) -> Result<()> {
+        for index in self.indexs.iter() {
             // 1. ensure if current output index is not asserted.
-            context.runner().try_assert_output(index)?;
+            context.runner().try_assert_output(*index)?;
         }
 
         Ok(())
