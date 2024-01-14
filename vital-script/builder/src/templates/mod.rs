@@ -1,3 +1,5 @@
 //! The templates for each types of scripts
 
-pub mod mint_name;
+mod mint_name;
+
+pub use mint_name::*;
