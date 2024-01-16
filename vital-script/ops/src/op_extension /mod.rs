@@ -1,0 +1,1 @@
+//! The extension opcode.

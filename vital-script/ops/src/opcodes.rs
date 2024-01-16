@@ -5,7 +5,7 @@ use bytes::Bytes;
 
 use crate::instruction::Instruction;
 
-pub use crate::basic::BasicOpcode;
+pub use crate::op_basic::BasicOpcode;
 
 #[repr(u8)]
 pub enum BasicOp {

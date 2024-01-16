@@ -9,7 +9,7 @@ use vital_script_primitives::{
 };
 
 use crate::{
-    basic::InputVRC721Assert,
+    op_basic::InputVRC721Assert,
     instruction::{utils::*, VitalInstruction},
 };
 

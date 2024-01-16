@@ -3,7 +3,7 @@ use anyhow::{bail, Context, Result};
 use bytes::{Buf, Bytes};
 
 use crate::{
-    basic::{self},
+    op_basic::{self},
     instruction::Instruction,
     opcodes::BasicOp,
 };
@@ -51,7 +51,7 @@ impl Parser {
 
         macro_rules! decode_operand {
             ( $x:ident ) => {
-                BasicOp::decode_operand::<basic::$x>(&mut self.datas)?
+                BasicOp::decode_operand::<op_basic::$x>(&mut self.datas)?
             };
         }
 

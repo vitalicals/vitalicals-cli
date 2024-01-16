@@ -9,7 +9,7 @@ use vital_script_primitives::{
 };
 
 use crate::{
-    basic::{BasicOpcode, MintName, MintShortName},
+    op_basic::{BasicOpcode, MintName, MintShortName},
     instruction::VitalInstruction,
 };
 

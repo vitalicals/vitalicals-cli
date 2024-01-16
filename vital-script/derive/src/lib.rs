@@ -25,7 +25,7 @@ pub fn basic_opcode_derive(input: proc_macro::TokenStream) -> proc_macro::TokenS
 
     let generate = quote! {
         const _: () = {
-            impl crate::basic::Opcode for #name {
+            impl crate::op_basic::Opcode for #name {
                 const ID: u8 = crate::opcodes::BasicOp::#name as u8;
             }
         };
