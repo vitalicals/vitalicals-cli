@@ -81,6 +81,8 @@ fn mint_name(
     let output_index = 0_u32;
     let scripts_bytes = templates::mint_name(output_index, name).context("build scripts failed")?;
 
+    println!("scripts_bytes {}", hex::encode(&scripts_bytes));
+
     // build tx
     let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
         .context("load wallet failed")?;
@@ -93,14 +95,8 @@ fn mint_name(
         bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
     };
 
-    let builder = P2trBuilder::new(
-        hex::decode(scripts_bytes).context("decode datas")?,
-        to_address,
-        amount,
-        *fee_rate,
-        &wallet,
-    )
-    .context("builder build")?;
+    let builder = P2trBuilder::new(scripts_bytes, to_address, amount, *fee_rate, &wallet)
+        .context("builder build")?;
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 
