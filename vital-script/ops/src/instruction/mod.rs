@@ -35,6 +35,7 @@ pub enum Instruction {
     Input(assert_input::InstructionInputAssert),
     Output(assert_output::InstructionOutputAssert),
     Mint(resource_mint::InstructionResourceMint),
+    Deploy(resource_deploy::InstructionVRC20Deploy),
 }
 
 impl VitalInstruction for Instruction {
@@ -43,6 +44,7 @@ impl VitalInstruction for Instruction {
             Self::Input(i) => i.exec(context),
             Self::Output(i) => i.exec(context),
             Self::Mint(i) => i.exec(context),
+            Self::Deploy(i) => i.exec(context),
         }
     }
 
@@ -51,6 +53,7 @@ impl VitalInstruction for Instruction {
             Self::Input(i) => i.into_ops_bytes(),
             Self::Output(i) => i.into_ops_bytes(),
             Self::Mint(i) => i.into_ops_bytes(),
+            Self::Deploy(i) => i.into_ops_bytes(),
         }
     }
 }

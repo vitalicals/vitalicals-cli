@@ -9,8 +9,8 @@ use vital_script_primitives::{
 };
 
 use crate::{
-    op_basic::{BasicOpcode, MintName, MintShortName},
     instruction::VitalInstruction,
+    op_basic::{BasicOpcode, MintName, MintShortName},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

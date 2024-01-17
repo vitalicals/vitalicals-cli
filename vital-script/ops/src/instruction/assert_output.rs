@@ -5,8 +5,8 @@ use anyhow::{bail, Result};
 use vital_script_primitives::traits::*;
 
 use crate::{
-    op_basic::{BasicOpcode, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert},
     instruction::VitalInstruction,
+    op_basic::{BasicOpcode, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

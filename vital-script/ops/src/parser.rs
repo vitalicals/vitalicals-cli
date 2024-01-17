@@ -3,8 +3,8 @@ use anyhow::{bail, Context, Result};
 use bytes::{Buf, Bytes};
 
 use crate::{
-    op_basic::{self},
     instruction::Instruction,
+    op_basic::{self},
     opcodes::BasicOp,
 };
 

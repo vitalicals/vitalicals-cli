@@ -3,7 +3,7 @@
 use anyhow::{bail, Context, Result};
 use bytes::Bytes;
 
-use crate::instruction::Instruction;
+use crate::{instruction::Instruction, op_extension::ExtensionOpcode};
 
 pub use crate::op_basic::BasicOpcode;
 
@@ -84,6 +84,32 @@ impl BasicOp {
     pub fn decode_operand<Op>(datas: &mut Bytes) -> Result<Instruction>
     where
         Op: BasicOpcode,
+    {
+        Ok(Op::decode_operand(datas).context("decode operand")?.into())
+    }
+}
+
+#[repr(u16)]
+pub enum ExtensionOp {
+    OutputIndexFlag64Assert = 0x8001,
+    DeployVRC20S = 0x8002,
+    DeployVRC20 = 0x8003,
+}
+
+impl ExtensionOp {
+    pub fn new(v: u16) -> Result<Self> {
+        match v {
+            0x8001 => Ok(Self::OutputIndexFlag64Assert),
+            0x8002 => Ok(Self::DeployVRC20S),
+            0x8003 => Ok(Self::DeployVRC20),
+
+            _ => bail!("not supported op {}", v),
+        }
+    }
+
+    pub fn decode_operand<Op>(datas: &mut Bytes) -> Result<Instruction>
+    where
+        Op: ExtensionOpcode,
     {
         Ok(Op::decode_operand(datas).context("decode operand")?.into())
     }

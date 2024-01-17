@@ -9,8 +9,8 @@ use vital_script_primitives::{
 };
 
 use crate::{
-    op_basic::InputVRC721Assert,
     instruction::{utils::*, VitalInstruction},
+    op_basic::InputVRC721Assert,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
