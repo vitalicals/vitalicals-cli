@@ -1,7 +1,7 @@
 //! The Resource Mint instruction
 
 use alloc::vec::Vec;
-use anyhow::{bail, Result};
+use anyhow::{bail, Context as AnyhowContext, Result};
 use vital_script_primitives::{
     names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
     resources::Resource,
@@ -9,8 +9,8 @@ use vital_script_primitives::{
 };
 
 use crate::{
-    basic::{BasicOpcode, MintName, MintShortName},
     instruction::VitalInstruction,
+    op_basic::{BasicOpcode, MintName, MintShortName},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +28,12 @@ impl InstructionResourceMint {
 impl VitalInstruction for InstructionResourceMint {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // TODO:: check if can mint
+
+        // for name, we need flag it
+        if let Resource::Name(n) = &self.resource {
+            context.env().new_name(*n).context("new name failed")?;
+        }
+
         context.send_resource_to_output(self.output_index, self.resource.clone())?;
 
         Ok(())

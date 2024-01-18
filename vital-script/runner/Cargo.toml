@@ -7,11 +7,15 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+parity-scale-codec = {workspace = true, features = ["derive", "max-encoded-len"] }
 
 bdk.workspace = true
 
 vital-script-ops.workspace = true
 vital-script-primitives.workspace = true
+
+[dev-dependencies]
+hex.workspace = true
 
 [features]
 default = ["std"]

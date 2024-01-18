@@ -1,6 +1,18 @@
 use anyhow::{bail, Context as AnyhowContext, Result};
+use parity_scale_codec::{Decode, Encode};
 
-use crate::resources::Resource;
+use crate::{
+    resources::{Resource, Tag},
+    types::vrc20::VRC20MetaData,
+};
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone)]
+pub enum MetaDataType {
+    Name = 1_u8,
+    VRC20,
+    VRC721,
+}
 
 pub trait EnvContext {
     fn get_ops(&self) -> &[(u8, Vec<u8>)];
@@ -18,6 +30,49 @@ pub trait EnvContext {
     ///   - set all outputs 's resources bind
     ///   - storage all uncosted inputs 's resources to space.
     fn apply_output_resources(&mut self) -> Result<()>;
+
+    fn new_name(&mut self, name: Tag) -> Result<()> {
+        let curr = self.get_metadata::<bool>(name, MetaDataType::Name).context("get")?;
+        if curr.is_some() {
+            bail!("the name had created");
+        }
+
+        // set to false, means it not costed
+        self.set_metadata(name, MetaDataType::Name, false).context("set")
+    }
+
+    fn cost_name(&mut self, name: Tag) -> Result<()> {
+        match self.get_metadata::<bool>(name, MetaDataType::Name).context("get")? {
+            Some(false) => {
+                self.set_metadata(name, MetaDataType::Name, true).context("set")?;
+            }
+            Some(true) => {
+                bail!("the name had costed");
+            }
+            None => {
+                bail!("the name had not created");
+            }
+        }
+
+        Ok(())
+    }
+
+    fn deploy_vrc20(&mut self, name: Tag, meta: VRC20MetaData) -> Result<()> {
+        let curr = self.get_metadata::<VRC20MetaData>(name, MetaDataType::VRC20).context("get")?;
+        if curr.is_some() {
+            bail!("the vrc20 had created");
+        }
+
+        // set to false, means it not costed
+        self.set_metadata(name, MetaDataType::VRC20, meta).context("set")
+    }
+
+    fn get_vrc20_metadata(&self, name: Tag) -> Result<Option<VRC20MetaData>> {
+        self.get_metadata(name, MetaDataType::VRC20)
+    }
+
+    fn set_metadata<T: Encode>(&mut self, name: Tag, typ: MetaDataType, meta: T) -> Result<()>;
+    fn get_metadata<T: Decode>(&self, name: Tag, typ: MetaDataType) -> Result<Option<T>>;
 }
 
 pub trait RunnerContext {

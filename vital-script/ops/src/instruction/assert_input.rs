@@ -4,13 +4,15 @@ use alloc::vec::Vec;
 use anyhow::{bail, Context as AnyhowContext, Result};
 use parity_scale_codec::Encode;
 use vital_script_primitives::{
-    resources::{Resource, VRC20, VRC721},
+    names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
+    resources::{Name, Resource, Tag, VRC20, VRC721},
     traits::*,
 };
 
 use crate::{
-    basic::InputVRC721Assert,
     instruction::{utils::*, VitalInstruction},
+    op_basic::{BasicOpcodeBase, InputAssertName, InputAssertShortName, InputVRC721Assert},
+    opcodes::{BasicOp, BasicOpcode},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,9 +44,7 @@ impl VitalInstruction for InstructionInputAssert {
 
     fn into_ops_bytes(self) -> Result<Vec<u8>> {
         match self.resource {
-            Resource::Name(_name) => {
-                todo!("add input name assert")
-            }
+            Resource::Name(name) => Self::into_input_name(name, self.index),
             Resource::VRC20(vrc20) => Self::into_input_vrc20(vrc20, self.index),
             Resource::VRC721(vrc721) => Self::into_input_vrc721(vrc721, self.index),
         }
@@ -52,6 +52,27 @@ impl VitalInstruction for InstructionInputAssert {
 }
 
 impl InstructionInputAssert {
+    fn into_input_name(n: Tag, index: u8) -> Result<Vec<u8>> {
+        // TODO: use a common way to process different name
+        let name_len = n.len();
+        let (opcode, mut res) = if name_len <= SHORT_NAME_LEN_MAX {
+            (
+                <InputAssertShortName as BasicOpcodeBase>::ID,
+                InputAssertShortName { name: n.try_into().expect("should ok"), index }.encode(),
+            )
+        } else if name_len <= NAME_LEN_MAX {
+            (<InputAssertName as BasicOpcodeBase>::ID, InputAssertName { name: n, index }.encode())
+        } else {
+            bail!("not support long name")
+        };
+
+        let mut bytes = Vec::with_capacity(4 + res.len());
+        bytes.push(opcode);
+        bytes.append(&mut res);
+
+        Ok(bytes)
+    }
+
     fn into_input_vrc20(v: VRC20, index: u8) -> Result<Vec<u8>> {
         Vrc20ResourceOperand::new(v).into_input_vrc20_opcode_bytes(index)
     }
@@ -59,6 +80,10 @@ impl InstructionInputAssert {
     fn into_input_vrc721(v: VRC721, index: u8) -> Result<Vec<u8>> {
         let op = InputVRC721Assert { hash: v.hash, name: v.name, index };
 
-        Ok(op.encode())
+        let mut bytes = Vec::with_capacity(512);
+        bytes.push(<InputVRC721Assert as BasicOpcodeBase>::ID);
+        bytes.append(&mut op.encode());
+
+        Ok(bytes)
     }
 }
