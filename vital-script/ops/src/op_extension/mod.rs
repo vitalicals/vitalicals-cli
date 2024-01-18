@@ -3,7 +3,6 @@
 use alloc::vec::Vec;
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use parity_scale_codec::Encode;
 
 mod op_deploy;
 
@@ -17,7 +16,10 @@ pub trait ExtensionOpcodeBase: Sized + Into<Instruction> {
 
 pub trait ExtensionOpcode: ExtensionOpcodeBase + parity_scale_codec::Codec {
     fn encode_op(&self) -> Vec<u8> {
-        (Self::ID, self).encode()
+        let id = Self::ID.to_be_bytes().to_vec();
+        let op = self.encode();
+
+        [id, op].concat()
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {

@@ -4,8 +4,8 @@ use bytes::{Buf, Bytes};
 
 use crate::{
     instruction::Instruction,
-    op_basic::{self},
-    opcodes::BasicOp,
+    op_basic, op_extension,
+    opcodes::{BasicOp, ExtensionOp},
 };
 
 pub struct Parser {
@@ -33,7 +33,7 @@ impl Parser {
                     bail!("Invalid opcodes for extend opcode")
                 }
                 let opcodes_1 = self.datas.get_u8();
-                let opcodes = u16::from_le_bytes([opcodes_0, opcodes_1]);
+                let opcodes = u16::from_be_bytes([opcodes_0, opcodes_1]);
 
                 // a extend opcodes
                 self.parse_extend_instruction(remaining - 1, opcodes)
@@ -70,6 +70,8 @@ impl Parser {
             OutputIndexAssert,
             OutputIndexFlag16Assert,
             OutputIndexFlag32Assert,
+            InputAssertShortName,
+            InputAssertName,
             InputVRC20AssertSa32,
             InputVRC20AssertSa64,
             InputVRC20AssertSa128,
@@ -90,7 +92,33 @@ impl Parser {
         Ok(res)
     }
 
-    fn parse_extend_instruction(&mut self, _remaining: usize, _opcode: u16) -> Result<Instruction> {
-        todo!()
+    fn parse_extend_instruction(&mut self, _remaining: usize, opcode: u16) -> Result<Instruction> {
+        println!("opcode {}", opcode);
+        let opcode = ExtensionOp::new(opcode).context("extension op")?;
+
+        macro_rules! decode_operand {
+            ( $x:ident ) => {
+                ExtensionOp::decode_operand::<op_extension::$x>(&mut self.datas)?
+            };
+        }
+
+        macro_rules! decode_operands {
+            ( $($x:ident),* ) => {
+                match opcode {
+                    $(
+                        ExtensionOp::$x => decode_operand!($x),
+                    )*
+                    _ => panic!("Not supported opcode")
+                }
+            }
+        }
+
+        let res = decode_operands!(
+            // OutputIndexFlag64Assert,
+            DeployVRC20S,
+            DeployVRC20
+        );
+
+        Ok(res)
     }
 }

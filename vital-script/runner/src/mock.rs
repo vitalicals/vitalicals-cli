@@ -13,7 +13,7 @@ use crate::traits::EnvFunctions;
 #[derive(Debug)]
 pub struct TxMock {
     tx: Transaction,
-    txid: Txid,
+    pub txid: Txid,
     ops_bytes: Vec<(u8, Vec<u8>)>,
 }
 
@@ -33,6 +33,8 @@ impl TxMock {
     pub fn push_input(&mut self, input: OutPoint) {
         let mut txin = TxIn::default();
         txin.previous_output = input;
+
+        // println!("push_input input by index: {:?}", txin);
 
         self.tx.input.push(txin);
         self.txid = self.tx.txid();
@@ -60,13 +62,18 @@ impl TxMock {
 
 #[derive(Debug, Clone)]
 pub struct EnvMock {
-    current_tx: Arc<TxMock>,
+    pub current_tx: Arc<TxMock>,
     pub resource_storage: Arc<Mutex<BTreeMap<OutPoint, Resource>>>,
+    pub storage: Arc<Mutex<BTreeMap<Vec<u8>, Vec<u8>>>>,
 }
 
 impl EnvMock {
     pub fn new(tx: TxMock) -> Self {
-        Self { current_tx: Arc::new(tx), resource_storage: Arc::new(Mutex::new(BTreeMap::new())) }
+        Self {
+            current_tx: Arc::new(tx),
+            resource_storage: Arc::new(Mutex::new(BTreeMap::new())),
+            storage: Arc::new(Mutex::new(BTreeMap::new())),
+        }
     }
 
     pub fn next_psbt(&mut self, tx: TxMock) {
@@ -86,12 +93,16 @@ impl EnvFunctions for EnvMock {
 
     /// Get the input 's point by index.
     fn get_input(&self, input_index: u8) -> Result<OutPoint> {
+        // println!("get input by index: {}", input_index);
+
         let input_len = self.current_tx.tx.input.len();
         if input_index as usize >= input_len {
             bail!("the index not exists in the input expect {}, got {}", input_index, input_len);
         }
 
         let input = &self.current_tx.tx.input[input_index as usize];
+
+        // println!("get input by index: {:?}", input);
 
         Ok(input.previous_output)
     }
@@ -112,6 +123,20 @@ impl EnvFunctions for EnvMock {
         assert!(self.resource_storage.lock().expect("lock").contains_key(input));
 
         self.resource_storage.lock().expect("lock").remove(input);
+
+        Ok(())
+    }
+
+    fn storage_get(&self, key: &[u8]) -> Result<Option<Vec<u8>>> {
+        // println!("storage_get {:?} {:?}", self.storage, key);
+
+        Ok(self.storage.lock().expect("lock").get(key).cloned())
+    }
+
+    fn storage_set(&self, key: Vec<u8>, value: Vec<u8>) -> Result<()> {
+        // println!("storage_set {:?}", self.storage);
+
+        self.storage.lock().expect("lock").insert(key, value);
 
         Ok(())
     }

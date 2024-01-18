@@ -3,11 +3,59 @@ use parity_scale_codec::{Decode, Encode};
 use vital_script_derive::BasicOpcode;
 use vital_script_primitives::{
     names::{Name, ShortName},
-    resources::{Resource, VRC20, VRC721},
+    resources::{Resource, Tag, VRC20, VRC721},
     H256, U256,
 };
 
 use crate::instruction::{assert_input::InstructionInputAssert, Instruction};
+
+/// Input ShortName Res Assert
+#[derive(Debug, BasicOpcode, Encode, Decode)]
+pub struct InputAssertShortName {
+    pub name: ShortName,
+    pub index: u8,
+}
+
+impl From<InputAssertShortName> for Instruction {
+    fn from(value: InputAssertShortName) -> Self {
+        Instruction::Input(InstructionInputAssert {
+            index: value.index,
+            resource: Resource::Name(value.name.into()),
+        })
+    }
+}
+
+/// Input Name Res Assert
+#[derive(Debug, BasicOpcode, Encode, Decode)]
+pub struct InputAssertName {
+    pub name: Name,
+    pub index: u8,
+}
+
+impl From<InputAssertName> for Instruction {
+    fn from(value: InputAssertName) -> Self {
+        Instruction::Input(InstructionInputAssert {
+            index: value.index,
+            resource: Resource::Name(value.name),
+        })
+    }
+}
+
+/// Input Long Name Res Assert
+#[derive(Debug, BasicOpcode, Encode, Decode)]
+pub struct InputAssertLongName {
+    pub name: Tag, // FIXME: add long name
+    pub index: u8,
+}
+
+impl From<InputAssertLongName> for Instruction {
+    fn from(value: InputAssertLongName) -> Self {
+        Instruction::Input(InstructionInputAssert {
+            index: value.index,
+            resource: Resource::Name(value.name),
+        })
+    }
+}
 
 /// Input VRC20 Res Assert for (ShortName, u32 amount)
 #[derive(Debug, BasicOpcode, Encode, Decode)]
