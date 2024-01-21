@@ -86,7 +86,7 @@ mod tests {
     };
     use vital_script_primitives::{
         names::Name,
-        resources::Resource,
+        resources::{Resource, ResourceType},
         types::vrc20::{VRC20MetaData, VRC20MintMeta},
         U256,
     };
@@ -99,7 +99,7 @@ mod tests {
         let mint_name = Name::try_from("abcdefg".to_string()).unwrap();
         let instructions = vec![
             Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
-            Instruction::mint(0, Resource::name(mint_name)),
+            Instruction::mint(0, ResourceType::name(mint_name)),
         ];
         let ops_bytes =
             ScriptBuilderFromInstructions::build(instructions).expect("build should ok");
@@ -128,7 +128,7 @@ mod tests {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
-                Instruction::mint(0, Resource::name(mint_name)),
+                Instruction::mint(0, ResourceType::name(mint_name)),
             ])
             .expect("build should ok");
 

@@ -3,7 +3,6 @@ use primitive_types::U256;
 use parity_scale_codec::{Decode, Encode};
 
 use super::MetaData;
-use crate::resources::Tag;
 
 /// The mint meta data for vrc20
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]

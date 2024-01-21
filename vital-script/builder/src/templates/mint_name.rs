@@ -3,7 +3,10 @@ use vital_script_ops::{
     builder::instruction::ScriptBuilderFromInstructions,
     instruction::{assert_output::InstructionOutputAssert, Instruction},
 };
-use vital_script_primitives::names::{Name, ShortName, NAME_LEN_MAX, SHORT_NAME_LEN_MAX};
+use vital_script_primitives::{
+    names::{Name, ShortName, NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
+    resources::ResourceType,
+};
 
 /// Build a script to mint a short name / name to a output index.
 pub fn mint_name(output_index: u32, name: impl Into<String>) -> Result<Vec<u8>> {
@@ -18,10 +21,10 @@ pub fn mint_name(output_index: u32, name: impl Into<String>) -> Result<Vec<u8>> 
     let name: String = name.into();
     let mint_instruction = if name.len() <= SHORT_NAME_LEN_MAX {
         let name = ShortName::try_from(name).context("the name format not valid")?;
-        Instruction::mint(output_index, name)
+        Instruction::mint(output_index, ResourceType::name(name))
     } else if name.len() <= NAME_LEN_MAX {
         let name = Name::try_from(name).context("the name format not valid")?;
-        Instruction::mint(output_index, name)
+        Instruction::mint(output_index, ResourceType::name(name))
     } else {
         bail!("not support long name with length {}, need <= {}", name.len(), NAME_LEN_MAX);
     };

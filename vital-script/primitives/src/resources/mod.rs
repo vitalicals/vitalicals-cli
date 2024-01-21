@@ -5,6 +5,8 @@ use anyhow::{bail, Result};
 #[cfg(feature = "std")]
 use primitive_types::U256;
 
+use parity_scale_codec::{Decode, Encode};
+
 pub use crate::names::Name;
 use crate::names::ShortName;
 
@@ -16,7 +18,7 @@ pub use vrc721::*;
 
 pub type Tag = Name;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
 #[repr(u16)]
 pub enum ResourceClass {
     Name = 0x01,
@@ -24,10 +26,24 @@ pub enum ResourceClass {
     VRC721 = 0x03,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
 pub struct ResourceType {
     pub class: ResourceClass,
     pub name: Tag,
+}
+
+impl ResourceType {
+    pub fn name(n: impl Into<Tag>) -> Self {
+        Self { class: ResourceClass::Name, name: n.into() }
+    }
+
+    pub fn vrc20(n: impl Into<Tag>) -> Self {
+        Self { class: ResourceClass::VRC20, name: n.into() }
+    }
+
+    pub fn vrc721(n: impl Into<Tag>) -> Self {
+        Self { class: ResourceClass::VRC721, name: n.into() }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
