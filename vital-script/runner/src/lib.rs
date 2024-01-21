@@ -86,7 +86,7 @@ mod tests {
     };
     use vital_script_primitives::{
         names::Name,
-        resources::Resource,
+        resources::{Resource, ResourceType},
         types::vrc20::{VRC20MetaData, VRC20MintMeta},
         U256,
     };
@@ -99,7 +99,7 @@ mod tests {
         let mint_name = Name::try_from("abcdefg".to_string()).unwrap();
         let instructions = vec![
             Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
-            Instruction::mint(0, Resource::name(mint_name)),
+            Instruction::mint(0, ResourceType::name(mint_name)),
         ];
         let ops_bytes =
             ScriptBuilderFromInstructions::build(instructions).expect("build should ok");
@@ -122,13 +122,15 @@ mod tests {
 
     #[test]
     fn test_mint_name_then_deploy_vrc20() {
-        let mint_name = Name::try_from("abcdefg".to_string()).unwrap();
+        let mint_name_str = "abcdefg";
+        let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
+        let mint_amount = U256::from(10000);
 
         let mut env_inner1 = {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
-                Instruction::mint(0, Resource::name(mint_name)),
+                Instruction::mint(0, ResourceType::name(mint_name)),
             ])
             .expect("build should ok");
 
@@ -148,7 +150,7 @@ mod tests {
 
         // println!("env {:?}", env_inner1);
 
-        let _env_inner2 = {
+        let mut env_inner2 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -166,7 +168,7 @@ mod tests {
                         max: U256::from(1000000000000000_u64),
                         mint: VRC20MintMeta {
                             mint_type: 1,
-                            mint_amount: U256::from(10000),
+                            mint_amount,
                             mint_height: 10,
                             max_mints: 100000000,
                         },
@@ -193,6 +195,33 @@ mod tests {
             env_inner1
         };
 
-        // 3. check state.
+        // 3. mint vrc20
+        let env_inner3 = {
+            // 2. deploy a vrc20 by the name
+            let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, ResourceType::vrc20(mint_name)),
+            ])
+            .expect("build should ok");
+
+            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+
+            let mut tx_mock3 = TxMock::new();
+            tx_mock3.push_output(2000);
+            tx_mock3.push_ops(ops_bytes);
+
+            env_inner2.next_psbt(tx_mock3);
+
+            let context = Context::new(env_inner2.clone());
+            let mut runner = Runner::new(context).expect("new runner");
+            runner.run().expect("run failed");
+
+            env_inner2
+        };
+
+        let outpoint = env_inner3.get_output(0).expect("get output failed");
+        let res = env_inner3.get_resources(&outpoint).expect("get resources failed");
+
+        assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount).expect("res")));
     }
 }

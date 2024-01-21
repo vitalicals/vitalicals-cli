@@ -6,19 +6,19 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-log.workspace = true
 anyhow.workspace = true
+bdk.workspace = true
+btc-p2tr-builder.workspace = true
+btc-script-builder.workspace = true
 clap = { workspace = true, features = ["derive"] }
-tokio.workspace = true
-futures.workspace = true
 env_logger.workspace = true
+futures.workspace = true
+hex.workspace = true
+log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-hex.workspace = true
-bdk.workspace = true
+tokio.workspace = true
 wallet.workspace = true
-btc-script-builder.workspace = true
-btc-p2tr-builder.workspace = true
 
 vital-script-builder.workspace = true
 vital-script-primitives.workspace = true

@@ -86,7 +86,10 @@ impl Parser {
             TransferVRC20Sa32,
             TransferVRC20A32,
             MintShortName,
-            MintName
+            MintName,
+            MintShortVRC20,
+            MintVRC20,
+            MintVRC721
         );
 
         Ok(res)

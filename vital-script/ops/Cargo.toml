@@ -8,10 +8,10 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 bytes.workspace = true
-parity-scale-codec = {workspace = true, features = ["derive", "max-encoded-len"] }
+parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 
-vital-script-primitives.workspace = true
 vital-script-derive.workspace = true
+vital-script-primitives.workspace = true
 
 [dev-dependencies]
 hex.workspace = true

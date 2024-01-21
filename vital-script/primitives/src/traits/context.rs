@@ -3,7 +3,7 @@ use parity_scale_codec::{Decode, Encode};
 
 use crate::{
     resources::{Resource, Tag},
-    types::vrc20::VRC20MetaData,
+    types::vrc20::{VRC20MetaData, VRC20StatusData},
 };
 
 #[repr(u8)]
@@ -58,17 +58,38 @@ pub trait EnvContext {
     }
 
     fn deploy_vrc20(&mut self, name: Tag, meta: VRC20MetaData) -> Result<()> {
-        let curr = self.get_metadata::<VRC20MetaData>(name, MetaDataType::VRC20).context("get")?;
+        let curr = self.get_vrc20_metadata(name).context("get")?;
         if curr.is_some() {
             bail!("the vrc20 had created");
         }
 
         // set to false, means it not costed
-        self.set_metadata(name, MetaDataType::VRC20, meta).context("set")
+        self.set_vrc20_metadata(name, VRC20StatusData { mint_count: 0, meta })
+            .context("set")
     }
 
-    fn get_vrc20_metadata(&self, name: Tag) -> Result<Option<VRC20MetaData>> {
+    fn increase_vrc20_mint_count(&mut self, name: Tag) -> Result<()> {
+        let status_data = self.get_vrc20_metadata(name).context("get")?;
+        if let Some(mut status_data) = status_data {
+            if status_data.mint_count >= status_data.meta.mint.max_mints {
+                bail!("mint count had reached max");
+            }
+
+            status_data.mint_count += 1;
+            self.set_vrc20_metadata(name, status_data).context("set")?;
+        } else {
+            bail!("the vrc20 had created");
+        }
+
+        Ok(())
+    }
+
+    fn get_vrc20_metadata(&self, name: Tag) -> Result<Option<VRC20StatusData>> {
         self.get_metadata(name, MetaDataType::VRC20)
+    }
+
+    fn set_vrc20_metadata(&mut self, name: Tag, meta: VRC20StatusData) -> Result<()> {
+        self.set_metadata(name, MetaDataType::VRC20, meta)
     }
 
     fn set_metadata<T: Encode>(&mut self, name: Tag, typ: MetaDataType, meta: T) -> Result<()>;

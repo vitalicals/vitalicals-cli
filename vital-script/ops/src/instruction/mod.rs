@@ -18,7 +18,10 @@ pub mod resource_move;
 
 pub use resource_mint::*;
 
-use vital_script_primitives::{resources::Resource, traits::Context};
+use vital_script_primitives::{
+    resources::{Resource, ResourceType},
+    traits::Context,
+};
 
 pub trait VitalInstruction {
     fn pre_check(&self) -> Result<()> {
@@ -59,7 +62,7 @@ impl VitalInstruction for Instruction {
 }
 
 impl Instruction {
-    pub fn mint(index: u8, resource: impl Into<Resource>) -> Self {
-        Self::Mint(InstructionResourceMint::new(index, resource))
+    pub fn mint(index: u8, resource_type: ResourceType) -> Self {
+        Self::Mint(InstructionResourceMint::new(index, resource_type))
     }
 }
