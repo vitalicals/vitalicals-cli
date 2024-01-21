@@ -23,3 +23,10 @@ pub struct VRC20MetaData {
     pub mint: VRC20MintMeta,
     pub meta: Option<MetaData>,
 }
+
+/// The status data for vrc20
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+pub struct VRC20StatusData {
+    pub mint_count: u64,
+    pub meta: VRC20MetaData,
+}
