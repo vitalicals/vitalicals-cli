@@ -37,7 +37,7 @@ impl VitalInstruction for InstructionVRC20Deploy {
         }
         context
             .input_resource()
-            .cost(name_resource)
+            .cost(&name_resource)
             .context("cost name resource input")?;
 
         // cost the name for deploy the vrc20

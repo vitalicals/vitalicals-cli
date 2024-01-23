@@ -30,14 +30,14 @@ impl Vrc20ResourceOperand {
         };
 
         let (amount_bytes, amount_typ_idx) = if res.amount <= U256::from(u32::MAX) {
-            (res.amount.as_u32().to_be_bytes().to_vec(), 0)
+            (res.amount.as_u32().to_le_bytes().to_vec(), 0)
         } else if res.amount <= U256::from(u64::MAX) {
-            (res.amount.as_u64().to_be_bytes().to_vec(), 1)
+            (res.amount.as_u64().to_le_bytes().to_vec(), 1)
         } else if res.amount <= U256::from(u128::MAX) {
-            (res.amount.as_u128().to_be_bytes().to_vec(), 2)
+            (res.amount.as_u128().to_le_bytes().to_vec(), 2)
         } else {
             let mut raw = [0_u8; 32];
-            res.amount.to_big_endian(&mut raw);
+            res.amount.to_little_endian(&mut raw);
 
             (raw.to_vec(), 3)
         };
@@ -46,7 +46,6 @@ impl Vrc20ResourceOperand {
     }
 
     pub fn into_input_vrc20_opcode_bytes(mut self, index: u8) -> Result<Vec<u8>> {
-        // TODO: to ops
         let opcode_header = BasicOp::InputVRC20AssertSa32 as u8;
         let opcode = opcode_header + self.name_typ_idx + self.amount_typ_idx;
 
@@ -56,6 +55,21 @@ impl Vrc20ResourceOperand {
         bytes.push(opcode as u8);
         bytes.append(&mut self.amount_bytes);
         bytes.append(&mut self.name_bytes);
+        bytes.push(index);
+
+        Ok(bytes)
+    }
+
+    pub fn into_move_vrc20_opcode_bytes(mut self, index: u8) -> Result<Vec<u8>> {
+        let opcode_header = BasicOp::MoveVRC20Sa32 as u8;
+        let opcode = opcode_header + self.name_typ_idx + self.amount_typ_idx;
+
+        let opcode = BasicOp::new(opcode)?;
+
+        let mut bytes = Vec::with_capacity(1 + 1 + self.name_bytes.len() + self.amount_bytes.len());
+        bytes.push(opcode as u8);
+        bytes.append(&mut self.name_bytes);
+        bytes.append(&mut self.amount_bytes);
         bytes.push(index);
 
         Ok(bytes)

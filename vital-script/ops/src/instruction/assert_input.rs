@@ -30,6 +30,7 @@ impl VitalInstruction for InstructionInputAssert {
         let resource_from_env =
             context.env().get_input_resource(self.index).context("get input resource")?;
         if resource_from_env != self.resource {
+            println!("resource from {:?} expect {:?}", resource_from_env, self.resource);
             bail!("the resource not expected")
         }
 
