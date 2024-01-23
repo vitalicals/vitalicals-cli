@@ -19,9 +19,12 @@ pub mod resource_move;
 pub use resource_mint::*;
 
 use vital_script_primitives::{
-    resources::{Resource, ResourceType},
+    resources::{Resource, ResourceType, Tag, VRC20},
     traits::Context,
+    U256,
 };
+
+use self::resource_move::InstructionResourceMove;
 
 pub trait VitalInstruction {
     fn pre_check(&self) -> Result<()> {
@@ -39,6 +42,8 @@ pub enum Instruction {
     Output(assert_output::InstructionOutputAssert),
     Mint(resource_mint::InstructionResourceMint),
     Deploy(resource_deploy::InstructionVRC20Deploy),
+    Move(resource_move::InstructionResourceMove),
+    MoveAll(resource_move::InstructionResourceMoveAll),
 }
 
 impl VitalInstruction for Instruction {
@@ -48,6 +53,8 @@ impl VitalInstruction for Instruction {
             Self::Output(i) => i.exec(context),
             Self::Mint(i) => i.exec(context),
             Self::Deploy(i) => i.exec(context),
+            Self::Move(i) => i.exec(context),
+            Self::MoveAll(i) => i.exec(context),
         }
     }
 
@@ -57,6 +64,8 @@ impl VitalInstruction for Instruction {
             Self::Output(i) => i.into_ops_bytes(),
             Self::Mint(i) => i.into_ops_bytes(),
             Self::Deploy(i) => i.into_ops_bytes(),
+            Self::Move(i) => i.into_ops_bytes(),
+            Self::MoveAll(i) => i.into_ops_bytes(),
         }
     }
 }
@@ -64,5 +73,16 @@ impl VitalInstruction for Instruction {
 impl Instruction {
     pub fn mint(index: u8, resource_type: ResourceType) -> Self {
         Self::Mint(InstructionResourceMint::new(index, resource_type))
+    }
+
+    pub fn move_to(index: u8, resource: impl Into<Resource>) -> Self {
+        Self::Move(InstructionResourceMove::new(index, resource))
+    }
+
+    pub fn move_vrc20_to(index: u8, name: impl Into<Tag>, amount: impl Into<U256>) -> Self {
+        Self::Move(InstructionResourceMove::new(
+            index,
+            Resource::VRC20(VRC20::new(name.into(), amount.into())),
+        ))
     }
 }

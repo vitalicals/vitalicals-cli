@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use anyhow::{bail, Result};
 use vital_script_primitives::{
     names::Name,
-    resources::{self, Resource, Tag, VRC20, VRC721},
+    resources::{self, Resource, ResourceClass, ResourceType, Tag, VRC20, VRC721},
     traits::context::InputResourcesContext as InputResourcesContextT,
     H256, U256,
 };
@@ -36,12 +36,26 @@ impl InputResourcesContextT for InputResourcesContext {
         Ok(())
     }
 
-    fn cost(&mut self, resource: Resource) -> Result<()> {
+    fn cost(&mut self, resource: &Resource) -> Result<()> {
         match resource {
             Resource::Name(name) => self.inputs.cost_name(name),
             Resource::VRC20(v) => self.inputs.cost_vrc20(v),
             Resource::VRC721(v) => self.inputs.cost_vrc721(v),
         }
+    }
+
+    fn get_vrc20(&self, name: Tag) -> Option<Resource> {
+        for vrc20 in self.inputs.vrc20s.iter() {
+            if vrc20.name == name {
+                if vrc20.amount.is_zero() {
+                    return None
+                } else {
+                    return Some(Resource::VRC20(VRC20::new(name, vrc20.amount)));
+                }
+            }
+        }
+
+        None
     }
 
     fn all(&self) -> &[u8] {
@@ -175,7 +189,7 @@ impl InputResources {
     }
 
     /// Cost the resources from input
-    pub fn cost(&mut self, resource: Resource) -> Result<()> {
+    pub fn cost(&mut self, resource: &Resource) -> Result<()> {
         match resource {
             Resource::Name(n) => self.cost_name(n),
             Resource::VRC20(v) => self.cost_vrc20(v),
@@ -183,7 +197,7 @@ impl InputResources {
         }
     }
 
-    pub fn cost_vrc20(&mut self, resource: resources::VRC20) -> Result<()> {
+    pub fn cost_vrc20(&mut self, resource: &resources::VRC20) -> Result<()> {
         for v in self.vrc20s.iter_mut() {
             if v.name == resource.name {
                 return v.cost(resource.amount);
@@ -193,7 +207,7 @@ impl InputResources {
         bail!("no found res in inputs")
     }
 
-    pub fn cost_vrc721(&mut self, resource: resources::VRC721) -> Result<()> {
+    pub fn cost_vrc721(&mut self, resource: &resources::VRC721) -> Result<()> {
         for v in self.vrc721s.iter_mut() {
             if v.name == resource.name {
                 return v.cost(resource.hash);
@@ -203,9 +217,9 @@ impl InputResources {
         bail!("not found res in inputs")
     }
 
-    pub fn cost_name(&mut self, resource: resources::Name) -> Result<()> {
+    pub fn cost_name(&mut self, resource: &resources::Name) -> Result<()> {
         for v in self.names.iter_mut() {
-            if v.name == resource {
+            if &v.name == resource {
                 if v.costed {
                     bail!("had already costed")
                 } else {

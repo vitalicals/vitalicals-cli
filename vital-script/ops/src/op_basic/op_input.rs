@@ -209,3 +209,101 @@ impl From<InputVRC721Assert> for Instruction {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use vital_script_primitives::names::Name;
+
+    use crate::{builder::instruction::ScriptBuilderFromInstructions, parser::Parser};
+
+    use super::*;
+
+    #[test]
+    fn test_ops_to_instruction() {
+        let hash = H256::random();
+        let short_name = ShortName::try_from("abc".to_string()).unwrap();
+        let name = Name::try_from("abcdef".to_string()).unwrap();
+
+        assert_eq!(
+            Instruction::from(InputAssertShortName { name: short_name, index: 1 }),
+            Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: Resource::Name(Name::from(short_name))
+            })
+        );
+
+        assert_eq!(
+            Instruction::from(InputAssertName { name: name, index: 1 }),
+            Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: Resource::Name(name)
+            })
+        );
+
+        assert_eq!(
+            Instruction::from(InputVRC721Assert { hash, name, index: 1 }),
+            Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: Resource::VRC721(VRC721 { name, hash })
+            })
+        )
+    }
+
+    #[test]
+    fn test_to_instruction() {
+        let instructions = vec![
+            Instruction::Input(InstructionInputAssert {
+                index: 0,
+                resource: Resource::name(Name::try_from("dd".to_string()).unwrap()),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: Resource::name(Name::try_from("dddddd".to_string()).unwrap()),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 2,
+                resource: Resource::vrc20("abc", 1000.into()).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 3,
+                resource: Resource::vrc20("abc", U256::from(u32::MAX) + 1).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 4,
+                resource: Resource::vrc20("abc", U256::from(u64::MAX) + 1).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 5,
+                resource: Resource::vrc20("abc", U256::from(u128::MAX) + U256::from(1)).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 6,
+                resource: Resource::vrc20("abcdefg", 1000.into()).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 7,
+                resource: Resource::vrc20("abcdefg", U256::from(u32::MAX) + 1).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 8,
+                resource: Resource::vrc20("abcdefg", U256::from(u64::MAX) + 1).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 9,
+                resource: Resource::vrc20("abcdefg", U256::from(u128::MAX) + 1).unwrap(),
+            }),
+            Instruction::Input(InstructionInputAssert {
+                index: 10,
+                resource: Resource::VRC721(VRC721 {
+                    name: "aaaaaa".to_string().try_into().unwrap(),
+                    hash: H256::random(),
+                }),
+            }),
+        ];
+
+        let ops_bytes = ScriptBuilderFromInstructions::build(instructions.clone()).unwrap();
+        let instructions_into = Parser::new(&ops_bytes).parse().expect("parse");
+
+        assert_eq!(instructions, instructions_into);
+    }
+}

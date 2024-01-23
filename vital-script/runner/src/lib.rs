@@ -227,7 +227,7 @@ mod tests {
         assert!(vrc20.is_some());
 
         // 3. mint vrc20
-        let env_inner3 = {
+        let mut env_inner3 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -252,6 +252,48 @@ mod tests {
 
         let outpoint = env_inner3.get_output(0).expect("get output failed");
         let res = env_inner3.get_resources(&outpoint).expect("get resources failed");
+
+        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
+
+        assert_eq!(res, Some(vrc20_in_2.clone()));
+
+        // 4. transfer vrc20
+        let env_inner4 = {
+            // 2. deploy a vrc20 by the name
+            let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 0,
+                    resource: vrc20_in_2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::move_to(0, vrc20_in_2),
+            ])
+            .expect("build should ok");
+
+            println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
+
+            // the minted vrc20s
+            let tx_mock3_id = env_inner3.get_output(0).expect("get output failed");
+
+            let mut tx_mock4 = TxMock::new();
+            tx_mock4.push_input(tx_mock3_id);
+            tx_mock4.push_output(2000);
+            tx_mock4.push_ops(ops_bytes);
+
+            env_inner3.next_psbt(tx_mock4);
+
+            let context = Context::new(env_inner3.clone());
+            let mut runner = Runner::new(context).expect("new runner");
+            runner.run().expect("run failed");
+
+            env_inner3
+        };
+
+        let res_before = env_inner4.get_resources(&outpoint).expect("get resources failed");
+        assert_eq!(res_before, None);
+
+        let outpoint = env_inner4.get_output(0).expect("get output failed");
+        let res = env_inner4.get_resources(&outpoint).expect("get resources failed");
 
         assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount).expect("res")));
     }
@@ -362,7 +404,7 @@ mod tests {
         assert!(vrc20.is_some());
 
         // 3. mint vrc20
-        let env_inner3 = {
+        let mut env_inner3 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -387,6 +429,48 @@ mod tests {
 
         let outpoint = env_inner3.get_output(0).expect("get output failed");
         let res = env_inner3.get_resources(&outpoint).expect("get resources failed");
+
+        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
+
+        assert_eq!(res, Some(vrc20_in_2.clone()));
+
+        // 4. transfer vrc20
+        let env_inner4 = {
+            // 2. deploy a vrc20 by the name
+            let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 0,
+                    resource: vrc20_in_2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::move_to(0, vrc20_in_2),
+            ])
+            .expect("build should ok");
+
+            println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
+
+            // the minted vrc20s
+            let tx_mock3_id = env_inner3.get_output(0).expect("get output failed");
+
+            let mut tx_mock4 = TxMock::new();
+            tx_mock4.push_input(tx_mock3_id);
+            tx_mock4.push_output(2000);
+            tx_mock4.push_ops(ops_bytes);
+
+            env_inner3.next_psbt(tx_mock4);
+
+            let context = Context::new(env_inner3.clone());
+            let mut runner = Runner::new(context).expect("new runner");
+            runner.run().expect("run failed");
+
+            env_inner3
+        };
+
+        let res_before = env_inner4.get_resources(&outpoint).expect("get resources failed");
+        assert_eq!(res_before, None);
+
+        let outpoint = env_inner4.get_output(0).expect("get output failed");
+        let res = env_inner4.get_resources(&outpoint).expect("get resources failed");
 
         assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount).expect("res")));
     }

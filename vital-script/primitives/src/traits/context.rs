@@ -2,7 +2,7 @@ use anyhow::{bail, Context as AnyhowContext, Result};
 use parity_scale_codec::{Decode, Encode};
 
 use crate::{
-    resources::{Resource, Tag},
+    resources::{Resource, ResourceType, Tag},
     types::vrc20::{VRC20MetaData, VRC20StatusData},
 };
 
@@ -104,10 +104,12 @@ pub trait RunnerContext {
 
 pub trait InputResourcesContext {
     fn push(&mut self, input_index: u8, resource: Resource) -> Result<()>;
-    fn cost(&mut self, resource: Resource) -> Result<()>;
+    fn cost(&mut self, resource: &Resource) -> Result<()>;
 
     fn all(&self) -> &[u8];
     fn uncosted(&self) -> Vec<(u8, Resource)>;
+
+    fn get_vrc20(&self, name: Tag) -> Option<Resource>;
 }
 
 pub trait Context {

@@ -44,6 +44,10 @@ impl ResourceType {
     pub fn vrc721(n: impl Into<Tag>) -> Self {
         Self { class: ResourceClass::VRC721, name: n.into() }
     }
+
+    pub fn is_vrc20(&self) -> bool {
+        self.class == ResourceClass::VRC20
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
