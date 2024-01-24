@@ -1,5 +1,6 @@
 use alloc::collections::BTreeMap;
 use anyhow::{anyhow, bail, Context, Result};
+use bitcoin::Transaction;
 use parity_scale_codec::{Decode, Encode};
 
 use vital_script_primitives::{
@@ -11,20 +12,23 @@ use crate::traits::EnvFunctions;
 
 const STORAGE_KEY_METADATA: &'static [u8; 8] = b"metadata";
 
-pub struct EnvContext<Functions: EnvFunctions> {
+pub struct EnvContext<'a, Functions: EnvFunctions> {
     env: Functions,
+
+    /// The tx
+    tx: &'a Transaction,
 
     /// The outputs need to bind to outputs.
     cached_output_resources: BTreeMap<u8, Resource>,
 }
 
-impl<Functions: EnvFunctions> EnvContext<Functions> {
-    pub fn new(env_interface: Functions) -> Self {
-        Self { env: env_interface, cached_output_resources: BTreeMap::new() }
+impl<'a, Functions: EnvFunctions> EnvContext<'a, Functions> {
+    pub fn new(env_interface: Functions, tx: &'a Transaction) -> Self {
+        Self { env: env_interface, tx, cached_output_resources: BTreeMap::new() }
     }
 }
 
-impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
+impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
     fn is_valid(&self) -> bool {
         self.env.is_valid()
     }

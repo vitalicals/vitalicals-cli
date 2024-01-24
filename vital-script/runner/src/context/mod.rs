@@ -1,5 +1,6 @@
 use anyhow::{bail, Context as AnyhowContext, Result};
 
+use bitcoin::Transaction;
 use vital_script_ops::{instruction::Instruction, parser::Parser};
 pub use vital_script_primitives::traits::context::Context as ContextT;
 use vital_script_primitives::traits::{
@@ -18,17 +19,17 @@ use crate::traits::EnvFunctions;
 
 const CAP_SIZE: usize = 16;
 
-pub struct Context<Functions: EnvFunctions> {
-    env: EnvContext<Functions>,
+pub struct Context<'a, Functions: EnvFunctions> {
+    env: EnvContext<'a, Functions>,
     input_resources: InputResourcesContext,
     runner: RunnerContext,
 }
 
-impl<Functions> ContextT for Context<Functions>
+impl<'a, Functions> ContextT for Context<'a, Functions>
 where
     Functions: EnvFunctions,
 {
-    type Env = EnvContext<Functions>;
+    type Env = EnvContext<'a, Functions>;
     type InputResource = InputResourcesContext;
     type Runner = RunnerContext;
 
@@ -45,14 +46,14 @@ where
     }
 }
 
-impl<Functions> Context<Functions>
+impl<'a, Functions> Context<'a, Functions>
 where
     Functions: EnvFunctions,
 {
-    pub fn new(env_interface: Functions) -> Self {
+    pub fn new(env_interface: Functions, tx: &'a Transaction) -> Self {
         let runner = RunnerContext::new();
         let input_resources = InputResourcesContext::new(CAP_SIZE);
-        let env = EnvContext::new(env_interface);
+        let env = EnvContext::new(env_interface, tx);
 
         Self { env, input_resources, runner }
     }

@@ -44,7 +44,7 @@ impl<'a> BlockRunner<'a> {
             let tx_id = tx.txid();
             log::debug!(target: TARGET, "run tx index {}, {} on {}", index, tx_id, self.height);
 
-            let context = Context::new(env_interface.clone());
+            let context = Context::new(env_interface.clone(), tx);
             if !context.is_valid() {
                 continue;
             }

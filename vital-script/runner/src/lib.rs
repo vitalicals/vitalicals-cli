@@ -23,13 +23,13 @@ pub use context::Context;
 use traits::EnvFunctions;
 use vital_script_ops::instruction::{Instruction, VitalInstruction};
 
-pub struct Runner<Functions: EnvFunctions> {
+pub struct Runner<'a, Functions: EnvFunctions> {
     instructions: Vec<Instruction>,
-    context: Context<Functions>,
+    context: Context<'a, Functions>,
 }
 
-impl<Functions: EnvFunctions> Runner<Functions> {
-    pub fn new(context: Context<Functions>) -> Result<Self> {
+impl<'a, Functions: EnvFunctions> Runner<'a, Functions> {
+    pub fn new(context: Context<'a, Functions>) -> Result<Self> {
         let instructions = context.get_instructions().context("get instructions")?;
 
         Ok(Self { instructions, context })
@@ -56,7 +56,7 @@ impl<Functions: EnvFunctions> Runner<Functions> {
     }
 }
 
-impl<Functions: EnvFunctions> Runner<Functions> {
+impl<'a, Functions: EnvFunctions> Runner<'a, Functions> {
     // The pre checks for context and instructions.
     fn pre_check(&self) -> Result<()> {
         self.context.pre_check().context("context")?;
@@ -109,8 +109,8 @@ mod tests {
         tx_mock.push_ops(ops_bytes);
         tx_mock.push_output(1000);
 
-        let env_interface = EnvMock::new(tx_mock);
-        let context = Context::new(env_interface.clone());
+        let env_interface = EnvMock::new(tx_mock.clone());
+        let context = Context::new(env_interface.clone(), &tx_mock.tx);
 
         let mut runner = Runner::new(context).expect("new runner");
 
@@ -127,7 +127,7 @@ mod tests {
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
         let mint_amount = U256::from(10000);
 
-        let mut env_inner1 = {
+        let (mut env_inner1, tx_mock1) = {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -139,14 +139,14 @@ mod tests {
             tx_mock1.push_ops(ops_bytes);
             tx_mock1.push_output(1000);
 
-            let env_interface = EnvMock::new(tx_mock1);
-            let context = Context::new(env_interface.clone());
+            let env_interface = EnvMock::new(tx_mock1.clone());
+            let context = Context::new(env_interface.clone(), &tx_mock1.tx);
 
             let mut runner = Runner::new(context).expect("new runner");
 
             runner.run().expect("run failed");
 
-            env_interface
+            (env_interface, tx_mock1)
         };
 
         // check name
@@ -155,7 +155,7 @@ mod tests {
 
         assert_eq!(res, Some(Resource::name(mint_name)));
 
-        let is_costed = Context::new(env_inner1.clone())
+        let is_costed = Context::new(env_inner1.clone(), &tx_mock1.tx)
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
             .expect("should have metadata");
@@ -163,7 +163,7 @@ mod tests {
 
         // println!("env {:?}", env_inner1);
 
-        let mut env_inner2 = {
+        let (mut env_inner2, tx_mock2) = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -199,13 +199,13 @@ mod tests {
             tx_mock2.push_ops(ops_bytes);
             tx_mock2.push_output(2000);
 
-            env_inner1.next_psbt(tx_mock2);
+            env_inner1.next_psbt(tx_mock2.clone());
 
-            let context = Context::new(env_inner1.clone());
+            let context = Context::new(env_inner1.clone(), &tx_mock2.tx);
             let mut runner = Runner::new(context).expect("new runner");
             runner.run().expect("run failed");
 
-            env_inner1
+            (env_inner1, tx_mock2)
         };
 
         // check name
@@ -215,7 +215,7 @@ mod tests {
         // name should had costed
         assert_eq!(res, None);
 
-        let mut ctx = Context::new(env_inner2.clone());
+        let mut ctx = Context::new(env_inner2.clone(), &tx_mock2.tx);
         let is_costed = ctx
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
@@ -241,9 +241,9 @@ mod tests {
             tx_mock3.push_output(2000);
             tx_mock3.push_ops(ops_bytes);
 
-            env_inner2.next_psbt(tx_mock3);
+            env_inner2.next_psbt(tx_mock3.clone());
 
-            let context = Context::new(env_inner2.clone());
+            let context = Context::new(env_inner2.clone(), &tx_mock3.tx);
             let mut runner = Runner::new(context).expect("new runner");
             runner.run().expect("run failed");
 
@@ -280,9 +280,9 @@ mod tests {
             tx_mock4.push_output(2000);
             tx_mock4.push_ops(ops_bytes);
 
-            env_inner3.next_psbt(tx_mock4);
+            env_inner3.next_psbt(tx_mock4.clone());
 
-            let context = Context::new(env_inner3.clone());
+            let context = Context::new(env_inner3.clone(), &tx_mock4.tx);
             let mut runner = Runner::new(context).expect("new runner");
             runner.run().expect("run failed");
 
@@ -304,7 +304,7 @@ mod tests {
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
         let mint_amount = U256::from(10000);
 
-        let mut env_inner1 = {
+        let (mut env_inner1, tx_mock1) = {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -316,14 +316,14 @@ mod tests {
             tx_mock1.push_ops(ops_bytes);
             tx_mock1.push_output(1000);
 
-            let env_interface = EnvMock::new(tx_mock1);
-            let context = Context::new(env_interface.clone());
+            let env_interface = EnvMock::new(tx_mock1.clone());
+            let context = Context::new(env_interface.clone(), &tx_mock1.tx);
 
             let mut runner = Runner::new(context).expect("new runner");
 
             runner.run().expect("run failed");
 
-            env_interface
+            (env_interface, tx_mock1)
         };
 
         // check name
@@ -332,7 +332,7 @@ mod tests {
 
         assert_eq!(res, Some(Resource::name(mint_name)));
 
-        let is_costed = Context::new(env_inner1.clone())
+        let is_costed = Context::new(env_inner1.clone(), &tx_mock1.tx)
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
             .expect("should have metadata");
@@ -340,7 +340,7 @@ mod tests {
 
         // println!("env {:?}", env_inner1);
 
-        let mut env_inner2 = {
+        let (mut env_inner2, tx_mock2) = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -376,13 +376,13 @@ mod tests {
             tx_mock2.push_ops(ops_bytes);
             tx_mock2.push_output(2000);
 
-            env_inner1.next_psbt(tx_mock2);
+            env_inner1.next_psbt(tx_mock2.clone());
 
-            let context = Context::new(env_inner1.clone());
+            let context = Context::new(env_inner1.clone(), &tx_mock2.tx);
             let mut runner = Runner::new(context).expect("new runner");
             runner.run().expect("run failed");
 
-            env_inner1
+            (env_inner1, tx_mock2)
         };
 
         // check name
@@ -392,7 +392,7 @@ mod tests {
         // name should had costed
         assert_eq!(res, None);
 
-        let mut ctx = Context::new(env_inner2.clone());
+        let mut ctx = Context::new(env_inner2.clone(), &tx_mock2.tx);
         let is_costed = ctx
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
@@ -418,9 +418,9 @@ mod tests {
             tx_mock3.push_output(2000);
             tx_mock3.push_ops(ops_bytes);
 
-            env_inner2.next_psbt(tx_mock3);
+            env_inner2.next_psbt(tx_mock3.clone());
 
-            let context = Context::new(env_inner2.clone());
+            let context = Context::new(env_inner2.clone(), &tx_mock3.tx);
             let mut runner = Runner::new(context).expect("new runner");
             runner.run().expect("run failed");
 
@@ -457,9 +457,9 @@ mod tests {
             tx_mock4.push_output(2000);
             tx_mock4.push_ops(ops_bytes);
 
-            env_inner3.next_psbt(tx_mock4);
+            env_inner3.next_psbt(tx_mock4.clone());
 
-            let context = Context::new(env_inner3.clone());
+            let context = Context::new(env_inner3.clone(), &tx_mock4.tx);
             let mut runner = Runner::new(context).expect("new runner");
             runner.run().expect("run failed");
 

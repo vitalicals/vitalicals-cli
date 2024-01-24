@@ -11,9 +11,9 @@ use vital_script_primitives::resources::Resource;
 
 use crate::traits::EnvFunctions;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TxMock {
-    tx: Transaction,
+    pub tx: Transaction,
     pub txid: Txid,
     ops_bytes: Vec<(u8, Vec<u8>)>,
 }
