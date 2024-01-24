@@ -50,7 +50,7 @@ impl ResourceType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 pub enum Resource {
     Name(Name),
     VRC20(VRC20),

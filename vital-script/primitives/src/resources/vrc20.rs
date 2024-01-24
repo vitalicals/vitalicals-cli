@@ -1,9 +1,11 @@
 //! The VRC20 Token
 
+use parity_scale_codec::{Decode, Encode};
+
 use super::Tag;
 use crate::U256;
 
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Encode, Decode, Debug, PartialEq, Eq)]
 pub struct VRC20 {
     pub name: Tag,
     pub amount: U256,

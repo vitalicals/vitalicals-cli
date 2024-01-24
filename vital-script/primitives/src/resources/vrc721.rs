@@ -1,9 +1,11 @@
 //! The VRC721 Token
 
+use parity_scale_codec::{Decode, Encode};
+
 use super::Tag;
 use crate::H256;
 
-#[derive(Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Encode, Decode, Debug, PartialEq, Eq)]
 pub struct VRC721 {
     pub name: Tag,
     pub hash: H256,
