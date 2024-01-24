@@ -2,11 +2,11 @@
 
 use anyhow::Result;
 
-use bdk::bitcoin::{hash_types::Txid, OutPoint};
+use bitcoin::{hash_types::Txid, OutPoint};
 
 use vital_script_primitives::resources::Resource;
 
-pub trait EnvFunctions: Send + Sync + 'static {
+pub trait EnvFunctions: Clone + Send + Sync + 'static {
     /// get current tx id.
     fn get_tx_id(&self) -> &Txid;
 

@@ -3,8 +3,9 @@ use std::sync::Mutex;
 use alloc::{collections::BTreeMap, sync::Arc};
 use anyhow::{bail, Result};
 
-use bdk::bitcoin::{
-    absolute::LockTime, hash_types::Txid, OutPoint, ScriptBuf, Transaction, TxIn, TxOut,
+use bitcoin::{
+    absolute::LockTime, hash_types::Txid, transaction::Version, Amount, OutPoint, ScriptBuf,
+    Transaction, TxIn, TxOut,
 };
 use vital_script_primitives::resources::Resource;
 
@@ -20,7 +21,7 @@ pub struct TxMock {
 impl TxMock {
     pub fn new() -> Self {
         let tx = Transaction {
-            version: 2,
+            version: Version::TWO,
             lock_time: LockTime::ZERO,
             input: Vec::new(),
             output: Vec::new(),
@@ -53,7 +54,7 @@ impl TxMock {
     }
 
     pub fn push_output(&mut self, amount: u64) {
-        let txout = TxOut { value: amount, script_pubkey: ScriptBuf::default() };
+        let txout = TxOut { value: Amount::from_sat(amount), script_pubkey: ScriptBuf::default() };
 
         self.tx.output.push(txout);
         self.txid = self.tx.txid();

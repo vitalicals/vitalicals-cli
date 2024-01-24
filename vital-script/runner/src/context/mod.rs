@@ -57,6 +57,10 @@ where
         Self { env, input_resources, runner }
     }
 
+    pub fn is_valid(&self) -> bool {
+        true
+    }
+
     pub fn get_instructions(&self) -> Result<Vec<Instruction>> {
         let ops_bytes = self.env.get_ops();
         let ins = ops_bytes

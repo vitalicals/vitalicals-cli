@@ -19,7 +19,7 @@ mod resource_cache;
 #[cfg(test)]
 mod mock;
 
-use context::Context;
+pub use context::Context;
 use traits::EnvFunctions;
 use vital_script_ops::instruction::{Instruction, VitalInstruction};
 
@@ -76,7 +76,7 @@ impl<Functions: EnvFunctions> Runner<Functions> {
 
 #[cfg(test)]
 mod tests {
-    use bdk::bitcoin::OutPoint;
+    use bitcoin::OutPoint;
     use vital_script_ops::{
         builder::instruction::ScriptBuilderFromInstructions,
         instruction::{
