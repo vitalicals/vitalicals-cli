@@ -10,6 +10,8 @@ use vital_script_primitives::{
 
 use crate::traits::EnvFunctions;
 
+use super::script::parse_vital_scripts;
+
 const STORAGE_KEY_METADATA: &'static [u8; 8] = b"metadata";
 
 pub struct EnvContext<'a, Functions: EnvFunctions> {
@@ -17,6 +19,7 @@ pub struct EnvContext<'a, Functions: EnvFunctions> {
 
     /// The tx
     tx: &'a Transaction,
+    ops: Vec<(u8, Vec<u8>)>,
 
     /// The outputs need to bind to outputs.
     cached_output_resources: BTreeMap<u8, Resource>,
@@ -24,7 +27,9 @@ pub struct EnvContext<'a, Functions: EnvFunctions> {
 
 impl<'a, Functions: EnvFunctions> EnvContext<'a, Functions> {
     pub fn new(env_interface: Functions, tx: &'a Transaction) -> Self {
-        Self { env: env_interface, tx, cached_output_resources: BTreeMap::new() }
+        let ops = parse_vital_scripts(tx).expect("parse vital scripts");
+
+        Self { env: env_interface, tx, ops, cached_output_resources: BTreeMap::new() }
     }
 }
 
@@ -34,7 +39,13 @@ impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
     }
 
     fn get_ops(&self) -> &[(u8, Vec<u8>)] {
-        self.env.get_ops()
+        // TODO: test use real tx
+        let ops = self.env.get_ops();
+        if !ops.is_empty() {
+            self.env.get_ops()
+        } else {
+            &self.ops
+        }
     }
 
     fn get_input_resource(&self, index: u8) -> Result<Resource> {

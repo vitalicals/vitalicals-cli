@@ -3,7 +3,7 @@ use anyhow::{Context as AnyhowContext, Result};
 
 use bitcoin::{Block, Transaction, Txid};
 
-use vital_script_runner::{traits::EnvFunctions, Context, Runner};
+use vital_script_runner::{check_is_vital_script, traits::EnvFunctions, Context, Runner};
 
 use crate::TARGET;
 
@@ -43,6 +43,10 @@ impl<'a> BlockRunner<'a> {
             let index = index as u32;
             let tx_id = tx.txid();
             log::debug!(target: TARGET, "run tx index {}, {} on {}", index, tx_id, self.height);
+
+            if !check_is_vital_script(tx) {
+                continue;
+            }
 
             let context = Context::new(env_interface.clone(), tx);
             if !context.is_valid() {

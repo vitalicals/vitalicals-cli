@@ -19,7 +19,8 @@ mod resource_cache;
 #[cfg(test)]
 mod mock;
 
-pub use context::Context;
+pub use context::{script::check_is_vital_script, Context};
+
 use traits::EnvFunctions;
 use vital_script_ops::instruction::{Instruction, VitalInstruction};
 

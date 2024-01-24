@@ -7,15 +7,23 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+hex.workspace = true
+hex-literal.workspace = true
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 
-bitcoin.workspace = true
+bitcoin = { workspace = true, features = ["serde"] }
 
 vital-script-ops.workspace = true
 vital-script-primitives.workspace = true
 
 [dev-dependencies]
-hex.workspace = true
+serde_json.workspace = true
+
+vital-script-builder.workspace = true
+
+btc-p2tr-builder.workspace = true
+btc-script-builder.workspace = true
+
 
 [features]
 default = ["std"]

@@ -10,6 +10,7 @@ use vital_script_primitives::traits::{
 mod env;
 mod input;
 mod runner;
+pub mod script;
 
 use env::EnvContext;
 use input::InputResourcesContext;

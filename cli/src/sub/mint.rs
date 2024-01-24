@@ -103,7 +103,12 @@ fn mint_name(
     let commit_raw_transaction = commit_psbt.extract_tx();
     let commit_txid = commit_raw_transaction.txid();
 
+    println!("tx: {}", serde_json::to_string_pretty(&reveal_psbt.unsigned_tx).expect("to"));
+
     let reveal_raw_transaction = reveal_psbt.extract_tx();
+
+    println!("tx: {}", serde_json::to_string_pretty(&reveal_raw_transaction).expect("to"));
+
     let reveal_txid = reveal_raw_transaction.txid();
 
     bdk_blockchain.broadcast(&commit_raw_transaction)?;
