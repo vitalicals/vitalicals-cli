@@ -15,6 +15,7 @@ pub enum MetaDataType {
 }
 
 pub trait EnvContext {
+    fn is_valid(&self) -> bool;
     fn get_ops(&self) -> &[(u8, Vec<u8>)];
 
     fn get_input_resource(&self, index: u8) -> Result<Resource>;

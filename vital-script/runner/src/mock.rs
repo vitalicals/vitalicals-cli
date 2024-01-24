@@ -88,6 +88,10 @@ impl EnvFunctions for EnvMock {
         &self.current_tx.txid
     }
 
+    fn is_valid(&self) -> bool {
+        true
+    }
+
     fn get_ops(&self) -> &[(u8, Vec<u8>)] {
         &self.current_tx.ops_bytes
     }

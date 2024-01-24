@@ -10,6 +10,9 @@ pub trait EnvFunctions: Clone + Send + Sync + 'static {
     /// get current tx id.
     fn get_tx_id(&self) -> &Txid;
 
+    /// is a valid transaction with vital script
+    fn is_valid(&self) -> bool;
+
     /// get ops bytes.
     fn get_ops(&self) -> &[(u8, Vec<u8>)];
 

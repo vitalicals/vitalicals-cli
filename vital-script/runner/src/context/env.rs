@@ -25,6 +25,10 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
 }
 
 impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
+    fn is_valid(&self) -> bool {
+        self.env.is_valid()
+    }
+
     fn get_ops(&self) -> &[(u8, Vec<u8>)] {
         self.env.get_ops()
     }

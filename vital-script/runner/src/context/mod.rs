@@ -58,7 +58,7 @@ where
     }
 
     pub fn is_valid(&self) -> bool {
-        true
+        self.env.is_valid()
     }
 
     pub fn get_instructions(&self) -> Result<Vec<Instruction>> {
