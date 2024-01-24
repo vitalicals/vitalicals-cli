@@ -96,22 +96,6 @@ impl EnvFunctions for EnvMock {
         &self.current_tx.ops_bytes
     }
 
-    /// Get the input 's point by index.
-    fn get_input(&self, input_index: u8) -> Result<OutPoint> {
-        // println!("get input by index: {}", input_index);
-
-        let input_len = self.current_tx.tx.input.len();
-        if input_index as usize >= input_len {
-            bail!("the index not exists in the input expect {}, got {}", input_index, input_len);
-        }
-
-        let input = &self.current_tx.tx.input[input_index as usize];
-
-        // println!("get input by index: {:?}", input);
-
-        Ok(input.previous_output)
-    }
-
     fn get_resources(&self, input_id: &OutPoint) -> Result<Option<Resource>> {
         Ok(self.resource_storage.lock().expect("lock").get(input_id).cloned())
     }

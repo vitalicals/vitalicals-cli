@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 use anyhow::{anyhow, bail, Context, Result};
-use bitcoin::Transaction;
+use bitcoin::{Transaction, OutPoint};
 use parity_scale_codec::{Decode, Encode};
 
 use vital_script_primitives::{
@@ -31,6 +31,14 @@ impl<'a, Functions: EnvFunctions> EnvContext<'a, Functions> {
 
         Self { env: env_interface, tx, ops, cached_output_resources: BTreeMap::new() }
     }
+
+    fn get_input(&self, input_index: u8) -> Result<OutPoint>{
+        if self.tx.input.len() <= input_index as usize{
+            bail!("Input index out of range")
+        }
+
+        Ok(self.tx.input[input_index as usize].previous_output)
+    }
 }
 
 impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
@@ -49,7 +57,7 @@ impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
     }
 
     fn get_input_resource(&self, index: u8) -> Result<Resource> {
-        let out_point = self.env.get_input(index).context("get input")?;
+        let out_point = self.get_input(index).context("get input")?;
 
         self.env
             .get_resources(&out_point)
@@ -76,7 +84,6 @@ impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
             self.env
                 .unbind_resource(
                     &self
-                        .env
                         .get_input(*index)
                         .with_context(|| format!("get input index {}", index))?,
                 )
