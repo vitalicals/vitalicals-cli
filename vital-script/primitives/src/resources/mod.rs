@@ -57,6 +57,12 @@ pub enum Resource {
     VRC721(VRC721),
 }
 
+impl Default for Resource {
+    fn default() -> Self {
+        Self::Name(Name::default())
+    }
+}
+
 impl Resource {
     #[cfg(feature = "std")]
     pub fn vrc20(name: impl Into<String>, amount: U256) -> Result<Self> {
