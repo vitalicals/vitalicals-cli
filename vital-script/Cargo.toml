@@ -22,3 +22,6 @@ std = [
     "log/std",
     "bitcoin/std",
 ]
+scale-info = [
+    "vital-script-primitives/scale-info",
+]

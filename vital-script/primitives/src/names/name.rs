@@ -21,6 +21,7 @@ pub const NAME_BYTES_LEN: usize = 8;
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 #[derive(Deserialize, Serialize)]
 #[derive(Encode, Decode)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
 
 impl Name {

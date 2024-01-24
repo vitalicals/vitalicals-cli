@@ -51,6 +51,7 @@ impl ResourceType {
 }
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub enum Resource {
     Name(Name),
     VRC20(VRC20),

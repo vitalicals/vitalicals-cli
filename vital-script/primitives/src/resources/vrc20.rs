@@ -6,6 +6,7 @@ use super::Tag;
 use crate::U256;
 
 #[derive(Default, Clone, Encode, Decode, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct VRC20 {
     pub name: Tag,
     pub amount: U256,
