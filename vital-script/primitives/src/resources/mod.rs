@@ -50,11 +50,18 @@ impl ResourceType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub enum Resource {
     Name(Name),
     VRC20(VRC20),
     VRC721(VRC721),
+}
+
+impl Default for Resource {
+    fn default() -> Self {
+        Self::Name(Name::default())
+    }
 }
 
 impl Resource {

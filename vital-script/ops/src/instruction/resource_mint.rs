@@ -8,9 +8,8 @@ use vital_script_primitives::{
     traits::*,
 };
 
-use crate::{
-    instruction::VitalInstruction,
-    op_basic::{BasicOpcode, MintName, MintShortName, MintShortVRC20, MintVRC20, MintVRC721},
+use crate::op_basic::{
+    BasicOpcode, MintName, MintShortName, MintShortVRC20, MintVRC20, MintVRC721,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,9 +51,11 @@ impl InstructionResourceMint {
     }
 }
 
-impl VitalInstruction for InstructionResourceMint {
+impl Instruction for InstructionResourceMint {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // TODO:: check if can mint
+
+        // println!("InstructionResourceMint");
 
         let resource = self.make_mint_resource(context)?;
 

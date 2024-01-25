@@ -10,7 +10,7 @@ use vital_script_primitives::{
 };
 
 use crate::{
-    instruction::{utils::*, VitalInstruction},
+    instruction::utils::*,
     op_basic::{BasicOpcodeBase, InputAssertName, InputAssertShortName, InputVRC721Assert},
     opcodes::{BasicOp, BasicOpcode},
 };
@@ -21,7 +21,7 @@ pub struct InstructionInputAssert {
     pub resource: Resource,
 }
 
-impl VitalInstruction for InstructionInputAssert {
+impl Instruction for InstructionInputAssert {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // 1. ensure if current input index is not asserted.
         context.runner().try_assert_input(self.index)?;

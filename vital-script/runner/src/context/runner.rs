@@ -2,7 +2,7 @@ use alloc::collections::BTreeSet;
 use anyhow::{bail, Result};
 use vital_script_primitives::traits::context::RunnerContext as RunnerContextT;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct RunnerContext {
     inputs: BTreeSet<u8>,
     outputs: BTreeSet<u8>,

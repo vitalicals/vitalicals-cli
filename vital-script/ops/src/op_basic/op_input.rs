@@ -233,11 +233,8 @@ mod tests {
         );
 
         assert_eq!(
-            Instruction::from(InputAssertName { name: name, index: 1 }),
-            Instruction::Input(InstructionInputAssert {
-                index: 1,
-                resource: Resource::Name(name)
-            })
+            Instruction::from(InputAssertName { name, index: 1 }),
+            Instruction::Input(InstructionInputAssert { index: 1, resource: Resource::Name(name) })
         );
 
         assert_eq!(

@@ -4,7 +4,9 @@
 use alloc::vec::Vec;
 use anyhow::Result;
 
-use crate::instruction::{Instruction, VitalInstruction};
+use vital_script_primitives::traits::Instruction as InstructionT;
+
+use crate::instruction::Instruction;
 
 pub struct ScriptBuilderFromInstructions {}
 

@@ -1,18 +1,23 @@
 use std::sync::Mutex;
 
 use alloc::{collections::BTreeMap, sync::Arc};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context as AnyhowContext, Result};
 
-use bdk::bitcoin::{
-    absolute::LockTime, hash_types::Txid, OutPoint, ScriptBuf, Transaction, TxIn, TxOut,
+use bitcoin::{
+    absolute::LockTime, hash_types::Txid, transaction::Version, Amount, OutPoint, ScriptBuf,
+    Transaction, TxIn, TxOut,
 };
-use vital_script_primitives::resources::Resource;
+use vital_script_ops::{instruction::Instruction, parser::Parser};
+use vital_script_primitives::{
+    resources::Resource,
+    traits::{Context as ContextT, EnvContext as EnvContextT},
+};
 
-use crate::traits::EnvFunctions;
+use crate::{traits::EnvFunctions, Context};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TxMock {
-    tx: Transaction,
+    pub tx: Transaction,
     pub txid: Txid,
     ops_bytes: Vec<(u8, Vec<u8>)>,
 }
@@ -20,7 +25,7 @@ pub struct TxMock {
 impl TxMock {
     pub fn new() -> Self {
         let tx = Transaction {
-            version: 2,
+            version: Version::TWO,
             lock_time: LockTime::ZERO,
             input: Vec::new(),
             output: Vec::new(),
@@ -53,7 +58,7 @@ impl TxMock {
     }
 
     pub fn push_output(&mut self, amount: u64) {
-        let txout = TxOut { value: amount, script_pubkey: ScriptBuf::default() };
+        let txout = TxOut { value: Amount::from_sat(amount), script_pubkey: ScriptBuf::default() };
 
         self.tx.output.push(txout);
         self.txid = self.tx.txid();
@@ -62,51 +67,20 @@ impl TxMock {
 
 #[derive(Debug, Clone)]
 pub struct EnvMock {
-    pub current_tx: Arc<TxMock>,
     pub resource_storage: Arc<Mutex<BTreeMap<OutPoint, Resource>>>,
     pub storage: Arc<Mutex<BTreeMap<Vec<u8>, Vec<u8>>>>,
 }
 
 impl EnvMock {
-    pub fn new(tx: TxMock) -> Self {
+    pub fn new() -> Self {
         Self {
-            current_tx: Arc::new(tx),
             resource_storage: Arc::new(Mutex::new(BTreeMap::new())),
             storage: Arc::new(Mutex::new(BTreeMap::new())),
         }
     }
-
-    pub fn next_psbt(&mut self, tx: TxMock) {
-        self.current_tx = Arc::new(tx);
-    }
 }
 
 impl EnvFunctions for EnvMock {
-    /// get current tx id.
-    fn get_tx_id(&self) -> &Txid {
-        &self.current_tx.txid
-    }
-
-    fn get_ops(&self) -> &[(u8, Vec<u8>)] {
-        &self.current_tx.ops_bytes
-    }
-
-    /// Get the input 's point by index.
-    fn get_input(&self, input_index: u8) -> Result<OutPoint> {
-        // println!("get input by index: {}", input_index);
-
-        let input_len = self.current_tx.tx.input.len();
-        if input_index as usize >= input_len {
-            bail!("the index not exists in the input expect {}, got {}", input_index, input_len);
-        }
-
-        let input = &self.current_tx.tx.input[input_index as usize];
-
-        // println!("get input by index: {:?}", input);
-
-        Ok(input.previous_output)
-    }
-
     fn get_resources(&self, input_id: &OutPoint) -> Result<Option<Resource>> {
         Ok(self.resource_storage.lock().expect("lock").get(input_id).cloned())
     }
@@ -138,6 +112,61 @@ impl EnvFunctions for EnvMock {
 
         self.storage.lock().expect("lock").insert(key, value);
 
+        Ok(())
+    }
+}
+
+pub type ContextMockInner = Context<EnvMock>;
+
+pub struct ContextMock {
+    inner: ContextMockInner,
+    tx: TxMock,
+}
+
+impl ContextMock {
+    pub fn new(tx: TxMock, env: EnvMock) -> Self {
+        Self { inner: ContextMockInner::new(env, &tx.tx), tx }
+    }
+}
+
+impl ContextT for ContextMock {
+    type Env = <ContextMockInner as ContextT>::Env;
+    type InputResource = <ContextMockInner as ContextT>::InputResource;
+    type Runner = <ContextMockInner as ContextT>::Runner;
+
+    type Instruction = Instruction;
+
+    fn env(&mut self) -> &mut Self::Env {
+        self.inner.env()
+    }
+
+    fn input_resource(&mut self) -> &mut Self::InputResource {
+        self.inner.input_resource()
+    }
+
+    fn runner(&mut self) -> &mut Self::Runner {
+        self.inner.runner()
+    }
+
+    fn get_ops(&self) -> &[(u8, Vec<u8>)] {
+        &self.tx.ops_bytes
+    }
+
+    fn get_instructions(&self) -> Result<Vec<Self::Instruction>> {
+        let ops_bytes = self.get_ops();
+        let ins = ops_bytes
+            .iter()
+            .map(|(index, ops)| {
+                Parser::new(ops).parse().with_context(|| format!("parse {}", index))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(ins.concat())
+    }
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+    fn post_check(&self) -> Result<()> {
         Ok(())
     }
 }

@@ -12,6 +12,7 @@ const VEC_CAP_SIZE: usize = 8;
 const INPUT_MAX: usize = 64;
 const OUTPUT_MAX: usize = 64;
 
+#[derive(Clone)]
 pub struct InputResourcesContext {
     inputs: InputResources,
     inputs_indexs: Vec<u8>,
@@ -67,17 +68,20 @@ impl InputResourcesContextT for InputResourcesContext {
     }
 }
 
+#[derive(Clone)]
 pub struct NameInput {
     index: u8,
     costed: bool,
     name: Name,
 }
 
+#[derive(Clone)]
 pub struct VRC20Input {
     index: u8,
     amount: U256,
 }
 
+#[derive(Clone)]
 pub struct VRC20Inputs {
     name: Tag,
     amount: U256,
@@ -101,12 +105,14 @@ impl VRC20Inputs {
     }
 }
 
+#[derive(Clone)]
 pub struct VRC721Input {
     index: u8,
     costed: bool,
     hash: H256,
 }
 
+#[derive(Clone)]
 pub struct VRC721Inputs {
     name: Tag,
     inputs: Vec<VRC721Input>,
@@ -133,6 +139,7 @@ impl VRC721Inputs {
     }
 }
 
+#[derive(Clone)]
 pub struct InputResources {
     names: Vec<NameInput>,
     vrc20s: Vec<VRC20Inputs>,

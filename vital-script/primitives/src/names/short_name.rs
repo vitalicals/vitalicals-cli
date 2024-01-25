@@ -19,6 +19,7 @@ pub const SHORT_NAME_LEN_MAX: usize = 5;
 /// The len just for 0 - 3
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 #[derive(Encode, Decode)]
+#[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct ShortName(pub [u8; 4]);
 
 impl ShortName {

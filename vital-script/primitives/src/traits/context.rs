@@ -1,4 +1,5 @@
 use anyhow::{bail, Context as AnyhowContext, Result};
+use bitcoin::{OutPoint, Txid};
 use parity_scale_codec::{Decode, Encode};
 
 use crate::{
@@ -15,6 +16,15 @@ pub enum MetaDataType {
 }
 
 pub trait EnvContext {
+    /// get current tx id.
+    fn get_tx_id(&self) -> &Txid;
+
+    /// Get the output 's point by the index for current tx.
+    fn get_output(&self, output_index: u8) -> OutPoint {
+        OutPoint { txid: *self.get_tx_id(), vout: output_index as u32 }
+    }
+
+    fn is_valid(&self) -> bool;
     fn get_ops(&self) -> &[(u8, Vec<u8>)];
 
     fn get_input_resource(&self, index: u8) -> Result<Resource>;
@@ -32,6 +42,7 @@ pub trait EnvContext {
     fn apply_output_resources(&mut self) -> Result<()>;
 
     fn new_name(&mut self, name: Tag) -> Result<()> {
+        println!("name {:?}", name);
         let curr = self.get_metadata::<bool>(name, MetaDataType::Name).context("get")?;
         if curr.is_some() {
             bail!("the name had created");
@@ -112,14 +123,50 @@ pub trait InputResourcesContext {
     fn get_vrc20(&self, name: Tag) -> Option<Resource>;
 }
 
+pub trait Instruction {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
+    fn exec(&self, context: &mut impl Context) -> Result<()>;
+
+    fn into_ops_bytes(self) -> Result<Vec<u8>>;
+}
+
 pub trait Context {
     type Env: EnvContext;
     type Runner: RunnerContext;
     type InputResource: InputResourcesContext;
 
+    type Instruction: Instruction;
+
+    // TODO use env_mut
     fn env(&mut self) -> &mut Self::Env;
     fn runner(&mut self) -> &mut Self::Runner;
     fn input_resource(&mut self) -> &mut Self::InputResource;
+
+    fn get_ops(&self) -> &[(u8, Vec<u8>)];
+    fn get_instructions(&self) -> Result<Vec<Self::Instruction>>;
+    fn pre_check(&self) -> Result<()>;
+    fn post_check(&self) -> Result<()>;
+
+    /// Apply changes to indexer, will do:
+    ///   - del all inputs 's resources bind
+    ///   - set all outputs 's resources bind
+    ///   - storage all uncosted inputs 's resources to space.
+    fn apply_resources(&mut self) -> Result<()> {
+        // del all inputs 's resources bind
+        let all = self.input_resource().all().to_vec();
+        self.env().remove_input_resources(&all).context("remove")?;
+
+        // set all outputs 's resources bind
+        self.env().apply_output_resources().context("apply")?;
+
+        // storage all uncosted inputs 's resources to space.
+        // TODO: impl
+
+        Ok(())
+    }
 
     fn send_resource_to_output(&mut self, index: u8, resource: Resource) -> Result<()> {
         // 1. only the output asserted can be send resource into.
