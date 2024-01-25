@@ -6,7 +6,7 @@ use bitcoin::{hash_types::Txid, OutPoint};
 
 use vital_script_primitives::resources::Resource;
 
-pub trait EnvFunctions: Clone + Send + Sync + 'static {
+pub trait EnvFunctions: Clone {
     fn get_resources(&self, input_id: &OutPoint) -> Result<Option<Resource>>;
     fn bind_resource(&self, output: OutPoint, res: Resource) -> Result<()>;
     fn unbind_resource(&self, input: &OutPoint) -> Result<()>;
