@@ -1,25 +1,14 @@
-use std::{collections::BTreeMap, str::FromStr};
+use std::str::FromStr;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use bdk::{
-    bitcoin::{
-        absolute,
-        address::{NetworkUnchecked, Payload},
-        key::TapTweak,
-        psbt::{Input, PartiallySignedTransaction, PsbtSighashType},
-        secp256k1::{All, KeyPair, Secp256k1, SecretKey, XOnlyPublicKey},
-        sighash::{self, SighashCache, TapSighash, TapSighashType},
-        taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder},
-        Address, Network, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Witness,
-    },
+    bitcoin::{address::NetworkUnchecked, Address, Network},
     blockchain::Blockchain,
     wallet::AddressIndex,
-    FeeRate, SignOptions,
 };
 use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
-use btc_script_builder::InscriptionScriptBuilder;
 
 use crate::Cli;
 

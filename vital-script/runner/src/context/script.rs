@@ -148,8 +148,6 @@ pub fn try_get_vital_script(script: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use bitcoin::{Address, XOnlyPublicKey};
-
     use super::*;
 
     const MINT_TX: &str = "{

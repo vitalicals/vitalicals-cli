@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use anyhow::Result;
 
-use bitcoin::{hash_types::Txid, OutPoint};
+use bitcoin::OutPoint;
 
 use vital_script_primitives::resources::Resource;
 

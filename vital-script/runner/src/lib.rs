@@ -15,7 +15,6 @@ use anyhow::{Context as AnyhowContext, Result};
 pub mod traits;
 
 mod context;
-mod outputs;
 mod resource_cache;
 
 #[cfg(test)]

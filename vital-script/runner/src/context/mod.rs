@@ -1,5 +1,5 @@
 use alloc::vec::Vec;
-use anyhow::{bail, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result};
 
 use bitcoin::Transaction;
 use vital_script_ops::{instruction::Instruction, parser::Parser};

@@ -5,14 +5,13 @@ use anyhow::{bail, Context as AnyhowContext, Result};
 use parity_scale_codec::Encode;
 use vital_script_primitives::{
     names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
-    resources::{Name, Resource, Tag, VRC20, VRC721},
+    resources::{Resource, Tag, VRC20, VRC721},
     traits::*,
 };
 
 use crate::{
     instruction::utils::*,
     op_basic::{BasicOpcodeBase, InputAssertName, InputAssertShortName, InputVRC721Assert},
-    opcodes::{BasicOp, BasicOpcode},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

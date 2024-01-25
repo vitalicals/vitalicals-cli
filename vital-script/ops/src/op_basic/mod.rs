@@ -11,6 +11,7 @@ mod op_mint;
 mod op_move;
 mod op_output;
 
+#[allow(unused_imports)]
 pub use op_dmint::*;
 pub use op_input::*;
 pub use op_mint::*;

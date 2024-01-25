@@ -77,7 +77,7 @@ impl Instruction for InstructionResourceMint {
                     .increase_vrc20_mint_count(v.name)
                     .context("increase mint count failed")?;
             }
-            Resource::VRC721(v) => {
+            Resource::VRC721(_v) => {
                 todo!();
             }
         }
