@@ -39,7 +39,7 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
                     }
                 }
                 Err(err) => {
-                    println!("parse error: {}", err);
+                    log::debug!("parse error: {}", err);
                 }
             }
         }
@@ -72,7 +72,7 @@ pub fn parse_vital_scripts(tx: &Transaction) -> Result<Vec<(u8, Vec<u8>)>> {
                     }
                 }
                 Err(err) => {
-                    println!("parse error: {}", err);
+                    log::debug!("parse error: {}", err);
                 }
             }
         }

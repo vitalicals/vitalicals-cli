@@ -7,6 +7,8 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+log.workspace = true
+env_logger.workspace = true
 hex-literal.workspace = true
 hex.workspace = true
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
@@ -27,6 +29,7 @@ btc-script-builder.workspace = true
 [features]
 default = ["std"]
 std = [
+    "log/std",
     "bitcoin/std",
     "vital-script-ops/std",
     "vital-script-primitives/std",

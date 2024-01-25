@@ -12,6 +12,12 @@ pub struct VRC721 {
     pub hash: H256,
 }
 
+impl core::fmt::Display for VRC721 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "[{},{}]", self.name, self.hash)
+    }
+}
+
 impl VRC721 {
     pub fn new(name: Tag, hash: H256) -> Self {
         Self { name, hash }

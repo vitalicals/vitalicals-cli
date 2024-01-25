@@ -1,5 +1,6 @@
 //! The Env trait
 
+use alloc::vec::Vec;
 use anyhow::Result;
 
 use bitcoin::{hash_types::Txid, OutPoint};

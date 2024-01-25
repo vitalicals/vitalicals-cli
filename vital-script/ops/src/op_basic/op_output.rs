@@ -27,7 +27,7 @@ pub struct OutputIndexAssert {
 
 impl From<OutputIndexAssert> for Instruction {
     fn from(value: OutputIndexAssert) -> Self {
-        Instruction::Output(InstructionOutputAssert { indexs: vec![value.index] })
+        Instruction::Output(InstructionOutputAssert { indexs: [value.index].to_vec() })
     }
 }
 

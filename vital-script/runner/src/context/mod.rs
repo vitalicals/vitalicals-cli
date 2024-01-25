@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use anyhow::{bail, Context as AnyhowContext, Result};
 
 use bitcoin::Transaction;
@@ -58,7 +59,7 @@ where
         let ins = ops_bytes
             .iter()
             .map(|(index, ops)| {
-                Parser::new(ops).parse().with_context(|| format!("parse {}", index))
+                Parser::new(ops).parse().with_context(|| alloc::format!("parse {}", index))
             })
             .collect::<Result<Vec<_>>>()?;
 

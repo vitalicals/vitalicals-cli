@@ -25,6 +25,12 @@ impl InstructionResourceMove {
     }
 }
 
+impl core::fmt::Display for InstructionResourceMove {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "ResourceMove:({}, {})", self.output_index, self.resource)
+    }
+}
+
 impl Instruction for InstructionResourceMove {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         context.input_resource().cost(&self.resource).context("cost resource failed")?;
@@ -75,6 +81,12 @@ pub struct InstructionResourceMoveAll {
 impl InstructionResourceMoveAll {
     pub fn new(index: u8, resource_type: ResourceType) -> Self {
         Self { output_index: index, resource_type }
+    }
+}
+
+impl core::fmt::Display for InstructionResourceMoveAll {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "ResourceMoveAll:({}, {})", self.output_index, self.resource_type)
     }
 }
 

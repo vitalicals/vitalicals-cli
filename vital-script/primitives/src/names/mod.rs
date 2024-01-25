@@ -64,7 +64,6 @@ fn char2u8(c: char) -> Result<u8> {
     }
 }
 
-#[cfg(feature = "std")]
 fn u8_to_char(v: u8) -> Result<char> {
     if v == 0 || v > VALUE_MAX {
         bail!("Unsupported value");

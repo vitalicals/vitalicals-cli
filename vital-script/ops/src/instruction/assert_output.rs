@@ -13,6 +13,12 @@ pub struct InstructionOutputAssert {
     pub indexs: Vec<u8>,
 }
 
+impl core::fmt::Display for InstructionOutputAssert {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "OutputAssert:({:?})", self.indexs)
+    }
+}
+
 impl Instruction for InstructionOutputAssert {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         for index in self.indexs.iter() {

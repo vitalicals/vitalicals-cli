@@ -37,7 +37,7 @@ members = [
 [workspace.dependencies]
 anyhow = "1.0"
 array-bytes = "6.1"
-bitcoin = { version = "0.31.0", default-features = false }
+bitcoin = { version = "0.31.0", default-features = false, features = ["serde", "no-std"] }
 bytes = { version = "1.4.0", default-features = false }
 clap = { version = "4.4.11", features = ["derive"] }
 env_logger = "0.10.0"
@@ -61,7 +61,7 @@ scale-info = { version = "2.10.0", features = ["derive", "serde"], default-featu
 bdk = { version = "0.29.0", features = ["rpc", "all-keys"] }
 bdk-macros = "0.6"
 
-primitive-types = "0.12"
+primitive-types = { version = "0.12", default-features = false }
 
 cli = { path = "./cli" }
 client = { path = "./client" }
@@ -69,12 +69,12 @@ wallet = { path = "./wallet" }
 
 vital-primitives = { path = "./primitives" }
 
-vital-script = { path = "./vital-script" }
-vital-script-builder = { path = "./vital-script/builder" }
-vital-script-derive = { path = "./vital-script/derive" }
-vital-script-ops = { path = "./vital-script/ops" }
-vital-script-primitives = { path = "./vital-script/primitives" }
-vital-script-runner = { path = "./vital-script/runner" }
+vital-script = { path = "./vital-script", default-features = false }
+vital-script-builder = { path = "./vital-script/builder", default-features = false }
+vital-script-derive = { path = "./vital-script/derive", default-features = false }
+vital-script-ops = { path = "./vital-script/ops", default-features = false }
+vital-script-primitives = { path = "./vital-script/primitives", default-features = false }
+vital-script-runner = { path = "./vital-script/runner", default-features = false }
 
 btc-p2tr-builder = { path = "./btc/p2tr-builder" }
 btc-script-builder = { path = "./btc/script-builder" }

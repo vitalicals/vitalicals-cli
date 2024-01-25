@@ -7,20 +7,19 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-bytes.workspace = true
-scale-info = { workspace = true, optional = true }
-serde = { workspace = true, features = ["derive"] }
+bytes = { workspace = true, default-features = false }
+scale-info = { workspace = true, default-features = false, optional = true }
 
-bitcoin = { workspace = true, features = ["serde"] }
+bitcoin = { workspace = true, default-features = false, features = ["no-std"] }
 
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
-primitive-types = { workspace = true, features = ["serde", "codec"] }
+primitive-types = { workspace = true, default-features = false, features = ["codec"] }
 
 [features]
 default = ["std"]
 std = [
+    "anyhow/std",
     "bytes/std",
-    "serde/std",
     "parity-scale-codec/std",
     "primitive-types/std",
     "bitcoin/std",

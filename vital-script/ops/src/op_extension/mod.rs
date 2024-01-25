@@ -23,8 +23,7 @@ pub trait ExtensionOpcode: ExtensionOpcodeBase + parity_scale_codec::Codec {
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
-        Self::decode(&mut Reader::new(datas))
-            .map_err(|err| anyhow!("decode_operand {}", err.to_string()))
+        Self::decode(&mut Reader::new(datas)).map_err(|err| anyhow!("decode_operand {:?}", err))
     }
 }
 

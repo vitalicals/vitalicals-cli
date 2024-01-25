@@ -15,6 +15,15 @@ use vital_script_primitives::{
 
 use crate::{traits::EnvFunctions, Context};
 
+pub fn init_logger() {
+    let _ = env_logger::Builder::from_default_env()
+        .format_module_path(true)
+        .format_level(true)
+        .filter_level(log::LevelFilter::Info)
+        .parse_filters(format!("{}=debug", crate::TARGET).as_str())
+        .try_init();
+}
+
 #[derive(Debug, Clone)]
 pub struct TxMock {
     pub tx: Transaction,

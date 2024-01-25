@@ -1,4 +1,4 @@
-use alloc::collections::BTreeMap;
+use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::{anyhow, bail, Context, Result};
 use bitcoin::{OutPoint, Transaction, Txid};
 use parity_scale_codec::{Decode, Encode};
@@ -93,9 +93,9 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
                 .unbind_resource(
                     &self
                         .get_input(*index)
-                        .with_context(|| format!("get input index {}", index))?,
+                        .with_context(|| alloc::format!("get input index {}", index))?,
                 )
-                .with_context(|| format!("unbind {}", index))?;
+                .with_context(|| alloc::format!("unbind {}", index))?;
         }
 
         Ok(())
@@ -105,7 +105,7 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
         for (index, resource) in self.cached_output_resources.iter() {
             self.env
                 .bind_resource(self.get_output(*index), resource.clone())
-                .with_context(|| format!("bind resource {} to {:?}", index, resource))?;
+                .with_context(|| alloc::format!("bind resource {} to {:?}", index, resource))?;
         }
 
         Ok(())

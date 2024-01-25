@@ -107,7 +107,7 @@ impl Parser {
     }
 
     fn parse_extend_instruction(&mut self, _remaining: usize, opcode: u16) -> Result<Instruction> {
-        println!("opcode {}", opcode);
+        log::debug!("opcode {}", opcode);
         let opcode = ExtensionOp::new(opcode).context("extension op")?;
 
         macro_rules! decode_operand {

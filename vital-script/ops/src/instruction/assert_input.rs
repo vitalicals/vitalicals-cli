@@ -21,6 +21,12 @@ pub struct InstructionInputAssert {
     pub resource: Resource,
 }
 
+impl core::fmt::Display for InstructionInputAssert {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "InputAssert:({}, {})", self.index, self.resource)
+    }
+}
+
 impl Instruction for InstructionInputAssert {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // 1. ensure if current input index is not asserted.
@@ -30,7 +36,7 @@ impl Instruction for InstructionInputAssert {
         let resource_from_env =
             context.env().get_input_resource(self.index).context("get input resource")?;
         if resource_from_env != self.resource {
-            println!("resource from {:?} expect {:?}", resource_from_env, self.resource);
+            log::debug!("resource from {:?} expect {:?}", resource_from_env, self.resource);
             bail!("the resource not expected")
         }
 

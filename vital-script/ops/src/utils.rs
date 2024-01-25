@@ -1,7 +1,5 @@
 //! The utils
 
-use std::io::Read;
-
 use bytes::{Buf, Bytes};
 
 pub struct Reader<'a> {
@@ -25,10 +23,10 @@ impl<'a> parity_scale_codec::Input for Reader<'a> {
         &mut self,
         into: &mut [u8],
     ) -> core::prelude::v1::Result<(), parity_scale_codec::Error> {
-        self.datas
-            .reader()
-            .read(into)
-            .map_err(|_err| parity_scale_codec::Error::from("io"))?;
+        let len = core::cmp::min(self.datas.remaining(), into.len());
+
+        Buf::copy_to_slice(&mut self.datas, &mut into[0..len]);
+
         Ok(())
     }
 }

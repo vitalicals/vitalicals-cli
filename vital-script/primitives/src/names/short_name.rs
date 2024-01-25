@@ -3,7 +3,6 @@
 use anyhow::{bail, Result};
 use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
-use serde::{Deserialize, Serialize};
 
 use crate::names::*;
 
@@ -17,7 +16,7 @@ pub const SHORT_NAME_LEN_MAX: usize = 5;
 /// |   0    |    1      |     2     |    3   |   4    | len |
 ///
 /// The len just for 0 - 3
-#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Default)]
 #[derive(Encode, Decode)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct ShortName(pub [u8; 4]);
