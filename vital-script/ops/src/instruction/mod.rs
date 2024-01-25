@@ -20,21 +20,11 @@ pub use resource_mint::*;
 
 use vital_script_primitives::{
     resources::{Resource, ResourceType, Tag, VRC20},
-    traits::Context,
+    traits::{Context, Instruction as InstructionT},
     U256,
 };
 
 use self::resource_move::InstructionResourceMove;
-
-pub trait VitalInstruction {
-    fn pre_check(&self) -> Result<()> {
-        Ok(())
-    }
-
-    fn exec(&self, context: &mut impl Context) -> Result<()>;
-
-    fn into_ops_bytes(self) -> Result<Vec<u8>>;
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
@@ -46,7 +36,7 @@ pub enum Instruction {
     MoveAll(resource_move::InstructionResourceMoveAll),
 }
 
-impl VitalInstruction for Instruction {
+impl InstructionT for Instruction {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         match self {
             Self::Input(i) => i.exec(context),

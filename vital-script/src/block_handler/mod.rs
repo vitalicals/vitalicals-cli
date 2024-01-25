@@ -73,16 +73,16 @@ impl<'a> BlockRunner<'a> {
 
     fn run_tx<Functions>(
         &self,
-        context: Context<Functions>,
+        mut context: Context<Functions>,
         _index: u32,
         _tx: &Transaction,
     ) -> Result<()>
     where
         Functions: EnvFunctions,
     {
-        let mut runner = Runner::new(context).context("new runner")?;
+        let mut runner = Runner::new();
 
-        runner.run().context("run")?;
+        runner.run(&mut context).context("run")?;
 
         Ok(())
     }

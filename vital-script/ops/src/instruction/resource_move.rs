@@ -9,7 +9,7 @@ use vital_script_primitives::{
 };
 
 use crate::{
-    instruction::{utils::Vrc20ResourceOperand, VitalInstruction},
+    instruction::utils::Vrc20ResourceOperand,
     op_basic::{BasicOpcode, MoveAllVRC20S, MoveName, MoveShortName, MoveVRC721},
 };
 
@@ -25,7 +25,7 @@ impl InstructionResourceMove {
     }
 }
 
-impl VitalInstruction for InstructionResourceMove {
+impl Instruction for InstructionResourceMove {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         context.input_resource().cost(&self.resource).context("cost resource failed")?;
 
@@ -78,7 +78,7 @@ impl InstructionResourceMoveAll {
     }
 }
 
-impl VitalInstruction for InstructionResourceMoveAll {
+impl Instruction for InstructionResourceMoveAll {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         let resource = context
             .input_resource()

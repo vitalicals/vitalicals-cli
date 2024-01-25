@@ -20,19 +20,22 @@ use crate::traits::EnvFunctions;
 
 const CAP_SIZE: usize = 16;
 
-pub struct Context<'a, Functions: EnvFunctions> {
-    env: EnvContext<'a, Functions>,
+#[derive(Clone)]
+pub struct Context<Functions: EnvFunctions> {
+    env: EnvContext<Functions>,
     input_resources: InputResourcesContext,
     runner: RunnerContext,
 }
 
-impl<'a, Functions> ContextT for Context<'a, Functions>
+impl<Functions> ContextT for Context<Functions>
 where
     Functions: EnvFunctions,
 {
-    type Env = EnvContext<'a, Functions>;
+    type Env = EnvContext<Functions>;
     type InputResource = InputResourcesContext;
     type Runner = RunnerContext;
+
+    type Instruction = Instruction;
 
     fn env(&mut self) -> &mut Self::Env {
         &mut self.env
@@ -45,26 +48,13 @@ where
     fn runner(&mut self) -> &mut Self::Runner {
         &mut self.runner
     }
-}
 
-impl<'a, Functions> Context<'a, Functions>
-where
-    Functions: EnvFunctions,
-{
-    pub fn new(env_interface: Functions, tx: &'a Transaction) -> Self {
-        let runner = RunnerContext::new();
-        let input_resources = InputResourcesContext::new(CAP_SIZE);
-        let env = EnvContext::new(env_interface, tx);
-
-        Self { env, input_resources, runner }
+    fn get_ops(&self) -> &[(u8, Vec<u8>)] {
+        self.env.get_ops()
     }
 
-    pub fn is_valid(&self) -> bool {
-        self.env.is_valid()
-    }
-
-    pub fn get_instructions(&self) -> Result<Vec<Instruction>> {
-        let ops_bytes = self.env.get_ops();
+    fn get_instructions(&self) -> Result<Vec<Instruction>> {
+        let ops_bytes = self.get_ops();
         let ins = ops_bytes
             .iter()
             .map(|(index, ops)| {
@@ -75,13 +65,13 @@ where
         Ok(ins.concat())
     }
 
-    pub fn pre_check(&self) -> Result<()> {
+    fn pre_check(&self) -> Result<()> {
         // TODO: pre check
         Ok(())
     }
 
     /// Do post check
-    pub fn post_check(&self) -> Result<()> {
+    fn post_check(&self) -> Result<()> {
         // TODO: post check
         Ok(())
     }
@@ -90,7 +80,7 @@ where
     ///   - del all inputs 's resources bind
     ///   - set all outputs 's resources bind
     ///   - storage all uncosted inputs 's resources to space.
-    pub fn apply_resources(&mut self) -> Result<()> {
+    fn apply_resources(&mut self) -> Result<()> {
         // del all inputs 's resources bind
         let all = self.input_resource().all().to_vec();
         self.env().remove_input_resources(&all).context("remove")?;
@@ -102,5 +92,22 @@ where
         // TODO: impl
 
         Ok(())
+    }
+}
+
+impl<Functions> Context<Functions>
+where
+    Functions: EnvFunctions,
+{
+    pub fn new(env_interface: Functions, tx: &Transaction) -> Self {
+        let runner = RunnerContext::new();
+        let input_resources = InputResourcesContext::new(CAP_SIZE);
+        let env = EnvContext::new(env_interface, tx);
+
+        Self { env, input_resources, runner }
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.env.is_valid()
     }
 }

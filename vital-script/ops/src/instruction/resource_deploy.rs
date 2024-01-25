@@ -9,10 +9,7 @@ use vital_script_primitives::{
     types::vrc20::VRC20MetaData,
 };
 
-use crate::{
-    instruction::VitalInstruction,
-    op_extension::{DeployVRC20, DeployVRC20S, ExtensionOpcode},
-};
+use crate::op_extension::{DeployVRC20, DeployVRC20S, ExtensionOpcode};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstructionVRC20Deploy {
@@ -21,7 +18,7 @@ pub struct InstructionVRC20Deploy {
     pub meta: VRC20MetaData,
 }
 
-impl VitalInstruction for InstructionVRC20Deploy {
+impl Instruction for InstructionVRC20Deploy {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // cost the name, check if the vrc20 had deployed.
         let metadata = context.env().get_vrc20_metadata(self.name).context("get vrc20 metadata")?;

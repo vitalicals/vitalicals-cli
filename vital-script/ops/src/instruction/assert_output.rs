@@ -4,9 +4,8 @@ use alloc::vec::Vec;
 use anyhow::{bail, Result};
 use vital_script_primitives::traits::*;
 
-use crate::{
-    instruction::VitalInstruction,
-    op_basic::{BasicOpcode, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert},
+use crate::op_basic::{
+    BasicOpcode, OutputIndexAssert, OutputIndexFlag16Assert, OutputIndexFlag32Assert,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,7 +13,7 @@ pub struct InstructionOutputAssert {
     pub indexs: Vec<u8>,
 }
 
-impl VitalInstruction for InstructionOutputAssert {
+impl Instruction for InstructionOutputAssert {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         for index in self.indexs.iter() {
             // 1. ensure if current output index is not asserted.

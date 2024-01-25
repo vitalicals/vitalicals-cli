@@ -46,7 +46,7 @@ impl<'a> P2trBuilder<'a> {
 
         let internal_key = wallet.derive_x_only_public_key(&secp)?;
         let reveal_script = InscriptionScriptBuilder::new(data)
-            .into_script(&internal_key)
+            .into_script_by_key(&internal_key)
             .context("build script")?;
 
         let master_xpriv = *wallet.xpriv();

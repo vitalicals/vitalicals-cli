@@ -8,7 +8,7 @@
 //! OP_PUSHBYTES_XX datas1 or OP_PUSHDATA2 len datasXXX
 //! OP_ENDIF
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 use bdk::bitcoin::{
     opcodes::{
@@ -33,7 +33,7 @@ impl InscriptionScriptBuilder {
         Self { datas }
     }
 
-    pub fn into_script(self, key: &XOnlyPublicKey) -> Result<ScriptBuf> {
+    pub fn into_script_by_key(self, key: &XOnlyPublicKey) -> Result<ScriptBuf> {
         if self.datas.len() >= MAX_INSCRIPTION_DATAS_LEN {
             bail!(
                 "the inscription datas is too large expect {} got {}!",
@@ -58,6 +58,11 @@ impl InscriptionScriptBuilder {
             Ok(script)
         }
     }
+
+    pub fn into_script(self, key: &[u8]) -> Result<ScriptBuf> {
+        let key = &XOnlyPublicKey::from_slice(key).context("key into public key")?;
+        self.into_script_by_key(key)
+    }
 }
 
 #[cfg(test)]
@@ -73,12 +78,12 @@ mod tests {
     }
 
     fn test_datas_with_len(l: usize) {
-        let pubkey = XOnlyPublicKey::from_slice(&hex_literal::hex!(
-            "d2e7612f73d26067ae83e2a9d8bfa496193374677490dff0792242bbacba6922"
-        ))
-        .expect("pubkey");
         let datas = gen_datas(l);
-        let script = InscriptionScriptBuilder::new(datas).into_script(&pubkey).expect("datas");
+        let script = InscriptionScriptBuilder::new(datas)
+            .into_script(&hex_literal::hex!(
+                "d2e7612f73d26067ae83e2a9d8bfa496193374677490dff0792242bbacba6922"
+            ))
+            .expect("datas");
 
         println!("script_{} {}", l, script);
         println!("script_{} {}", l, hex::encode(script.as_bytes()));

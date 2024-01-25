@@ -21,63 +21,44 @@ mod mock;
 
 pub use context::{script::check_is_vital_script, Context};
 
-use traits::EnvFunctions;
-use vital_script_ops::instruction::{Instruction, VitalInstruction};
+use vital_script_ops::instruction::Instruction;
+use vital_script_primitives::traits::{Context as ContextT, Instruction as InstructionT};
 
-pub struct Runner<'a, Functions: EnvFunctions> {
-    instructions: Vec<Instruction>,
-    context: Context<'a, Functions>,
+pub struct Runner<Context: ContextT<Instruction = Instruction>> {
+    _marker: core::marker::PhantomData<Context>,
 }
 
-impl<'a, Functions: EnvFunctions> Runner<'a, Functions> {
-    pub fn new(context: Context<'a, Functions>) -> Result<Self> {
+impl<Context: ContextT<Instruction = Instruction>> Runner<Context> {
+    pub fn new() -> Self {
+        Self { _marker: Default::default() }
+    }
+
+    pub fn run(&mut self, context: &mut Context) -> Result<()> {
         let instructions = context.get_instructions().context("get instructions")?;
 
-        Ok(Self { instructions, context })
-    }
-
-    pub fn run(&mut self) -> Result<()> {
         // 1. run pre check
-        self.pre_check().context("pre check")?;
+        context.pre_check().context("context")?;
 
-        // 2. run opcodes, cost input resources, call env traits.
-        for (index, instruction) in self.instructions.iter().enumerate() {
-            instruction
-                .exec(&mut self.context)
-                .with_context(|| format!("execute {}", index))?;
-        }
-
-        // 3. post check
-        self.post_check().context("post check")?;
-
-        // 4. apply the resources
-        self.context.apply_resources().context("apply")?;
-
-        Ok(())
-    }
-}
-
-impl<'a, Functions: EnvFunctions> Runner<'a, Functions> {
-    // The pre checks for context and instructions.
-    fn pre_check(&self) -> Result<()> {
-        self.context.pre_check().context("context")?;
-
-        for (index, instruction) in self.instructions.iter().enumerate() {
+        for (index, instruction) in instructions.iter().enumerate() {
             instruction.pre_check().with_context(|| format!("instruction {}", index))?;
         }
 
-        Ok(())
-    }
+        // 2. run opcodes, cost input resources, call env traits.
+        for (index, instruction) in instructions.iter().enumerate() {
+            instruction.exec(context).with_context(|| format!("execute {}", index))?;
+        }
 
-    // The post check
-    fn post_check(&self) -> Result<()> {
+        // 3. post check
+
+        // 4. apply the resources
+        context.apply_resources().context("apply")?;
+
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bitcoin::OutPoint;
     use vital_script_ops::{
         builder::instruction::ScriptBuilderFromInstructions,
         instruction::{
@@ -94,7 +75,7 @@ mod tests {
     };
 
     use super::*;
-    use crate::mock::*;
+    use crate::{mock::*, traits::EnvFunctions};
 
     #[test]
     fn test_simple_runner() {
@@ -110,14 +91,9 @@ mod tests {
         tx_mock.push_ops(ops_bytes);
         tx_mock.push_output(1000);
 
-        let env_interface = EnvMock::new(tx_mock.clone());
-        let context = Context::new(env_interface.clone(), &tx_mock.tx);
+        let mut context = ContextMock::new(tx_mock, EnvMock::new());
 
-        let mut runner = Runner::new(context).expect("new runner");
-
-        runner.run().expect("run failed");
-
-        println!("res storage {:?}", env_interface.resource_storage);
+        Runner::new().run(&mut context).expect("run failed");
     }
 
     // TODO: need move the tests
@@ -128,7 +104,9 @@ mod tests {
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
         let mint_amount = U256::from(10000);
 
-        let (mut env_inner1, tx_mock1) = {
+        let env_interface = EnvMock::new();
+
+        let mut context1 = {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -140,31 +118,23 @@ mod tests {
             tx_mock1.push_ops(ops_bytes);
             tx_mock1.push_output(1000);
 
-            let env_interface = EnvMock::new(tx_mock1.clone());
-            let context = Context::new(env_interface.clone(), &tx_mock1.tx);
+            let mut context = ContextMock::new(tx_mock1, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let mut runner = Runner::new(context).expect("new runner");
-
-            runner.run().expect("run failed");
-
-            (env_interface, tx_mock1)
+            context
         };
 
-        // check name
-        let outpoint = env_inner1.get_output(0).expect("get output failed");
-        let res = env_inner1.get_resources(&outpoint).expect("get resources failed");
-
-        assert_eq!(res, Some(Resource::name(mint_name)));
-
-        let is_costed = Context::new(env_inner1.clone(), &tx_mock1.tx)
+        let is_costed = context1
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
             .expect("should have metadata");
         assert_eq!(is_costed, Some(false));
 
-        // println!("env {:?}", env_inner1);
+        let outpoint = context1.env().get_output(0);
+        let res = env_interface.get_resources(&outpoint).expect("get resources failed");
+        assert_eq!(res, Some(Resource::name(mint_name)));
 
-        let (mut env_inner2, tx_mock2) = {
+        let mut context2 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -194,42 +164,38 @@ mod tests {
 
             println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
-            let tx_mock1_id = env_inner1.current_tx.txid.clone();
             let mut tx_mock2 = TxMock::new();
-            tx_mock2.push_input(OutPoint::new(tx_mock1_id, 0));
+            tx_mock2.push_input(outpoint);
             tx_mock2.push_ops(ops_bytes);
             tx_mock2.push_output(2000);
 
-            env_inner1.next_psbt(tx_mock2.clone());
+            let mut context = ContextMock::new(tx_mock2, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let context = Context::new(env_inner1.clone(), &tx_mock2.tx);
-            let mut runner = Runner::new(context).expect("new runner");
-            runner.run().expect("run failed");
-
-            (env_inner1, tx_mock2)
+            context
         };
 
-        // check name
-        let outpoint = env_inner2.get_output(0).expect("get output failed");
-        let res = env_inner2.get_resources(&outpoint).expect("get resources failed");
-
-        // name should had costed
-        assert_eq!(res, None);
-
-        let mut ctx = Context::new(env_inner2.clone(), &tx_mock2.tx);
-        let is_costed = ctx
+        let is_costed = context2
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
             .expect("should have metadata");
         assert_eq!(is_costed, Some(true));
 
+        // check name
+        let outpoint = context2.env().get_output(0);
+        let res = env_interface.get_resources(&outpoint).expect("get resources failed");
+
+        // name should had costed
+        assert_eq!(res, None);
+
         // check deployed
-        let vrc20 = ctx.env().get_vrc20_metadata(mint_name).expect("should have metadata");
+        let vrc20 = context2.env().get_vrc20_metadata(mint_name).expect("should have metadata");
         assert!(vrc20.is_some());
 
         // 3. mint vrc20
-        let mut env_inner3 = {
-            // 2. deploy a vrc20 by the name
+        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
+
+        let mut context3 = {
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::vrc20(mint_name)),
@@ -242,24 +208,19 @@ mod tests {
             tx_mock3.push_output(2000);
             tx_mock3.push_ops(ops_bytes);
 
-            env_inner2.next_psbt(tx_mock3.clone());
+            let mut context = ContextMock::new(tx_mock3, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let context = Context::new(env_inner2.clone(), &tx_mock3.tx);
-            let mut runner = Runner::new(context).expect("new runner");
-            runner.run().expect("run failed");
+            let outpoint = context.env().get_output(0);
+            let res = env_interface.get_resources(&outpoint).expect("get resources failed");
 
-            env_inner2
+            assert_eq!(res, Some(vrc20_in_2.clone()));
+
+            context
         };
 
-        let outpoint = env_inner3.get_output(0).expect("get output failed");
-        let res = env_inner3.get_resources(&outpoint).expect("get resources failed");
-
-        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
-
-        assert_eq!(res, Some(vrc20_in_2.clone()));
-
         // 4. transfer vrc20
-        let env_inner4 = {
+        let mut context4 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -274,27 +235,20 @@ mod tests {
             println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
 
             // the minted vrc20s
-            let tx_mock3_id = env_inner3.get_output(0).expect("get output failed");
-
             let mut tx_mock4 = TxMock::new();
-            tx_mock4.push_input(tx_mock3_id);
+            tx_mock4.push_input(context3.env().get_output(0));
             tx_mock4.push_output(2000);
             tx_mock4.push_ops(ops_bytes);
 
-            env_inner3.next_psbt(tx_mock4.clone());
+            let mut context = ContextMock::new(tx_mock4, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let context = Context::new(env_inner3.clone(), &tx_mock4.tx);
-            let mut runner = Runner::new(context).expect("new runner");
-            runner.run().expect("run failed");
-
-            env_inner3
+            context
         };
 
-        let res_before = env_inner4.get_resources(&outpoint).expect("get resources failed");
-        assert_eq!(res_before, None);
-
-        let outpoint = env_inner4.get_output(0).expect("get output failed");
-        let res = env_inner4.get_resources(&outpoint).expect("get resources failed");
+        let res = env_interface
+            .get_resources(&context4.env().get_output(0))
+            .expect("get resources failed");
 
         assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount).expect("res")));
     }
@@ -305,7 +259,9 @@ mod tests {
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
         let mint_amount = U256::from(10000);
 
-        let (mut env_inner1, tx_mock1) = {
+        let env_interface = EnvMock::new();
+
+        let mut context1 = {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -317,31 +273,23 @@ mod tests {
             tx_mock1.push_ops(ops_bytes);
             tx_mock1.push_output(1000);
 
-            let env_interface = EnvMock::new(tx_mock1.clone());
-            let context = Context::new(env_interface.clone(), &tx_mock1.tx);
+            let mut context = ContextMock::new(tx_mock1, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let mut runner = Runner::new(context).expect("new runner");
-
-            runner.run().expect("run failed");
-
-            (env_interface, tx_mock1)
+            context
         };
 
-        // check name
-        let outpoint = env_inner1.get_output(0).expect("get output failed");
-        let res = env_inner1.get_resources(&outpoint).expect("get resources failed");
-
-        assert_eq!(res, Some(Resource::name(mint_name)));
-
-        let is_costed = Context::new(env_inner1.clone(), &tx_mock1.tx)
+        let is_costed = context1
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
             .expect("should have metadata");
         assert_eq!(is_costed, Some(false));
 
-        // println!("env {:?}", env_inner1);
+        let outpoint = context1.env().get_output(0);
+        let res = env_interface.get_resources(&outpoint).expect("get resources failed");
+        assert_eq!(res, Some(Resource::name(mint_name)));
 
-        let (mut env_inner2, tx_mock2) = {
+        let mut context2 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -371,42 +319,38 @@ mod tests {
 
             println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
-            let tx_mock1_id = env_inner1.current_tx.txid.clone();
             let mut tx_mock2 = TxMock::new();
-            tx_mock2.push_input(OutPoint::new(tx_mock1_id, 0));
+            tx_mock2.push_input(outpoint);
             tx_mock2.push_ops(ops_bytes);
             tx_mock2.push_output(2000);
 
-            env_inner1.next_psbt(tx_mock2.clone());
+            let mut context = ContextMock::new(tx_mock2, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let context = Context::new(env_inner1.clone(), &tx_mock2.tx);
-            let mut runner = Runner::new(context).expect("new runner");
-            runner.run().expect("run failed");
-
-            (env_inner1, tx_mock2)
+            context
         };
 
-        // check name
-        let outpoint = env_inner2.get_output(0).expect("get output failed");
-        let res = env_inner2.get_resources(&outpoint).expect("get resources failed");
-
-        // name should had costed
-        assert_eq!(res, None);
-
-        let mut ctx = Context::new(env_inner2.clone(), &tx_mock2.tx);
-        let is_costed = ctx
+        let is_costed = context2
             .env()
             .get_metadata::<bool>(mint_name, MetaDataType::Name)
             .expect("should have metadata");
         assert_eq!(is_costed, Some(true));
 
+        // check name
+        let outpoint = context2.env().get_output(0);
+        let res = env_interface.get_resources(&outpoint).expect("get resources failed");
+
+        // name should had costed
+        assert_eq!(res, None);
+
         // check deployed
-        let vrc20 = ctx.env().get_vrc20_metadata(mint_name).expect("should have metadata");
+        let vrc20 = context2.env().get_vrc20_metadata(mint_name).expect("should have metadata");
         assert!(vrc20.is_some());
 
         // 3. mint vrc20
-        let mut env_inner3 = {
-            // 2. deploy a vrc20 by the name
+        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
+
+        let mut context3 = {
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::vrc20(mint_name)),
@@ -419,24 +363,19 @@ mod tests {
             tx_mock3.push_output(2000);
             tx_mock3.push_ops(ops_bytes);
 
-            env_inner2.next_psbt(tx_mock3.clone());
+            let mut context = ContextMock::new(tx_mock3, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let context = Context::new(env_inner2.clone(), &tx_mock3.tx);
-            let mut runner = Runner::new(context).expect("new runner");
-            runner.run().expect("run failed");
+            let outpoint = context.env().get_output(0);
+            let res = env_interface.get_resources(&outpoint).expect("get resources failed");
 
-            env_inner2
+            assert_eq!(res, Some(vrc20_in_2.clone()));
+
+            context
         };
 
-        let outpoint = env_inner3.get_output(0).expect("get output failed");
-        let res = env_inner3.get_resources(&outpoint).expect("get resources failed");
-
-        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
-
-        assert_eq!(res, Some(vrc20_in_2.clone()));
-
         // 4. transfer vrc20
-        let env_inner4 = {
+        let mut context4 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -451,27 +390,20 @@ mod tests {
             println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
 
             // the minted vrc20s
-            let tx_mock3_id = env_inner3.get_output(0).expect("get output failed");
-
             let mut tx_mock4 = TxMock::new();
-            tx_mock4.push_input(tx_mock3_id);
+            tx_mock4.push_input(context3.env().get_output(0));
             tx_mock4.push_output(2000);
             tx_mock4.push_ops(ops_bytes);
 
-            env_inner3.next_psbt(tx_mock4.clone());
+            let mut context = ContextMock::new(tx_mock4, env_interface.clone());
+            Runner::new().run(&mut context).expect("run failed");
 
-            let context = Context::new(env_inner3.clone(), &tx_mock4.tx);
-            let mut runner = Runner::new(context).expect("new runner");
-            runner.run().expect("run failed");
-
-            env_inner3
+            context
         };
 
-        let res_before = env_inner4.get_resources(&outpoint).expect("get resources failed");
-        assert_eq!(res_before, None);
-
-        let outpoint = env_inner4.get_output(0).expect("get output failed");
-        let res = env_inner4.get_resources(&outpoint).expect("get resources failed");
+        let res = env_interface
+            .get_resources(&context4.env().get_output(0))
+            .expect("get resources failed");
 
         assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount).expect("res")));
     }

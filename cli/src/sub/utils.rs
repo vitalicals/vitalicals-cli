@@ -225,7 +225,7 @@ fn inscribe_to_address_impl(
     let internal_key = wallet.derive_x_only_public_key(&secp)?;
 
     let reveal_script = InscriptionScriptBuilder::new(hex::decode(datas).context("decode datas")?)
-        .into_script(&internal_key)
+        .into_script_by_key(&internal_key)
         .context("build script")?;
     let script_p2tr = reveal_script.to_v1_p2tr(&secp, internal_key);
 

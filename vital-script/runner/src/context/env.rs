@@ -1,6 +1,6 @@
 use alloc::collections::BTreeMap;
 use anyhow::{anyhow, bail, Context, Result};
-use bitcoin::{Transaction, OutPoint};
+use bitcoin::{OutPoint, Transaction, Txid};
 use parity_scale_codec::{Decode, Encode};
 
 use vital_script_primitives::{
@@ -14,26 +14,35 @@ use super::script::parse_vital_scripts;
 
 const STORAGE_KEY_METADATA: &'static [u8; 8] = b"metadata";
 
-pub struct EnvContext<'a, Functions: EnvFunctions> {
+#[derive(Clone)]
+pub struct EnvContext<Functions: EnvFunctions> {
     env: Functions,
 
     /// The tx
-    tx: &'a Transaction,
+    tx: Transaction,
+    tx_id: Txid,
     ops: Vec<(u8, Vec<u8>)>,
 
     /// The outputs need to bind to outputs.
     cached_output_resources: BTreeMap<u8, Resource>,
 }
 
-impl<'a, Functions: EnvFunctions> EnvContext<'a, Functions> {
-    pub fn new(env_interface: Functions, tx: &'a Transaction) -> Self {
+impl<'a, Functions: EnvFunctions> EnvContext<Functions> {
+    pub fn new(env_interface: Functions, tx: &Transaction) -> Self {
         let ops = parse_vital_scripts(tx).expect("parse vital scripts");
+        let tx_id = tx.txid();
 
-        Self { env: env_interface, tx, ops, cached_output_resources: BTreeMap::new() }
+        Self {
+            env: env_interface,
+            tx: tx.clone(),
+            ops,
+            tx_id,
+            cached_output_resources: BTreeMap::new(),
+        }
     }
 
-    fn get_input(&self, input_index: u8) -> Result<OutPoint>{
-        if self.tx.input.len() <= input_index as usize{
+    fn get_input(&self, input_index: u8) -> Result<OutPoint> {
+        if self.tx.input.len() <= input_index as usize {
             bail!("Input index out of range")
         }
 
@@ -41,19 +50,18 @@ impl<'a, Functions: EnvFunctions> EnvContext<'a, Functions> {
     }
 }
 
-impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
+impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
+    /// get current tx id.
+    fn get_tx_id(&self) -> &Txid {
+        &self.tx_id
+    }
+
     fn is_valid(&self) -> bool {
-        self.env.is_valid()
+        true
     }
 
     fn get_ops(&self) -> &[(u8, Vec<u8>)] {
-        // TODO: test use real tx
-        let ops = self.env.get_ops();
-        if !ops.is_empty() {
-            self.env.get_ops()
-        } else {
-            &self.ops
-        }
+        &self.ops
     }
 
     fn get_input_resource(&self, index: u8) -> Result<Resource> {
@@ -96,7 +104,7 @@ impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
     fn apply_output_resources(&mut self) -> Result<()> {
         for (index, resource) in self.cached_output_resources.iter() {
             self.env
-                .bind_resource(self.env.get_output(*index).context("get output")?, resource.clone())
+                .bind_resource(self.get_output(*index), resource.clone())
                 .with_context(|| format!("bind resource {} to {:?}", index, resource))?;
         }
 
@@ -104,6 +112,8 @@ impl<'a, Functions: EnvFunctions> EnvContextT for EnvContext<'a, Functions> {
     }
 
     fn set_metadata<T: Encode>(&mut self, name: Tag, typ: MetaDataType, meta: T) -> Result<()> {
+        // println!("set metadata {:?} {:?}", name, typ);
+
         let key = [STORAGE_KEY_METADATA.to_vec(), [typ as u8].to_vec(), name.0.to_vec()].concat();
         let value = (typ as u8, meta).encode();
 
