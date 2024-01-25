@@ -6,6 +6,7 @@ use vital_script_primitives::{
     names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
     resources::{Resource, ResourceClass, ResourceType, VRC20},
     traits::*,
+    U256,
 };
 
 use crate::op_basic::{
@@ -48,7 +49,7 @@ impl InstructionResourceMint {
                     bail!("mint count had reached max");
                 }
 
-                Ok(Resource::VRC20(VRC20 { name, amount }))
+                Ok(Resource::VRC20(VRC20 { name, amount: U256::from(amount) }))
             }
             ResourceClass::VRC721 => {
                 todo!()
