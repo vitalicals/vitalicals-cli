@@ -7,11 +7,13 @@ use vital_script_runner::{check_is_vital_script, traits::EnvFunctions, Context, 
 
 use crate::TARGET;
 
+#[derive(Debug, Clone)]
 pub enum TxRunStatus {
     Success,
     Failed,
 }
 
+#[derive(Debug, Clone)]
 pub struct TxRunResponse {
     pub status: TxRunStatus,
     pub tx_index: u32,
@@ -19,6 +21,7 @@ pub struct TxRunResponse {
     pub resp: (),
 }
 
+#[derive(Debug, Clone)]
 pub struct BlockRunResponse {
     pub txs: Vec<TxRunResponse>,
 }
