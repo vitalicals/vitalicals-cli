@@ -143,7 +143,7 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
         if let Some((typ_in_storage, res)) = value
             .map(|datas| <(u8, T)>::decode(&mut datas.as_slice()))
             .transpose()
-            .context("decode failed")?
+            .map_err(|err| anyhow!("decode failed by {:?}", err))?
         {
             if typ_in_storage != typ as u8 {
                 bail!("the type not match expected {}, got {}", typ as u8, typ_in_storage);

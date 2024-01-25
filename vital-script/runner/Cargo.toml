@@ -7,10 +7,10 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-log.workspace = true
 env_logger.workspace = true
 hex-literal.workspace = true
 hex.workspace = true
+log.workspace = true
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 
 bitcoin = { workspace = true, features = ["serde"] }
@@ -19,10 +19,10 @@ vital-script-ops.workspace = true
 vital-script-primitives.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
-vital-script-builder = { workspace = true, features = ["std"] }
 btc-p2tr-builder.workspace = true
 btc-script-builder.workspace = true
+serde_json.workspace = true
+vital-script-builder = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]
