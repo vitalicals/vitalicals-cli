@@ -8,7 +8,7 @@ use vital_script_primitives::{
     traits::{context::EnvContext as EnvContextT, MetaDataType},
 };
 
-use crate::traits::EnvFunctions;
+use crate::{traits::EnvFunctions, TARGET};
 
 use super::script::parse_vital_scripts;
 
@@ -65,16 +65,27 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
     }
 
     fn get_input_resource(&self, index: u8) -> Result<Resource> {
+        log::debug!(target: TARGET, "get_input_resource {}", index);
+
         let out_point = self.get_input(index).context("get input")?;
 
-        self.env
+        let res = self
+            .env
             .get_resources(&out_point)
             .context("get")?
-            .ok_or_else(|| anyhow!("not found {} {}", index, out_point))
+            .ok_or_else(|| anyhow!("not found {} {}", index, out_point))?;
+
+        log::debug!(target: TARGET, "get_input_resource {} {}", index, res);
+
+        Ok(res)
     }
 
     fn get_output_resource(&self, index: u8) -> Option<&Resource> {
-        self.cached_output_resources.get(&index)
+        let res = self.cached_output_resources.get(&index);
+
+        log::debug!(target: TARGET, "get_output_resource {} {:?}", index, res);
+
+        res
     }
 
     fn set_resource_to_output(&mut self, index: u8, resource: Resource) -> Result<()> {
@@ -89,6 +100,8 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
 
     fn remove_input_resources(&self, input_indexs: &[u8]) -> Result<()> {
         for index in input_indexs.iter() {
+            log::debug!(target: TARGET, "remove_input_resources {}", index);
+
             self.env
                 .unbind_resource(
                     &self
@@ -103,6 +116,7 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
 
     fn apply_output_resources(&mut self) -> Result<()> {
         for (index, resource) in self.cached_output_resources.iter() {
+            log::debug!(target: TARGET, "apply_output_resources {} {}", index, resource);
             self.env
                 .bind_resource(self.get_output(*index), resource.clone())
                 .with_context(|| alloc::format!("bind resource {} to {:?}", index, resource))?;
@@ -112,7 +126,7 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
     }
 
     fn set_metadata<T: Encode>(&mut self, name: Tag, typ: MetaDataType, meta: T) -> Result<()> {
-        // println!("set metadata {:?} {:?}", name, typ);
+        log::debug!(target: TARGET, "set metadata {} {:?}", name, typ);
 
         let key = [STORAGE_KEY_METADATA.to_vec(), [typ as u8].to_vec(), name.0.to_vec()].concat();
         let value = (typ as u8, meta).encode();
@@ -121,6 +135,8 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
     }
 
     fn get_metadata<T: Decode>(&self, name: Tag, typ: MetaDataType) -> Result<Option<T>> {
+        log::debug!(target: TARGET, "get metadata {} {:?}", name, typ);
+
         let key = [STORAGE_KEY_METADATA.to_vec(), [typ as u8].to_vec(), name.0.to_vec()].concat();
 
         let value = self.env.storage_get(&key).context("get metadata failed")?;

@@ -16,7 +16,8 @@ pub fn mint_name(output_index: u32, name: impl Into<String>) -> Result<Vec<u8>> 
 
     let output_index = output_index as u8;
 
-    let mut instructions = vec![Instruction::Output(InstructionOutputAssert { indexs: vec![0] })];
+    let mut instructions =
+        [Instruction::Output(InstructionOutputAssert { indexs: vec![0] })].to_vec();
 
     let name: String = name.into();
     let mint_instruction = if name.len() <= SHORT_NAME_LEN_MAX {

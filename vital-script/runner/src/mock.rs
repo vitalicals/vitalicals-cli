@@ -18,6 +18,7 @@ pub fn init_logger() {
         .format_level(true)
         .filter_level(log::LevelFilter::Info)
         .parse_filters(format!("{}=debug", crate::TARGET).as_str())
+        .parse_filters("vital::ops=debug")
         .try_init();
 }
 

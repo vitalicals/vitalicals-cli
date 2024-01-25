@@ -12,6 +12,7 @@ use vital_script_primitives::{
 use crate::{
     instruction::utils::*,
     op_basic::{BasicOpcodeBase, InputAssertName, InputAssertShortName, InputVRC721Assert},
+    TARGET,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,7 +36,7 @@ impl Instruction for InstructionInputAssert {
         let resource_from_env =
             context.env().get_input_resource(self.index).context("get input resource")?;
         if resource_from_env != self.resource {
-            log::debug!("resource from {:?} expect {:?}", resource_from_env, self.resource);
+            log::debug!(target: TARGET, "resource from {:?} expect {:?}", resource_from_env, self.resource);
             bail!("the resource not expected")
         }
 

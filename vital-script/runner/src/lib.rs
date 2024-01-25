@@ -174,7 +174,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock2 = TxMock::new();
             tx_mock2.push_input(outpoint);
@@ -214,7 +214,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock3 = TxMock::new();
             tx_mock3.push_output(2000);
@@ -244,7 +244,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
 
             // the minted vrc20s
             let mut tx_mock4 = TxMock::new();
@@ -331,7 +331,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock2 = TxMock::new();
             tx_mock2.push_input(outpoint);
@@ -371,7 +371,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock3 = TxMock::new();
             tx_mock3.push_output(2000);
@@ -401,7 +401,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
 
             // the minted vrc20s
             let mut tx_mock4 = TxMock::new();

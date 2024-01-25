@@ -5,9 +5,7 @@ use parity_scale_codec::{Decode, Encode};
 use vital_script_derive::ExtensionOpcode;
 use vital_script_primitives::{
     names::{Name, ShortName},
-    types::{
-        vrc20::{VRC20MetaData,},
-    },
+    types::vrc20::VRC20MetaData,
 };
 
 use crate::instruction::{resource_deploy::InstructionVRC20Deploy, Instruction};
