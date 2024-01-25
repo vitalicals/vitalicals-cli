@@ -6,7 +6,7 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+anyhow = { workspace = true, default-features = false }
 bytes = { workspace = true, default-features = false }
 scale-info = { workspace = true, default-features = false, optional = true }
 

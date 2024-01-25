@@ -7,8 +7,8 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-log.workspace = true
 bytes.workspace = true
+log = { workspace = true, default-features = false }
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 
 vital-script-derive.workspace = true
