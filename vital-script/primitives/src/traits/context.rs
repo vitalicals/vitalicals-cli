@@ -1,9 +1,11 @@
+use alloc::vec::Vec;
+
 use anyhow::{bail, Context as AnyhowContext, Result};
 use bitcoin::{OutPoint, Txid};
 use parity_scale_codec::{Decode, Encode};
 
 use crate::{
-    resources::{Resource, ResourceType, Tag},
+    resources::{Resource, Tag},
     types::vrc20::{VRC20MetaData, VRC20StatusData},
 };
 
@@ -42,7 +44,8 @@ pub trait EnvContext {
     fn apply_output_resources(&mut self) -> Result<()>;
 
     fn new_name(&mut self, name: Tag) -> Result<()> {
-        println!("name {:?}", name);
+        // log::debug()
+
         let curr = self.get_metadata::<bool>(name, MetaDataType::Name).context("get")?;
         if curr.is_some() {
             bail!("the name had created");

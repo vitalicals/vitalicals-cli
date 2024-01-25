@@ -18,6 +18,12 @@ pub struct InstructionVRC20Deploy {
     pub meta: VRC20MetaData,
 }
 
+impl core::fmt::Display for InstructionVRC20Deploy {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "VRC20Deploy:({}, {}, {:?})", self.name_input, self.name, self.meta)
+    }
+}
+
 impl Instruction for InstructionVRC20Deploy {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // cost the name, check if the vrc20 had deployed.

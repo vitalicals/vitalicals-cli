@@ -3,7 +3,6 @@
 use anyhow::{bail, Result};
 use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
-use serde::{Deserialize, Serialize};
 
 use crate::names::*;
 
@@ -19,10 +18,21 @@ pub const NAME_BYTES_LEN: usize = 8;
 ///
 /// The len just for 0 - 3
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
-#[derive(Deserialize, Serialize)]
 #[derive(Encode, Decode)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
+
+impl core::fmt::Display for Name {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let len = self.len();
+
+        for i in 0..len {
+            write!(f, "{}", u8_to_char(self.index_value(i)).expect("the value should be valid"))?;
+        }
+
+        Ok(())
+    }
+}
 
 impl Name {
     pub const SIZE: usize = NAME_BYTES_LEN;
@@ -209,20 +219,6 @@ impl Name {
             3 => self.0[start + 2] & 0x3f,
             _ => INVALID_VALUE,
         }
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::string::ToString for Name {
-    fn to_string(&self) -> String {
-        let len = self.len();
-        let mut res = String::with_capacity(len + 1);
-
-        for i in 0..len {
-            res.push(u8_to_char(self.index_value(i)).expect("the value should be valid"))
-        }
-
-        res
     }
 }
 

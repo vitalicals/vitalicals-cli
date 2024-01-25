@@ -1,5 +1,7 @@
 //! The resources types
 
+use core::fmt;
+
 use anyhow::{bail, Result};
 
 #[cfg(feature = "std")]
@@ -32,6 +34,22 @@ pub struct ResourceType {
     pub name: Tag,
 }
 
+impl fmt::Display for ResourceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.class {
+            ResourceClass::Name => {
+                write!(f, "name({})", self.name)
+            }
+            ResourceClass::VRC20 => {
+                write!(f, "vrc20({})", self.name)
+            }
+            ResourceClass::VRC721 => {
+                write!(f, "vrc721({})", self.name)
+            }
+        }
+    }
+}
+
 impl ResourceType {
     pub fn name(n: impl Into<Tag>) -> Self {
         Self { class: ResourceClass::Name, name: n.into() }
@@ -56,6 +74,22 @@ pub enum Resource {
     Name(Name),
     VRC20(VRC20),
     VRC721(VRC721),
+}
+
+impl fmt::Display for Resource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Name(n) => {
+                write!(f, "name({})", n)
+            }
+            Self::VRC20(v) => {
+                write!(f, "vrc20({})", v)
+            }
+            Self::VRC721(v) => {
+                write!(f, "vrc721({})", v)
+            }
+        }
+    }
 }
 
 impl Default for Resource {

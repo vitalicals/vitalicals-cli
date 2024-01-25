@@ -18,6 +18,12 @@ pub struct InstructionResourceMint {
     pub resource_type: ResourceType,
 }
 
+impl core::fmt::Display for InstructionResourceMint {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "ResourceMint:({}, {})", self.output_index, self.resource_type)
+    }
+}
+
 impl InstructionResourceMint {
     pub fn new(index: u8, resource_type: ResourceType) -> Self {
         Self { output_index: index, resource_type }
@@ -71,7 +77,7 @@ impl Instruction for InstructionResourceMint {
                     .increase_vrc20_mint_count(v.name)
                     .context("increase mint count failed")?;
             }
-            Resource::VRC721(v) => {
+            Resource::VRC721(_v) => {
                 todo!();
             }
         }

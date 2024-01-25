@@ -7,6 +7,7 @@ version.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+log.workspace = true
 bytes.workspace = true
 parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
 
@@ -19,6 +20,7 @@ hex.workspace = true
 [features]
 default = ["std"]
 std = [
+    "log/std",
     "bytes/std",
     "parity-scale-codec/std",
     "vital-script-primitives/std",

@@ -5,20 +5,26 @@ use anyhow::{bail, Context as AnyhowContext, Result};
 use parity_scale_codec::Encode;
 use vital_script_primitives::{
     names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
-    resources::{Name, Resource, Tag, VRC20, VRC721},
+    resources::{Resource, Tag, VRC20, VRC721},
     traits::*,
 };
 
 use crate::{
     instruction::utils::*,
     op_basic::{BasicOpcodeBase, InputAssertName, InputAssertShortName, InputVRC721Assert},
-    opcodes::{BasicOp, BasicOpcode},
+    TARGET,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstructionInputAssert {
     pub index: u8,
     pub resource: Resource,
+}
+
+impl core::fmt::Display for InstructionInputAssert {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "InputAssert:({}, {})", self.index, self.resource)
+    }
 }
 
 impl Instruction for InstructionInputAssert {
@@ -30,7 +36,7 @@ impl Instruction for InstructionInputAssert {
         let resource_from_env =
             context.env().get_input_resource(self.index).context("get input resource")?;
         if resource_from_env != self.resource {
-            println!("resource from {:?} expect {:?}", resource_from_env, self.resource);
+            log::debug!(target: TARGET, "resource from {:?} expect {:?}", resource_from_env, self.resource);
             bail!("the resource not expected")
         }
 

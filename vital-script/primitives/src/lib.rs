@@ -4,6 +4,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 pub mod names;
 pub mod resources;
 pub mod traits;

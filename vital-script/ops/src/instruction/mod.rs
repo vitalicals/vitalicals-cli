@@ -1,7 +1,5 @@
 //! The instructions for the script runner.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 extern crate alloc;
 
 use alloc::vec::Vec;
@@ -34,6 +32,19 @@ pub enum Instruction {
     Deploy(resource_deploy::InstructionVRC20Deploy),
     Move(resource_move::InstructionResourceMove),
     MoveAll(resource_move::InstructionResourceMoveAll),
+}
+
+impl core::fmt::Display for Instruction {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Input(i) => i.fmt(f),
+            Self::Output(i) => i.fmt(f),
+            Self::Mint(i) => i.fmt(f),
+            Self::Deploy(i) => i.fmt(f),
+            Self::Move(i) => i.fmt(f),
+            Self::MoveAll(i) => i.fmt(f),
+        }
+    }
 }
 
 impl InstructionT for Instruction {

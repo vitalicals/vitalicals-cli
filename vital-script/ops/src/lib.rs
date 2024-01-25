@@ -12,3 +12,5 @@ pub mod opcodes;
 pub mod parser;
 
 mod utils;
+
+pub(crate) const TARGET: &str = "vital::ops";

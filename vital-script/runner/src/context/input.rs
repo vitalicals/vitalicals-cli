@@ -2,15 +2,14 @@ use alloc::vec::Vec;
 use anyhow::{bail, Result};
 use vital_script_primitives::{
     names::Name,
-    resources::{self, Resource, ResourceClass, ResourceType, Tag, VRC20, VRC721},
+    resources::{self, Resource, Tag, VRC20, VRC721},
     traits::context::InputResourcesContext as InputResourcesContextT,
     H256, U256,
 };
 
-const VEC_CAP_SIZE: usize = 8;
+use crate::TARGET;
 
-const INPUT_MAX: usize = 64;
-const OUTPUT_MAX: usize = 64;
+const VEC_CAP_SIZE: usize = 8;
 
 #[derive(Clone)]
 pub struct InputResourcesContext {
@@ -156,10 +155,14 @@ impl InputResources {
     }
 
     pub fn push_name(&mut self, index: u8, name: Tag) {
+        log::debug!(target: TARGET, "push input name: {} {}", index, name);
+
         self.names.push(NameInput { index, name, costed: false })
     }
 
     pub fn push_vrc20(&mut self, index: u8, name: Tag, amount: U256) {
+        log::debug!(target: TARGET, "push input vrc20: {} {} {}", index, name, amount);
+
         for vrc20 in self.vrc20s.iter_mut() {
             if vrc20.name == name {
                 vrc20.amount = vrc20.amount.saturating_add(amount);
@@ -177,6 +180,8 @@ impl InputResources {
     }
 
     pub fn push_vrc721(&mut self, index: u8, name: Tag, hash: H256) {
+        log::debug!(target: TARGET, "push input vrc721: {} {} {}", index, name, hash);
+
         for vrc721s in self.vrc721s.iter_mut() {
             if vrc721s.name == name {
                 vrc721s.inputs.push(VRC721Input { index, costed: false, hash });
@@ -205,6 +210,8 @@ impl InputResources {
     }
 
     pub fn cost_vrc20(&mut self, resource: &resources::VRC20) -> Result<()> {
+        log::debug!(target: TARGET, "cost_vrc20: {}", resource);
+
         for v in self.vrc20s.iter_mut() {
             if v.name == resource.name {
                 return v.cost(resource.amount);
@@ -215,6 +222,8 @@ impl InputResources {
     }
 
     pub fn cost_vrc721(&mut self, resource: &resources::VRC721) -> Result<()> {
+        log::debug!(target: TARGET, "cost_vrc721: {}", resource);
+
         for v in self.vrc721s.iter_mut() {
             if v.name == resource.name {
                 return v.cost(resource.hash);
@@ -225,6 +234,8 @@ impl InputResources {
     }
 
     pub fn cost_name(&mut self, resource: &resources::Name) -> Result<()> {
+        log::debug!(target: TARGET, "cost_name: {}", resource);
+
         for v in self.names.iter_mut() {
             if &v.name == resource {
                 if v.costed {

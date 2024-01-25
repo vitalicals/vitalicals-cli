@@ -1,19 +1,26 @@
 use std::sync::Mutex;
 
 use alloc::{collections::BTreeMap, sync::Arc};
-use anyhow::{bail, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result};
 
 use bitcoin::{
     absolute::LockTime, hash_types::Txid, transaction::Version, Amount, OutPoint, ScriptBuf,
     Transaction, TxIn, TxOut,
 };
 use vital_script_ops::{instruction::Instruction, parser::Parser};
-use vital_script_primitives::{
-    resources::Resource,
-    traits::{Context as ContextT, EnvContext as EnvContextT},
-};
+use vital_script_primitives::{resources::Resource, traits::Context as ContextT};
 
 use crate::{traits::EnvFunctions, Context};
+
+pub fn init_logger() {
+    let _ = env_logger::Builder::from_default_env()
+        .format_module_path(true)
+        .format_level(true)
+        .filter_level(log::LevelFilter::Info)
+        .parse_filters(format!("{}=debug", crate::TARGET).as_str())
+        .parse_filters("vital::ops=debug")
+        .try_init();
+}
 
 #[derive(Debug, Clone)]
 pub struct TxMock {

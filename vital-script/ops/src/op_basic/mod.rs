@@ -11,6 +11,7 @@ mod op_mint;
 mod op_move;
 mod op_output;
 
+#[allow(unused_imports)]
 pub use op_dmint::*;
 pub use op_input::*;
 pub use op_mint::*;
@@ -29,8 +30,7 @@ pub trait BasicOpcode: BasicOpcodeBase + parity_scale_codec::Codec {
     }
 
     fn decode_operand(datas: &mut Bytes) -> Result<Self> {
-        Self::decode(&mut Reader::new(datas))
-            .map_err(|err| anyhow!("decode_operand {}", err.to_string()))
+        Self::decode(&mut Reader::new(datas)).map_err(|err| anyhow!("decode_operand {}", err))
     }
 }
 

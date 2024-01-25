@@ -8,12 +8,13 @@
 
 extern crate alloc;
 
+pub(crate) const TARGET: &str = "vital::runner";
+
 use anyhow::{Context as AnyhowContext, Result};
 
 pub mod traits;
 
 mod context;
-mod outputs;
 mod resource_cache;
 
 #[cfg(test)]
@@ -34,18 +35,25 @@ impl<Context: ContextT<Instruction = Instruction>> Runner<Context> {
     }
 
     pub fn run(&mut self, context: &mut Context) -> Result<()> {
+        log::debug!(target: TARGET, "run instructions");
+
         let instructions = context.get_instructions().context("get instructions")?;
+        log::debug!(target: TARGET, "run instructions len {}", instructions.len());
 
         // 1. run pre check
         context.pre_check().context("context")?;
 
         for (index, instruction) in instructions.iter().enumerate() {
-            instruction.pre_check().with_context(|| format!("instruction {}", index))?;
+            instruction
+                .pre_check()
+                .with_context(|| alloc::format!("instruction {}", index))?;
         }
 
         // 2. run opcodes, cost input resources, call env traits.
         for (index, instruction) in instructions.iter().enumerate() {
-            instruction.exec(context).with_context(|| format!("execute {}", index))?;
+            log::debug!(target: TARGET, "run instruction {} : {}", index, instruction);
+
+            instruction.exec(context).with_context(|| alloc::format!("execute {}", index))?;
         }
 
         // 3. post check
@@ -79,6 +87,8 @@ mod tests {
 
     #[test]
     fn test_simple_runner() {
+        init_logger();
+
         let mint_name = Name::try_from("abcdefg".to_string()).unwrap();
         let instructions = vec![
             Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -100,6 +110,8 @@ mod tests {
 
     #[test]
     fn test_mint_name_then_deploy_vrc20() {
+        init_logger();
+
         let mint_name_str = "abcdefg";
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
         let mint_amount = U256::from(10000);
@@ -162,7 +174,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock2 = TxMock::new();
             tx_mock2.push_input(outpoint);
@@ -202,7 +214,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock3 = TxMock::new();
             tx_mock3.push_output(2000);
@@ -232,7 +244,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
 
             // the minted vrc20s
             let mut tx_mock4 = TxMock::new();
@@ -255,6 +267,8 @@ mod tests {
 
     #[test]
     fn test_mint_short_name_then_deploy_vrc20() {
+        init_logger();
+
         let mint_name_str = "abc";
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
         let mint_amount = U256::from(10000);
@@ -317,7 +331,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock2 = TxMock::new();
             tx_mock2.push_input(outpoint);
@@ -357,7 +371,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock3 = TxMock::new();
             tx_mock3.push_output(2000);
@@ -387,7 +401,7 @@ mod tests {
             ])
             .expect("build should ok");
 
-            println!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
+            log::info!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
 
             // the minted vrc20s
             let mut tx_mock4 = TxMock::new();
