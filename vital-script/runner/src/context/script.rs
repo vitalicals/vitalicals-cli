@@ -25,7 +25,7 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
         return false;
     }
 
-    let mut is_all_ok = true;
+    let mut at_least_one_script = false;
 
     for input in tx.input.iter() {
         let witness = &input.witness;
@@ -35,7 +35,8 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
             match try_get_vital_script(&script_bytes) {
                 Ok(s) => {
                     if s.len() > 0 {
-                        is_all_ok &= true;
+                        at_least_one_script = true;
+                        break;
                     }
                 }
                 Err(err) => {
@@ -45,7 +46,7 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
         }
     }
 
-    return is_all_ok
+    return at_least_one_script
 }
 
 pub fn parse_vital_scripts(tx: &Transaction) -> Result<Vec<(u8, Vec<u8>)>> {
