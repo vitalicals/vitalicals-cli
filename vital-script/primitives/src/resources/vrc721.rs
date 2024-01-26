@@ -7,6 +7,7 @@ use crate::H256;
 
 #[derive(Default, Clone, Encode, Decode, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VRC721 {
     pub name: Tag,
     pub hash: H256,

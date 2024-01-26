@@ -21,7 +21,9 @@ pub use vrc721::*;
 pub type Tag = Name;
 
 #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
+
 #[repr(u16)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ResourceClass {
     Name = 0x01,
     VRC20 = 0x02,
@@ -29,6 +31,7 @@ pub enum ResourceClass {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ResourceType {
     pub class: ResourceClass,
     pub name: Tag,
@@ -70,6 +73,7 @@ impl ResourceType {
 
 #[derive(Debug, Clone, Encode, Decode, PartialEq, Eq)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Resource {
     Name(Name),
     VRC20(VRC20),

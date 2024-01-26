@@ -35,4 +35,4 @@ std = [
   "bitcoin/std",
 ]
 scale-info = ["dep:scale-info", "primitive-types/scale-info"]
-serde = ["dep:serde"]
+serde = ["dep:serde", "primitive-types/serde"]
