@@ -16,10 +16,48 @@ pub const SHORT_NAME_LEN_MAX: usize = 5;
 /// |   0    |    1      |     2     |    3   |   4    | len |
 ///
 /// The len just for 0 - 3
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Default)]
 #[derive(Encode, Decode)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct ShortName(pub [u8; 4]);
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for ShortName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for ShortName {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct NameVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for NameVisitor {
+            type Value = ShortName;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("vital short name resource")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                ShortName::try_from(v)
+                    .map_err(|err| E::custom(format!("short name format error {}", err)))
+            }
+        }
+
+        deserializer.deserialize_str(NameVisitor)
+    }
+}
 
 impl ShortName {
     pub const SIZE: usize = 4;
@@ -149,6 +187,32 @@ impl ShortName {
             4 => self.0[3] >> 2,
             _ => INVALID_VALUE,
         }
+    }
+}
+
+impl TryFrom<&str> for ShortName {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        if value.len() > SHORT_NAME_LEN_MAX {
+            bail!("the string len too large");
+        }
+
+        let mut res = ShortName::default();
+
+        if value.is_empty() {
+            return Ok(res);
+        }
+
+        for c in value.chars() {
+            res.push(c)?;
+        }
+
+        if !res.is_valid() {
+            bail!("the string not valid");
+        }
+
+        Ok(res)
     }
 }
 
@@ -344,5 +408,32 @@ mod tests {
                 .to_string(),
             "erc20"
         );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_for_name() {
+        use serde::{Deserialize, Serialize};
+
+        let name = ShortName::try_from("abc@1").unwrap();
+
+        #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+        struct Obj {
+            n: ShortName,
+        }
+
+        let datas: Obj = serde_json::from_str("{\"n\": \"abc@1\"}").unwrap();
+
+        println!("name : {:?}", datas);
+        println!("name : {:?}", datas.n.to_string());
+
+        assert_eq!(name, datas.n);
+
+        let datas_str = serde_json::to_string_pretty(&datas).unwrap();
+        println!("name data : {}", datas_str);
+
+        let datas_de: Obj = serde_json::from_str(datas_str.as_str()).unwrap();
+
+        assert_eq!(datas, datas_de);
     }
 }
