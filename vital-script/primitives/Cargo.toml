@@ -8,23 +8,31 @@ version.workspace = true
 [dependencies]
 anyhow = { workspace = true, default-features = false }
 bytes = { workspace = true, default-features = false }
+serde = { workspace = true, optional = true }
 scale-info = { workspace = true, default-features = false, optional = true }
 
 bitcoin = { workspace = true, default-features = false, features = ["no-std"] }
 
-parity-scale-codec = { workspace = true, features = ["derive", "max-encoded-len"] }
-primitive-types = { workspace = true, default-features = false, features = ["codec"] }
+parity-scale-codec = { workspace = true, features = [
+  "derive",
+  "max-encoded-len",
+] }
+primitive-types = { workspace = true, default-features = false, features = [
+  "codec",
+] }
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [features]
 default = ["std"]
 std = [
-    "anyhow/std",
-    "bytes/std",
-    "parity-scale-codec/std",
-    "primitive-types/std",
-    "bitcoin/std",
+  "anyhow/std",
+  "bytes/std",
+  "serde?/std",
+  "parity-scale-codec/std",
+  "primitive-types/std",
+  "bitcoin/std",
 ]
-scale-info = [
-    "dep:scale-info",
-    "primitive-types/scale-info",
-]
+scale-info = ["dep:scale-info", "primitive-types/scale-info"]
+serde = ["dep:serde", "primitive-types/serde"]

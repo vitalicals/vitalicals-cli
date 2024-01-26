@@ -21,7 +21,13 @@ std = [
     "anyhow/std",
     "log/std",
     "bitcoin/std",
+    "vital-script-primitives/std",
+    "vital-script-ops/std",
+    "vital-script-runner/std",
 ]
 scale-info = [
     "vital-script-primitives/scale-info",
+]
+serde = [
+    "vital-script-primitives/serde",
 ]
