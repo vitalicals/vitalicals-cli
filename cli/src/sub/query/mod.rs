@@ -5,17 +5,17 @@ mod resources;
 
 use crate::Cli;
 
-use self::resources::QueryResouces;
+use self::resources::QueryResources;
 
 #[derive(Debug, Subcommand)]
 pub enum QuerySubCommands {
-    /// Query vitalicals status.
+    /// Query status.
     FtInfo {
         /// The remote to clone
         id: String,
     },
     /// Query resources.
-    Resources(QueryResouces),
+    Resources(QueryResources),
 }
 
 impl QuerySubCommands {

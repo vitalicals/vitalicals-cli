@@ -1,9 +1,15 @@
 //! The context for all cmds
 
-use anyhow::Result;
+use anyhow::{Context as AnyhowContext, Result};
 
-use bdk::bitcoin::Network;
-use vital_interfaces_indexer::IndexerClient;
+use bdk::{
+    bitcoin::{hashes::Hash as BdkHash, Network},
+    LocalUtxo,
+};
+use bitcoin::{hashes::Hash, OutPoint, Txid};
+
+use vital_interfaces_indexer::{traits::IndexerClientT, IndexerClient};
+use vital_script_primitives::resources::Resource;
 use wallet::Wallet;
 
 pub struct Context {
@@ -21,5 +27,36 @@ impl Context {
 
     pub fn network(&self) -> Network {
         self.wallet.wallet.network()
+    }
+
+    pub async fn all_resources(&self) -> Result<Vec<(LocalUtxo, Resource)>> {
+        let mut res = Vec::new();
+
+        let outpoints = self.wallet.wallet.list_unspent().context("list unspents failed")?;
+
+        for unspent in outpoints.into_iter() {
+            log::debug!(
+                "unspent {} - {:?} - {} - {}",
+                unspent.is_spent,
+                unspent.keychain,
+                unspent.outpoint,
+                unspent.txout.script_pubkey
+            );
+            let outpoint = unspent.outpoint;
+
+            let resource = self
+                .indexer
+                .get_resource(&OutPoint {
+                    txid: Txid::from_byte_array(*outpoint.txid.as_byte_array()),
+                    vout: outpoint.vout,
+                })
+                .await?;
+            if let Some(resource) = resource {
+                log::debug!("find {} contain with resource {}", outpoint, resource);
+                res.push((unspent, resource));
+            }
+        }
+
+        Ok(res)
     }
 }

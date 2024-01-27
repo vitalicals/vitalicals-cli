@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
-use bdk::bitcoin::hashes::Hash as bdk_hashes;
-use bitcoin::{hashes::Hash, OutPoint, Txid};
+use bitcoin::OutPoint;
 use clap::Parser;
 
 use vital_interfaces_indexer::traits::IndexerClientT;
@@ -9,13 +8,13 @@ use crate::{sub::context::build_context, Cli};
 
 #[derive(Debug, Parser)]
 #[command(name = "query resources", about = "Query resources hold by wallet")]
-pub struct QueryResouces {
+pub struct QueryResources {
     /// If use outpoint arg, just return it 's outpoint
     #[arg(long)]
     outpoint: Option<OutPoint>,
 }
 
-impl QueryResouces {
+impl QueryResources {
     pub async fn run(&self, cli: &Cli) -> Result<()> {
         let context = build_context(cli).await.context("build context")?;
 
@@ -31,35 +30,11 @@ impl QueryResouces {
         } else {
             log::debug!("query resources");
 
-            let mut resources = Vec::new();
-
-            let outpoints = context.wallet.wallet.list_unspent().context("list unspents failed")?;
-            for unspent in outpoints.into_iter() {
-                log::debug!(
-                    "unspent {} - {:?} - {} - {}",
-                    unspent.is_spent,
-                    unspent.keychain,
-                    unspent.outpoint,
-                    unspent.txout.script_pubkey
-                );
-                let outpoint = unspent.outpoint;
-
-                let resource = context
-                    .indexer
-                    .get_resource(&OutPoint {
-                        txid: Txid::from_byte_array(*outpoint.txid.as_byte_array()),
-                        vout: outpoint.vout,
-                    })
-                    .await?;
-                if let Some(resource) = resource {
-                    log::debug!("find {} contain with resource {}", outpoint, resource);
-                    resources.push((outpoint, resource));
-                }
-            }
-
+            let resources =
+                context.all_resources().await?.into_iter().enumerate().collect::<Vec<_>>();
             println!("find {} resources", resources.len());
-            for (i, (outpoint, resource)) in resources.into_iter().enumerate() {
-                println!("{}. find {} contain with resource {}", i, outpoint, resource);
+            for (i, (utxo, resource)) in resources.into_iter() {
+                println!("{}. find {} contain with resource {}", i, utxo.outpoint, resource);
             }
         }
 
