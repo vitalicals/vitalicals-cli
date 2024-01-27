@@ -6,6 +6,8 @@ use bdk::bitcoin::Network;
 mod sub;
 use sub::*;
 
+pub(crate) use sub::{build_context, Context};
+
 /// A fictional versioning CLI
 #[derive(Debug, Parser)] // requires `derive` feature
 #[command(name = "vitalicals-cli")]
@@ -94,10 +96,10 @@ pub async fn run() -> Result<()> {
     });
 
     match &cli.command {
-        SubCommands::Query(cmd) => futures::executor::block_on(async { cmd.run(&cli).await }),
-        SubCommands::Mint(cmd) => cmd.run(&cli),
-        SubCommands::Transfer(cmd) => cmd.run(&cli),
-        SubCommands::Wallet(cmd) => cmd.run(&cli),
-        SubCommands::Utils(cmd) => cmd.run(&cli),
+        SubCommands::Query(cmd) => cmd.run(&cli).await,
+        SubCommands::Mint(cmd) => cmd.run(&cli).await,
+        SubCommands::Transfer(cmd) => cmd.run(&cli).await,
+        SubCommands::Wallet(cmd) => cmd.run(&cli).await,
+        SubCommands::Utils(cmd) => cmd.run(&cli).await,
     }
 }

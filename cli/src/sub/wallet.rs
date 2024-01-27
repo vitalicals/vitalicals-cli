@@ -22,7 +22,7 @@ pub enum WalletSubCommands {
 }
 
 impl WalletSubCommands {
-    pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
+    pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
         match self {
             Self::Create => {
                 create_wallet(cli)?;

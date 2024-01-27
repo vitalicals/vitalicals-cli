@@ -1,6 +1,6 @@
 use anyhow::{Context as AnyhowContext, Result};
 
-use client::context::Context;
+pub use client::context::Context;
 
 use crate::Cli;
 

@@ -32,6 +32,8 @@ pub struct P2trBuilder<'a> {
     secp: Secp256k1<All>,
     master_xpriv: ExtendedPrivKey,
     derivation_path: DerivationPath,
+
+    utxo_with_resources: Vec<OutPoint>,
 }
 
 impl<'a> P2trBuilder<'a> {
@@ -41,6 +43,7 @@ impl<'a> P2trBuilder<'a> {
         amount: u64,
         fee_rate: Option<f32>,
         wallet: &'a Wallet,
+        utxo_with_resources: Vec<OutPoint>,
     ) -> Result<Self> {
         let secp = Secp256k1::new();
 
@@ -62,6 +65,7 @@ impl<'a> P2trBuilder<'a> {
             internal_key,
             master_xpriv,
             derivation_path,
+            utxo_with_resources,
         })
     }
 
@@ -87,6 +91,8 @@ impl<'a> P2trBuilder<'a> {
 
         let mut builder = bdk_wallet.build_tx();
         builder.set_recipients(vec![(commit_script_pubkey, amount_to_trans)]);
+        // Note we not use this utxos, because it will cost the resource.
+        builder.unspendable(self.utxo_with_resources.clone());
 
         if let Some(fee_rate) = &self.fee_rate {
             builder.fee_rate(*fee_rate);

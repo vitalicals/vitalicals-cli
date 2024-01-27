@@ -1,9 +1,11 @@
 //! The context for all cmds
 
+use std::str::FromStr;
+
 use anyhow::{Context as AnyhowContext, Result};
 
 use bdk::{
-    bitcoin::{hashes::Hash as BdkHash, Network},
+    bitcoin::{address::NetworkUnchecked, hashes::Hash as BdkHash, Address, Network},
     LocalUtxo,
 };
 use bitcoin::{hashes::Hash, OutPoint, Txid};
@@ -16,13 +18,27 @@ pub struct Context {
     pub root_path: std::path::PathBuf,
     pub wallet: Wallet,
     pub indexer: IndexerClient,
+    pub to_address: Option<Address>,
 }
 
 impl Context {
     pub async fn new(root_path: std::path::PathBuf, indexer: &str, wallet: Wallet) -> Result<Self> {
         let indexer = IndexerClient::new(indexer).await?;
 
-        Ok(Self { root_path, wallet, indexer })
+        Ok(Self { root_path, wallet, indexer, to_address: None })
+    }
+
+    pub fn with_to_address(mut self, to: &Option<impl ToString>) -> Result<Self> {
+        if let Some(to) = to {
+            let to = Address::<NetworkUnchecked>::from_str(to.to_string().as_str())
+                .context("parse address failed")?
+                .require_network(self.network())
+                .context("the address is not for the network")?;
+
+            self.to_address = Some(to);
+        }
+
+        Ok(self)
     }
 
     pub fn network(&self) -> Network {
@@ -58,5 +74,14 @@ impl Context {
         }
 
         Ok(res)
+    }
+
+    pub async fn utxo_with_resources(&self) -> Result<Vec<bdk::bitcoin::OutPoint>> {
+        Ok(self
+            .all_resources()
+            .await?
+            .into_iter()
+            .map(|(unspent, _)| unspent.outpoint)
+            .collect())
     }
 }
