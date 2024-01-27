@@ -13,7 +13,7 @@ pub enum TransferSubCommands {
 }
 
 impl TransferSubCommands {
-    pub(crate) fn run(&self, _cli: &Cli) -> Result<()> {
+    pub(crate) async fn run(&self, _cli: &Cli) -> Result<()> {
         Ok(())
     }
 }

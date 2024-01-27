@@ -13,8 +13,12 @@ futures.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+bitcoin.workspace = true
 tokio.workspace = true
 
 bdk = { workspace = true }
 
 wallet.workspace = true
+
+vital-interfaces-indexer.workspace = true
+vital-script-primitives.workspace = true

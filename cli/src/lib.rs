@@ -6,6 +6,8 @@ use bdk::bitcoin::Network;
 mod sub;
 use sub::*;
 
+pub(crate) use sub::{build_context, Context};
+
 /// A fictional versioning CLI
 #[derive(Debug, Parser)] // requires `derive` feature
 #[command(name = "vitalicals-cli")]
@@ -30,6 +32,10 @@ struct Cli {
     /// The url for electrum.
     #[arg(short = 'e', long = "endpoint")]
     pub endpoint: String,
+
+    /// The endpoint for indexer
+    #[arg(short = 'i', long = "indexer")]
+    pub indexer: String,
 
     /// Sets the wallet data directory.
     /// Default value : "~/.vitalicals-cli
@@ -90,10 +96,10 @@ pub async fn run() -> Result<()> {
     });
 
     match &cli.command {
-        SubCommands::Query(cmd) => cmd.run(&cli),
-        SubCommands::Mint(cmd) => cmd.run(&cli),
-        SubCommands::Transfer(cmd) => cmd.run(&cli),
-        SubCommands::Wallet(cmd) => cmd.run(&cli),
-        SubCommands::Utils(cmd) => cmd.run(&cli),
+        SubCommands::Query(cmd) => cmd.run(&cli).await,
+        SubCommands::Mint(cmd) => cmd.run(&cli).await,
+        SubCommands::Transfer(cmd) => cmd.run(&cli).await,
+        SubCommands::Wallet(cmd) => cmd.run(&cli).await,
+        SubCommands::Utils(cmd) => cmd.run(&cli).await,
     }
 }
