@@ -6,8 +6,8 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+anyhow = { workspace = true, features = ["default"] }
 clap = { workspace = true, features = ["derive"] }
 futures.workspace = true
-log.workspace = true
+log = { workspace = true, features = ["std"] }
 tokio.workspace = true

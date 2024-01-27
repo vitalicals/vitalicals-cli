@@ -6,14 +6,14 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow = { workspace = true, default-features = false }
-log = { workspace = true, default-features = false }
+anyhow = { workspace = true }
+log = { workspace = true }
 
-bitcoin = { workspace = true, default-features = false }
+bitcoin = { workspace = true }
 
-vital-script-ops = { workspace = true, default-features = false }
-vital-script-primitives = { workspace = true, default-features = false }
-vital-script-runner = { workspace = true, default-features = false }
+vital-script-ops = { workspace = true }
+vital-script-primitives = { workspace = true }
+vital-script-runner = { workspace = true }
 
 [features]
 default = ["std"]

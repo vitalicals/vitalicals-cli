@@ -1,5 +1,6 @@
 //! The short name type
 
+use alloc::string::{String, ToString};
 use anyhow::{bail, Result};
 use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
@@ -239,8 +240,7 @@ impl TryFrom<Name> for ShortName {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::string::ToString for ShortName {
+impl ToString for ShortName {
     fn to_string(&self) -> String {
         let len = self.len();
         let mut res = String::with_capacity(len + 1);
@@ -253,11 +253,10 @@ impl std::string::ToString for ShortName {
     }
 }
 
-#[cfg(feature = "std")]
 impl TryFrom<String> for ShortName {
     type Error = anyhow::Error;
 
-    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.len() > SHORT_NAME_LEN_MAX {
             bail!("the string len too large");
         }
@@ -281,7 +280,6 @@ impl TryFrom<String> for ShortName {
 }
 
 #[cfg(test)]
-#[cfg(feature = "std")]
 mod tests {
     use crate::{names::char2u8, resources::Name};
 

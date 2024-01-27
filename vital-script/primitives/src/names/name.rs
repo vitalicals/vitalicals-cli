@@ -1,5 +1,6 @@
 //! The name type
 
+use alloc::string::String;
 use anyhow::{bail, Result};
 use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
@@ -285,11 +286,10 @@ impl TryFrom<&str> for Name {
     }
 }
 
-#[cfg(feature = "std")]
 impl TryFrom<String> for Name {
     type Error = anyhow::Error;
 
-    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.len() > NAME_LEN_MAX {
             bail!("the string len too large");
         }

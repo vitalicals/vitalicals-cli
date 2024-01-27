@@ -6,10 +6,9 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+anyhow = { workspace = true, features = ["default"] }
+bdk = { workspace = true }
+log = { workspace = true, features = ["std"] }
 futures.workspace = true
 hex-literal.workspace = true
-log.workspace = true
 tokio.workspace = true
-
-bdk = { workspace = true }

@@ -6,7 +6,7 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+anyhow = { workspace = true, features = ["default"] }
 clap = { workspace = true, features = ["derive"] }
 env_logger.workspace = true
 futures.workspace = true
