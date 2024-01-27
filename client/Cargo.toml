@@ -18,3 +18,5 @@ tokio.workspace = true
 bdk = { workspace = true }
 
 wallet.workspace = true
+
+vital-interfaces-indexer.workspace = true

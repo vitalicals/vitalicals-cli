@@ -48,7 +48,7 @@ impl SimulatorStatus {
             bail!("the resource by {} had removed", outpoint);
         }
 
-        self.removed_resources.insert(outpoint.clone());
+        self.removed_resources.insert(*outpoint);
 
         Ok(())
     }

@@ -19,9 +19,13 @@ serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 wallet.workspace = true
+bitcoin.workspace = true
+
+client.workspace = true
 
 vital-script-builder.workspace = true
 vital-script-primitives.workspace = true
+vital-interfaces-indexer.workspace = true
 
 [features]
 default = ["std"]

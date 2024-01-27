@@ -1,5 +1,5 @@
 [package]
-name = "vital-interface-indexer"
+name = "vital-interfaces-indexer"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

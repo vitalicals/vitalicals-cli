@@ -34,7 +34,7 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
             let script_bytes = script.to_bytes();
             match try_get_vital_script(&script_bytes) {
                 Ok(s) => {
-                    if s.len() > 0 {
+                    if !s.is_empty() {
                         is_all_ok &= true;
                     }
                 }
@@ -45,7 +45,7 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
         }
     }
 
-    return is_all_ok
+    is_all_ok
 }
 
 pub fn parse_vital_scripts(tx: &Transaction) -> Result<Vec<(u8, Vec<u8>)>> {
@@ -67,7 +67,7 @@ pub fn parse_vital_scripts(tx: &Transaction) -> Result<Vec<(u8, Vec<u8>)>> {
             let script_bytes = script.to_bytes();
             match try_get_vital_script(&script_bytes) {
                 Ok(s) => {
-                    if s.len() > 0 {
+                    if !s.is_empty() {
                         res.push((input_index as u8, s));
                     }
                 }

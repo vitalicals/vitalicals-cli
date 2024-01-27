@@ -21,7 +21,7 @@ pub struct IndexerClient {
 
 impl IndexerClient {
     pub async fn new(target: &str) -> Result<Self> {
-        let client = HttpClientBuilder::default().build(target.to_string())?;
+        let client = HttpClientBuilder::default().build(target)?;
         let client = Arc::new(client);
 
         Ok(Self { client })
@@ -61,6 +61,7 @@ mod tests {
 
     use super::*;
 
+    #[ignore = "need boot indexer"]
     #[tokio::test]
     async fn test_get_resource() {
         let cli = IndexerClient::new("http://localhost:9944").await.expect("new");

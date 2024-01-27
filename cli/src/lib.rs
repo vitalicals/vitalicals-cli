@@ -31,6 +31,10 @@ struct Cli {
     #[arg(short = 'e', long = "endpoint")]
     pub endpoint: String,
 
+    /// The endpoint for indexer
+    #[arg(short = 'i', long = "indexer")]
+    pub indexer: String,
+
     /// Sets the wallet data directory.
     /// Default value : "~/.vitalicals-cli
     #[clap(name = "DATADIR", short = 'd', long = "datadir", default_value = "./.vitalicals-cli")]
@@ -90,7 +94,7 @@ pub async fn run() -> Result<()> {
     });
 
     match &cli.command {
-        SubCommands::Query(cmd) => cmd.run(&cli),
+        SubCommands::Query(cmd) => futures::executor::block_on(async { cmd.run(&cli).await }),
         SubCommands::Mint(cmd) => cmd.run(&cli),
         SubCommands::Transfer(cmd) => cmd.run(&cli),
         SubCommands::Wallet(cmd) => cmd.run(&cli),
