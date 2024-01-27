@@ -21,7 +21,6 @@ pub use vrc721::*;
 pub type Tag = Name;
 
 #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
-
 #[repr(u16)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ResourceClass {

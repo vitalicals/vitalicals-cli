@@ -193,7 +193,7 @@ impl ShortName {
 impl TryFrom<&str> for ShortName {
     type Error = anyhow::Error;
 
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: &str) -> core::result::Result<Self, Self::Error> {
         if value.len() > SHORT_NAME_LEN_MAX {
             bail!("the string len too large");
         }
