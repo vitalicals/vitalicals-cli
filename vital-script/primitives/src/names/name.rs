@@ -335,7 +335,6 @@ impl From<ShortName> for Name {
 }
 
 #[cfg(test)]
-#[cfg(feature = "std")]
 mod tests {
     use crate::names::{char2u8, ShortName};
 
