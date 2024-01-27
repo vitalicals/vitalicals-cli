@@ -27,6 +27,7 @@ members = [
     "vital-script/builder",
 
     "interfaces/electrum",
+    "interfaces/indexer",
 
     "btc/script-builder",
     "btc/p2tr-builder",
@@ -35,6 +36,7 @@ members = [
 ]
 
 [workspace.dependencies]
+async-trait = "0.1"
 anyhow = { version = "1.0", default-features = false }
 array-bytes = "6.1"
 bitcoin = { version = "0.31.0", default-features = false, features = ["serde", "no-std"] }
@@ -46,6 +48,7 @@ futures = "0.3.26"
 futures-channel = "0.3"
 futures-timer = "3.0.1"
 futures-util = "0.3"
+jsonrpsee = "0.16"
 hex = { version = "0.4.3", features = ["alloc"], default-features = false }
 hex-literal = "0.4"
 log = { version = "0.4", default-features = false }
@@ -66,6 +69,8 @@ primitive-types = { version = "0.12", default-features = false }
 cli = { path = "./cli" }
 client = { path = "./client" }
 wallet = { path = "./wallet" }
+
+vital-interfaces-indexer = { path = "./interfaces/indexer" }
 
 vital-primitives = { path = "./primitives" }
 
