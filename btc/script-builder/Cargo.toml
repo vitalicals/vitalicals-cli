@@ -6,13 +6,13 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+anyhow = { workspace = true, features = ["default"] }
 clap = { workspace = true, features = ["derive"] }
 env_logger.workspace = true
 futures.workspace = true
 hex-literal.workspace = true
-hex.workspace = true
-log.workspace = true
+hex = { workspace = true, features = ["default"] }
+log = { workspace = true, features = ["std"] }
 tokio.workspace = true
 
 bdk.workspace = true
