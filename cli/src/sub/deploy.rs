@@ -1,8 +1,5 @@
 use anyhow::{Context as AnyhowContext, Result};
-use bdk::{
-    blockchain::Blockchain,
-    wallet::AddressIndex,
-};
+use bdk::blockchain::Blockchain;
 use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
@@ -78,7 +75,10 @@ impl DeploySubCommands {
                 max_mints,
                 meta_data,
             } => {
-                let context = context.with_to_address(to).context("with to address")?;
+                let context = context
+                    .with_to_address(to, *amount)
+                    .context("with to address")?
+                    .with_fee_rate(fee_rate);
 
                 let meta_data =
                     meta_data.as_ref().map(|data| MetaData { raw: data.as_bytes().to_vec() });
@@ -95,7 +95,7 @@ impl DeploySubCommands {
                     meta: meta_data,
                 };
 
-                deploy_vrc20(&context, name.clone(), meta, *amount, fee_rate).await?;
+                deploy_vrc20(&context, name.clone(), meta).await?;
             }
         }
 
@@ -103,13 +103,7 @@ impl DeploySubCommands {
     }
 }
 
-async fn deploy_vrc20(
-    context: &Context,
-    name: String,
-    meta: VRC20MetaData,
-    amount: u64,
-    fee_rate: &Option<f32>,
-) -> Result<()> {
+async fn deploy_vrc20(context: &Context, name: String, meta: VRC20MetaData) -> Result<()> {
     use vital_script_builder::templates;
 
     // TODO: check input resource
@@ -123,26 +117,9 @@ async fn deploy_vrc20(
 
     // build tx
     let wallet = &context.wallet;
-    let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    let to_address = if let Some(to) = context.to_address.clone() {
-        to
-    } else {
-        bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
-    };
-    let utxo_with_resources =
-        context.utxo_with_resources().await.context("utxo_with_resources failed")?;
-
-    let builder = P2trBuilder::new(
-        scripts_bytes,
-        to_address,
-        amount,
-        *fee_rate,
-        &wallet,
-        utxo_with_resources,
-    )
-    .context("builder build")?;
+    let builder = P2trBuilder::new(context, scripts_bytes).context("builder build")?;
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 

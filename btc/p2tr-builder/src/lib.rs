@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 use bdk::{
     bitcoin::{
         absolute,
@@ -15,10 +15,13 @@ use bdk::{
         taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo},
         Address, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Weight, Witness,
     },
+    wallet::AddressIndex,
     FeeRate, SignOptions,
 };
 
 use btc_script_builder::InscriptionScriptBuilder;
+
+use client::context::Context;
 use wallet::Wallet;
 
 pub struct P2trBuilder<'a> {
@@ -37,15 +40,17 @@ pub struct P2trBuilder<'a> {
 }
 
 impl<'a> P2trBuilder<'a> {
-    pub fn new(
-        data: Vec<u8>,
-        to: Address,
-        amount: u64,
-        fee_rate: Option<f32>,
-        wallet: &'a Wallet,
-        utxo_with_resources: Vec<OutPoint>,
-    ) -> Result<Self> {
+    pub fn new(context: &'a Context, data: Vec<u8>) -> Result<Self> {
         let secp = Secp256k1::new();
+
+        let wallet = &context.wallet;
+        let utxo_with_resources = context.utxo_with_resources.clone();
+
+        let to_address = if let Some(to) = context.to_address.clone() {
+            to
+        } else {
+            wallet.wallet.get_address(AddressIndex::New).context("new address")?.address
+        };
 
         let internal_key = wallet.derive_x_only_public_key(&secp)?;
         let reveal_script = InscriptionScriptBuilder::new(data)
@@ -57,9 +62,9 @@ impl<'a> P2trBuilder<'a> {
 
         Ok(Self {
             reveal_script,
-            to_address: to,
-            amount,
-            fee_rate: fee_rate.map(FeeRate::from_sat_per_vb),
+            to_address,
+            amount: context.to_amount,
+            fee_rate: context.fee_rate.map(FeeRate::from_sat_per_vb),
             wallet,
             secp,
             internal_key,

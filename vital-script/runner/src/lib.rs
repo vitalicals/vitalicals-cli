@@ -85,7 +85,6 @@ mod tests {
         resources::{Resource, ResourceType},
         traits::{Context as ContextT, EnvContext, MetaDataType},
         types::vrc20::{VRC20MetaData, VRC20MintMeta},
-        U256,
     };
 
     use super::*;
@@ -120,7 +119,7 @@ mod tests {
 
         let mint_name_str = "abcdefg";
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
-        let mint_amount = U256::from(10000);
+        let mint_amount = 10000000_u128;
 
         let env_interface = EnvMock::new();
 
@@ -167,13 +166,7 @@ mod tests {
                         decimals: 5,
                         nonce: 1000000,
                         bworkc: 1000000,
-                        max: U256::from(1000000000000000_u64),
-                        mint: VRC20MintMeta {
-                            mint_type: 1,
-                            mint_amount,
-                            mint_height: 10,
-                            max_mints: 100000000,
-                        },
+                        mint: VRC20MintMeta { mint_amount, mint_height: 10, max_mints: 100000000 },
                         meta: None,
                     },
                 }),
@@ -211,7 +204,7 @@ mod tests {
         assert!(vrc20.is_some());
 
         // 3. mint vrc20
-        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
+        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount.into()).expect("res");
 
         let mut context3 = {
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
@@ -268,7 +261,7 @@ mod tests {
             .get_resources(&context4.env().get_output(0))
             .expect("get resources failed");
 
-        assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount).expect("res")));
+        assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount.into()).expect("res")));
     }
 
     #[test]
@@ -277,7 +270,7 @@ mod tests {
 
         let mint_name_str = "abc";
         let mint_name = Name::try_from(mint_name_str.to_string()).unwrap();
-        let mint_amount = U256::from(10000);
+        let mint_amount = 10000000_u128;
 
         let env_interface = EnvMock::new();
 
@@ -324,13 +317,7 @@ mod tests {
                         decimals: 5,
                         nonce: 1000000,
                         bworkc: 1000000,
-                        max: U256::from(1000000000000000_u64),
-                        mint: VRC20MintMeta {
-                            mint_type: 1,
-                            mint_amount,
-                            mint_height: 10,
-                            max_mints: 100000000,
-                        },
+                        mint: VRC20MintMeta { mint_amount, mint_height: 10, max_mints: 100000000 },
                         meta: None,
                     },
                 }),
@@ -368,7 +355,7 @@ mod tests {
         assert!(vrc20.is_some());
 
         // 3. mint vrc20
-        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount).expect("res");
+        let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount.into()).expect("res");
 
         let mut context3 = {
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
@@ -425,6 +412,6 @@ mod tests {
             .get_resources(&context4.env().get_output(0))
             .expect("get resources failed");
 
-        assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount).expect("res")));
+        assert_eq!(res, Some(Resource::vrc20(mint_name_str, mint_amount.into()).expect("res")));
     }
 }
