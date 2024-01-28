@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use anyhow::{Context as AnyhowContext, Result};
 
-use bitcoin::{OutPoint, Transaction, Txid};
+use bitcoin::{OutPoint, Transaction};
 use vital_script_ops::{instruction::Instruction, parser::Parser};
 pub use vital_script_primitives::traits::context::Context as ContextT;
 use vital_script_primitives::traits::{
