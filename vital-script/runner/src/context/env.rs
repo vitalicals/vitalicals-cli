@@ -12,7 +12,7 @@ use crate::{traits::EnvFunctions, TARGET};
 
 use super::script::parse_vital_scripts;
 
-const STORAGE_KEY_METADATA: &'static [u8; 8] = b"metadata";
+const STORAGE_KEY_METADATA: &[u8; 8] = b"metadata";
 
 #[derive(Clone)]
 pub struct EnvContext<Functions: EnvFunctions> {
@@ -27,7 +27,7 @@ pub struct EnvContext<Functions: EnvFunctions> {
     cached_output_resources: BTreeMap<u8, Resource>,
 }
 
-impl<'a, Functions: EnvFunctions> EnvContext<Functions> {
+impl<Functions: EnvFunctions> EnvContext<Functions> {
     pub fn new(env_interface: Functions, tx: &Transaction) -> Self {
         let ops = parse_vital_scripts(tx).expect("parse vital scripts");
         let tx_id = tx.txid();
@@ -143,7 +143,7 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
         if let Some((typ_in_storage, res)) = value
             .map(|datas| <(u8, T)>::decode(&mut datas.as_slice()))
             .transpose()
-            .context("decode failed")?
+            .map_err(|err| anyhow!("decode failed by {:?}", err))?
         {
             if typ_in_storage != typ as u8 {
                 bail!("the type not match expected {}, got {}", typ as u8, typ_in_storage);

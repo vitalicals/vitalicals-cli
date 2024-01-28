@@ -1,16 +1,12 @@
-use std::str::FromStr;
-
-use anyhow::{Context, Result};
-use bdk::{
-    bitcoin::{address::NetworkUnchecked, Address, Network},
-    blockchain::Blockchain,
-    wallet::AddressIndex,
-};
+use anyhow::{Context as AnyhowContext, Result};
+use bdk::{blockchain::Blockchain, wallet::AddressIndex};
 use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
 
 use crate::Cli;
+
+use super::context::{build_context, Context};
 
 #[derive(Debug, Subcommand)]
 pub enum MintSubCommands {
@@ -33,22 +29,15 @@ pub enum MintSubCommands {
 }
 
 impl MintSubCommands {
-    pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
-        let network = cli.network();
-
+    pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
         match self {
             Self::Name { name, to, amount, fee_rate } => {
-                let to_address = to
-                    .as_ref()
-                    .map(|address| {
-                        Address::<NetworkUnchecked>::from_str(address.as_str())
-                            .context("parse address failed")?
-                            .require_network(network)
-                            .context("the address is not for the network")
-                    })
-                    .transpose()?;
+                let context = build_context(cli)
+                    .await?
+                    .with_to_address(to)
+                    .context("with to address failed")?;
 
-                mint_name(network, cli, name.clone(), to_address, *amount, fee_rate)?;
+                mint_name(&context, name.clone(), *amount, fee_rate).await?;
             }
         }
 
@@ -56,11 +45,9 @@ impl MintSubCommands {
     }
 }
 
-fn mint_name(
-    network: Network,
-    cli: &Cli,
+async fn mint_name(
+    context: &Context,
     name: String,
-    to_address: Option<Address>,
     amount: u64,
     fee_rate: &Option<f32>,
 ) -> Result<()> {
@@ -73,19 +60,22 @@ fn mint_name(
     println!("scripts_bytes {}", hex::encode(&scripts_bytes));
 
     // build tx
-    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
-        .context("load wallet failed")?;
+    let wallet = &context.wallet;
     let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    let to_address = if let Some(to) = to_address {
+    let to_address = if let Some(to) = context.to_address.clone() {
         to
     } else {
         bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
     };
 
-    let builder = P2trBuilder::new(scripts_bytes, to_address, amount, *fee_rate, &wallet)
-        .context("builder build")?;
+    let utxo_with_resources =
+        context.utxo_with_resources().await.context("utxo_with_resources failed")?;
+
+    let builder =
+        P2trBuilder::new(scripts_bytes, to_address, amount, *fee_rate, wallet, utxo_with_resources)
+            .context("builder build")?;
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 

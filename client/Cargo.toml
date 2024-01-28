@@ -6,15 +6,19 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-anyhow.workspace = true
+anyhow = { workspace = true, features = ["default"] }
 clap = { workspace = true, features = ["derive"] }
 env_logger.workspace = true
 futures.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+bitcoin.workspace = true
 tokio.workspace = true
 
 bdk = { workspace = true }
 
 wallet.workspace = true
+
+vital-interfaces-indexer.workspace = true
+vital-script-primitives.workspace = true

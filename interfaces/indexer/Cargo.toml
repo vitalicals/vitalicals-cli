@@ -1,0 +1,19 @@
+[package]
+name = "vital-interfaces-indexer"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+log.workspace = true
+tokio.workspace = true
+hex.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+
+bitcoin = { workspace = true, features = ["serde"] }
+jsonrpsee = { workspace = true, features = ["http-client", "async-client"] }
+
+vital-script = { workspace = true, features = ["default", "serde"] }

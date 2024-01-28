@@ -1,5 +1,6 @@
 //! The name type
 
+use alloc::string::String;
 use anyhow::{bail, Result};
 use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
@@ -21,6 +22,43 @@ pub const NAME_BYTES_LEN: usize = 8;
 #[derive(Encode, Decode)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for Name {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Name {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct NameVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for NameVisitor {
+            type Value = Name;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("vital name resource")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Name::try_from(v).map_err(|err| E::custom(format!("name format error {}", err)))
+            }
+        }
+
+        deserializer.deserialize_str(NameVisitor)
+    }
+}
 
 impl core::fmt::Display for Name {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -222,11 +260,36 @@ impl Name {
     }
 }
 
-#[cfg(feature = "std")]
+impl TryFrom<&str> for Name {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> core::result::Result<Self, Self::Error> {
+        if value.len() > NAME_LEN_MAX {
+            bail!("the string len too large");
+        }
+
+        let mut res = Name::default();
+
+        if value.is_empty() {
+            return Ok(res);
+        }
+
+        for c in value.chars() {
+            res.push(c)?;
+        }
+
+        if !res.is_valid() {
+            bail!("the string not valid");
+        }
+
+        Ok(res)
+    }
+}
+
 impl TryFrom<String> for Name {
     type Error = anyhow::Error;
 
-    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.len() > NAME_LEN_MAX {
             bail!("the string len too large");
         }
@@ -272,7 +335,6 @@ impl From<ShortName> for Name {
 }
 
 #[cfg(test)]
-#[cfg(feature = "std")]
 mod tests {
     use crate::names::{char2u8, ShortName};
 
@@ -376,5 +438,32 @@ mod tests {
             Name::from(ShortName::try_from("erc20".to_string()).unwrap()).to_string(),
             "erc20"
         );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde_for_name() {
+        use serde::{Deserialize, Serialize};
+
+        let name = Name::try_from("abcedfg").unwrap();
+
+        #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+        struct Obj {
+            n: Name,
+        }
+
+        let datas: Obj = serde_json::from_str("{\"n\": \"abcedfg\"}").unwrap();
+
+        println!("name : {:?}", datas);
+        println!("name : {:?}", datas.n.to_string());
+
+        assert_eq!(name, datas.n);
+
+        let datas_str = serde_json::to_string_pretty(&datas).unwrap();
+        println!("name data : {}", datas_str);
+
+        let datas_de: Obj = serde_json::from_str(datas_str.as_str()).unwrap();
+
+        assert_eq!(datas, datas_de);
     }
 }

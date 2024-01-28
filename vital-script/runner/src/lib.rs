@@ -29,6 +29,12 @@ pub struct Runner<Context: ContextT<Instruction = Instruction>> {
     _marker: core::marker::PhantomData<Context>,
 }
 
+impl<Context: ContextT<Instruction = Instruction>> Default for Runner<Context> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<Context: ContextT<Instruction = Instruction>> Runner<Context> {
     pub fn new() -> Self {
         Self { _marker: Default::default() }

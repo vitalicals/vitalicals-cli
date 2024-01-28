@@ -65,7 +65,7 @@ pub enum UtilsSubCommands {
 }
 
 impl UtilsSubCommands {
-    pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
+    pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
         let network = cli.network();
 
         match self {
@@ -78,25 +78,12 @@ impl UtilsSubCommands {
                 send_to_address(network, cli, address, *amount, fee_rate, *replaceable)
             }
             Self::InscribeToAddress { address, amount, fee_rate, replaceable, datas } => {
-                let address = address
-                    .as_ref()
-                    .map(|address| {
-                        Address::<NetworkUnchecked>::from_str(address.as_str())
-                            .context("parse address failed")?
-                            .require_network(network)
-                            .context("the address is not for the network")
-                    })
-                    .transpose()?;
+                let context = crate::build_context(cli)
+                    .await?
+                    .with_to_address(address)
+                    .context("with to address failed")?;
 
-                inscribe_to_address(
-                    network,
-                    cli,
-                    address,
-                    *amount,
-                    fee_rate,
-                    *replaceable,
-                    datas.as_str(),
-                )
+                inscribe_to_address(&context, *amount, fee_rate, *replaceable, datas.as_str()).await
             }
         }
     }
@@ -149,32 +136,33 @@ fn send_to_address(
     Ok(())
 }
 
-fn inscribe_to_address(
-    network: Network,
-    cli: &Cli,
-    to_address: Option<Address>,
+async fn inscribe_to_address(
+    context: &crate::Context,
     amount: u64,
     fee_rate: &Option<f32>,
     _replaceable: bool,
     datas: &str,
 ) -> Result<()> {
-    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
-        .context("load wallet failed")?;
+    let wallet = &context.wallet;
     let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    let to_address = if let Some(to) = to_address {
+    let to_address = if let Some(to) = context.to_address.clone() {
         to
     } else {
         bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
     };
+
+    let utxo_with_resources =
+        context.utxo_with_resources().await.context("utxo_with_resources failed")?;
 
     let builder = P2trBuilder::new(
         hex::decode(datas).context("decode datas")?,
         to_address,
         amount,
         *fee_rate,
-        &wallet,
+        wallet,
+        utxo_with_resources,
     )
     .context("builder build")?;
 

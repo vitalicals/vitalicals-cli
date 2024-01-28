@@ -13,6 +13,6 @@ name = "vitalicals-cli"
 path = "src/main.rs"
 
 [dependencies]
-anyhow.workspace = true
+anyhow = { workspace = true, features = ["default"] }
 cli.workspace = true
 tokio = { workspace = true, features = ["macros"] }
