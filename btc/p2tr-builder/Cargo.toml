@@ -19,4 +19,6 @@ tokio.workspace = true
 bdk = { workspace = true }
 
 btc-script-builder.workspace = true
+
+client.workspace = true
 wallet.workspace = true

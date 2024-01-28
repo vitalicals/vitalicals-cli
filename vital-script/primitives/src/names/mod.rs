@@ -11,7 +11,7 @@ mod short_name;
 pub use name::*;
 pub use short_name::*;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 const INVALID_VALUE: u8 = 0xFF;
 const VALUE_MAX: u8 = 42;
@@ -76,4 +76,27 @@ fn u8_to_char(v: u8) -> Result<char> {
     ];
 
     Ok(CHAR_DATA[v as usize])
+}
+
+pub enum NameOrShort {
+    Name(Name),
+    ShortName(ShortName),
+}
+
+#[cfg(feature = "std")]
+impl NameOrShort {
+    pub fn parse(name_str: impl Into<String>) -> Result<NameOrShort> {
+        let name: String = name_str.into();
+        let res = if name.len() <= SHORT_NAME_LEN_MAX {
+            let name = ShortName::try_from(name).context("the name format not valid")?;
+            NameOrShort::ShortName(name)
+        } else if name.len() <= NAME_LEN_MAX {
+            let name = Name::try_from(name).context("the name format not valid")?;
+            NameOrShort::Name(name)
+        } else {
+            bail!("not support long name with length {}, need <= {}", name.len(), NAME_LEN_MAX);
+        };
+
+        Ok(res)
+    }
 }

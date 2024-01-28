@@ -31,7 +31,7 @@ impl QueryResources {
             log::debug!("query resources");
 
             let resources =
-                context.all_resources().await?.into_iter().enumerate().collect::<Vec<_>>();
+                context.fetch_all_resources().await?.into_iter().enumerate().collect::<Vec<_>>();
             println!("find {} resources", resources.len());
             for (i, (utxo, resource)) in resources.into_iter() {
                 println!("{}. find {} contain with resource {}", i, utxo.outpoint, resource);

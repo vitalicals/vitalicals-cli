@@ -1,4 +1,6 @@
 mod context;
+
+pub mod deploy;
 pub mod mint;
 pub mod query;
 pub mod transfer;

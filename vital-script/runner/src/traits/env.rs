@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use anyhow::Result;
 
-use bitcoin::OutPoint;
+use bitcoin::{OutPoint, Txid};
 
 use vital_script_primitives::resources::Resource;
 
@@ -14,4 +14,14 @@ pub trait EnvFunctions: Clone {
 
     fn storage_get(&self, key: &[u8]) -> Result<Option<Vec<u8>>>;
     fn storage_set(&self, key: Vec<u8>, value: Vec<u8>) -> Result<()>;
+}
+
+pub trait ChainFunctions: Clone {
+    fn get_commit_tx_inputs_previous_output(&self, txid: &Txid) -> Result<Option<Vec<OutPoint>>>;
+    fn set_commit_tx_inputs_previous_output(
+        &self,
+        txid: Txid,
+        outpoints: Vec<OutPoint>,
+    ) -> Result<()>;
+    fn delete_commit_tx_inputs_previous_output(&self, txid: &Txid) -> Result<()>;
 }

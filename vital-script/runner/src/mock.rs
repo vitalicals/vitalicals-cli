@@ -24,8 +24,10 @@ pub fn init_logger() {
 
 #[derive(Debug, Clone)]
 pub struct TxMock {
-    pub tx: Transaction,
-    pub txid: Txid,
+    pub commit: Transaction,
+    pub commit_txid: Txid,
+    pub reveal: Transaction,
+    pub reveal_txid: Txid,
     ops_bytes: Vec<(u8, Vec<u8>)>,
 }
 
@@ -39,7 +41,13 @@ impl TxMock {
         };
         let txid = tx.txid();
 
-        Self { tx, txid, ops_bytes: Vec::new() }
+        Self {
+            commit: tx.clone(),
+            commit_txid: txid,
+            reveal: tx,
+            reveal_txid: txid,
+            ops_bytes: Vec::new(),
+        }
     }
 
     pub fn push_input(&mut self, input: OutPoint) {
@@ -48,18 +56,18 @@ impl TxMock {
 
         // println!("push_input input by index: {:?}", txin);
 
-        self.tx.input.push(txin);
-        self.txid = self.tx.txid();
+        self.commit.input.push(txin);
+        self.commit_txid = self.commit.txid();
     }
 
     pub fn push_ops(&mut self, ops_bytes: Vec<u8>) {
         let txin = TxIn::default();
 
-        let new_txin_index = self.tx.input.len();
+        let new_txin_index = self.reveal.input.len();
         assert!(new_txin_index < 0xff);
 
-        self.tx.input.push(txin);
-        self.txid = self.tx.txid();
+        self.reveal.input.push(txin);
+        self.reveal_txid = self.reveal.txid();
 
         self.ops_bytes.push((new_txin_index as u8, ops_bytes));
     }
@@ -67,8 +75,8 @@ impl TxMock {
     pub fn push_output(&mut self, amount: u64) {
         let txout = TxOut { value: Amount::from_sat(amount), script_pubkey: ScriptBuf::default() };
 
-        self.tx.output.push(txout);
-        self.txid = self.tx.txid();
+        self.reveal.output.push(txout);
+        self.reveal_txid = self.reveal.txid();
     }
 }
 
@@ -132,7 +140,16 @@ pub struct ContextMock {
 
 impl ContextMock {
     pub fn new(tx: TxMock, env: EnvMock) -> Self {
-        Self { inner: ContextMockInner::new(env, &tx.tx), tx }
+        log::info!("new context mock {} -> {}", tx.commit_txid, tx.reveal_txid);
+
+        let commit_tx_inputs_previous_output = tx
+            .commit
+            .input
+            .iter()
+            .map(|input| input.previous_output.clone())
+            .collect::<Vec<_>>();
+
+        Self { inner: ContextMockInner::new(env, commit_tx_inputs_previous_output, &tx.reveal), tx }
     }
 }
 

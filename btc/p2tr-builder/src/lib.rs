@@ -1,8 +1,10 @@
 //! Psbt Builder for send p2tr commit tx and reveal tx
 
+mod coin_selector;
+
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 use bdk::{
     bitcoin::{
         absolute,
@@ -15,10 +17,13 @@ use bdk::{
         taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo},
         Address, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Weight, Witness,
     },
-    FeeRate, SignOptions,
+    wallet::AddressIndex,
+    FeeRate, LocalUtxo, SignOptions,
 };
 
 use btc_script_builder::InscriptionScriptBuilder;
+
+use client::context::Context;
 use wallet::Wallet;
 
 pub struct P2trBuilder<'a> {
@@ -34,18 +39,22 @@ pub struct P2trBuilder<'a> {
     derivation_path: DerivationPath,
 
     utxo_with_resources: Vec<OutPoint>,
+
+    reveal_inputs: Vec<LocalUtxo>,
 }
 
 impl<'a> P2trBuilder<'a> {
-    pub fn new(
-        data: Vec<u8>,
-        to: Address,
-        amount: u64,
-        fee_rate: Option<f32>,
-        wallet: &'a Wallet,
-        utxo_with_resources: Vec<OutPoint>,
-    ) -> Result<Self> {
+    pub fn new(context: &'a Context, data: Vec<u8>) -> Result<Self> {
         let secp = Secp256k1::new();
+
+        let wallet = &context.wallet;
+        let utxo_with_resources = context.utxo_with_resources.clone();
+
+        let to_address = if let Some(to) = context.to_address.clone() {
+            to
+        } else {
+            wallet.wallet.get_address(AddressIndex::New).context("new address")?.address
+        };
 
         let internal_key = wallet.derive_x_only_public_key(&secp)?;
         let reveal_script = InscriptionScriptBuilder::new(data)
@@ -57,20 +66,37 @@ impl<'a> P2trBuilder<'a> {
 
         Ok(Self {
             reveal_script,
-            to_address: to,
-            amount,
-            fee_rate: fee_rate.map(FeeRate::from_sat_per_vb),
+            to_address,
+            amount: context.to_amount,
+            fee_rate: context.fee_rate.map(FeeRate::from_sat_per_vb),
             wallet,
             secp,
             internal_key,
             master_xpriv,
             derivation_path,
             utxo_with_resources,
+            reveal_inputs: Vec::new(),
         })
     }
 
     fn secp(&self) -> &Secp256k1<All> {
         &self.secp
+    }
+
+    pub fn with_reveal_input(mut self, utxo: LocalUtxo) -> Self {
+        self.reveal_inputs.push(utxo);
+
+        self
+    }
+
+    /// TODO: support merge amount to output mod.
+    #[allow(dead_code)]
+    fn reveal_input_amount(&self) -> u64 {
+        let mut amount = 0;
+        for i in self.reveal_inputs.iter() {
+            amount += i.txout.value;
+        }
+        amount
     }
 
     /// Generate a commit tx psbt
@@ -87,9 +113,18 @@ impl<'a> P2trBuilder<'a> {
         let script_p2tr = self.reveal_script.to_v1_p2tr(secp, internal_key);
 
         // the total amount send to output, need the amount and fee for next tx.
+        // TODO: support merge amount to output mod.
         let amount_to_trans = self.amount + fee_for_reveal_tx.unwrap_or_default();
 
-        let mut builder = bdk_wallet.build_tx();
+        let reveal_inputs = self.reveal_inputs.iter().map(|i| i.outpoint).collect::<Vec<_>>();
+
+        let mut builder = bdk_wallet
+            .build_tx()
+            .coin_selection(coin_selector::CoinSelector::new(reveal_inputs.clone()));
+        builder.ordering(bdk::wallet::tx_builder::TxOrdering::Untouched);
+        // for the inputs, push into the builder
+        builder.add_utxos(&reveal_inputs).context("add utxo failed")?;
+
         builder.set_recipients(vec![(commit_script_pubkey, amount_to_trans)]);
         // Note we not use this utxos, because it will cost the resource.
         builder.unspendable(self.utxo_with_resources.clone());
@@ -120,6 +155,11 @@ impl<'a> P2trBuilder<'a> {
         // Broadcast the transaction
         let raw_transaction = psbt.clone().extract_tx();
         let txid = raw_transaction.txid();
+
+        for i in self.reveal_inputs.iter().enumerate() {
+            println!("reveal input {} : for {}", i.0, i.1.outpoint);
+        }
+        println!("commit tx {}", serde_json::to_string_pretty(&raw_transaction).unwrap());
 
         Ok((psbt, OutPoint::new(txid, index)))
     }
@@ -296,6 +336,51 @@ impl<'a> P2trBuilder<'a> {
             .context("generate_reveal_psbt")?;
 
         Ok((commit_psbt, reveal_psbt))
+    }
+
+    /// this will push taproot input into index 0 for vital script
+    #[allow(dead_code)]
+    fn update_psbt_taproot_input(
+        &self,
+        psbt: &mut PartiallySignedTransaction,
+        secp: &Secp256k1<All>,
+        taproot_spend_info: &TaprootSpendInfo,
+        commit_script_pubkey: ScriptBuf,
+        send_amount: u64,
+    ) -> Result<()> {
+        let internal_key = self.internal_key;
+
+        let leaf_hash = self.reveal_script.tapscript_leaf_hash();
+        let mut origins = BTreeMap::new();
+        origins.insert(
+            internal_key,
+            (vec![leaf_hash], (self.master_xpriv.fingerprint(secp), self.derivation_path.clone())),
+        );
+
+        let ty = PsbtSighashType::from_str("SIGHASH_ALL")?;
+        let mut tap_scripts = BTreeMap::new();
+        tap_scripts.insert(
+            taproot_spend_info
+                .control_block(&(self.reveal_script.clone(), LeafVersion::TapScript))
+                .unwrap(),
+            (self.reveal_script.clone(), LeafVersion::TapScript),
+        );
+
+        let input = Input {
+            witness_utxo: {
+                Some(TxOut { value: send_amount, script_pubkey: commit_script_pubkey })
+            },
+            tap_key_origins: origins,
+            tap_merkle_root: taproot_spend_info.merkle_root(),
+            sighash_type: Some(ty),
+            tap_internal_key: Some(internal_key),
+            tap_scripts,
+            ..Default::default()
+        };
+
+        psbt.inputs.push(input);
+
+        Ok(())
     }
 }
 

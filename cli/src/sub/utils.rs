@@ -80,10 +80,12 @@ impl UtilsSubCommands {
             Self::InscribeToAddress { address, amount, fee_rate, replaceable, datas } => {
                 let context = crate::build_context(cli)
                     .await?
-                    .with_to_address(address)
-                    .context("with to address failed")?;
+                    .with_to_address(address, *amount)
+                    .context("with to address failed")?
+                    .with_fee_rate(fee_rate)
+                    .with_replaceable(replaceable);
 
-                inscribe_to_address(&context, *amount, fee_rate, *replaceable, datas.as_str()).await
+                inscribe_to_address(&context, datas.as_str()).await
             }
         }
     }
@@ -136,35 +138,12 @@ fn send_to_address(
     Ok(())
 }
 
-async fn inscribe_to_address(
-    context: &crate::Context,
-    amount: u64,
-    fee_rate: &Option<f32>,
-    _replaceable: bool,
-    datas: &str,
-) -> Result<()> {
+async fn inscribe_to_address(context: &crate::Context, datas: &str) -> Result<()> {
     let wallet = &context.wallet;
-    let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    let to_address = if let Some(to) = context.to_address.clone() {
-        to
-    } else {
-        bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
-    };
-
-    let utxo_with_resources =
-        context.utxo_with_resources().await.context("utxo_with_resources failed")?;
-
-    let builder = P2trBuilder::new(
-        hex::decode(datas).context("decode datas")?,
-        to_address,
-        amount,
-        *fee_rate,
-        wallet,
-        utxo_with_resources,
-    )
-    .context("builder build")?;
+    let builder = P2trBuilder::new(context, hex::decode(datas).context("decode datas")?)
+        .context("builder build")?;
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 

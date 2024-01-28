@@ -1,5 +1,5 @@
 use anyhow::{Context as AnyhowContext, Result};
-use bdk::{blockchain::Blockchain, wallet::AddressIndex};
+use bdk::blockchain::Blockchain;
 use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
@@ -34,10 +34,11 @@ impl MintSubCommands {
             Self::Name { name, to, amount, fee_rate } => {
                 let context = build_context(cli)
                     .await?
-                    .with_to_address(to)
-                    .context("with to address failed")?;
+                    .with_to_address(to, *amount)
+                    .context("with to address failed")?
+                    .with_fee_rate(fee_rate);
 
-                mint_name(&context, name.clone(), *amount, fee_rate).await?;
+                mint_name(&context, name.clone()).await?;
             }
         }
 
@@ -45,12 +46,7 @@ impl MintSubCommands {
     }
 }
 
-async fn mint_name(
-    context: &Context,
-    name: String,
-    amount: u64,
-    fee_rate: &Option<f32>,
-) -> Result<()> {
+async fn mint_name(context: &Context, name: String) -> Result<()> {
     use vital_script_builder::templates;
 
     // build script.
@@ -61,21 +57,9 @@ async fn mint_name(
 
     // build tx
     let wallet = &context.wallet;
-    let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    let to_address = if let Some(to) = context.to_address.clone() {
-        to
-    } else {
-        bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
-    };
-
-    let utxo_with_resources =
-        context.utxo_with_resources().await.context("utxo_with_resources failed")?;
-
-    let builder =
-        P2trBuilder::new(scripts_bytes, to_address, amount, *fee_rate, wallet, utxo_with_resources)
-            .context("builder build")?;
+    let builder = P2trBuilder::new(context, scripts_bytes).context("builder build")?;
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 

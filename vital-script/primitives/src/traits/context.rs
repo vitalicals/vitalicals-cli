@@ -19,11 +19,11 @@ pub enum MetaDataType {
 
 pub trait EnvContext {
     /// get current tx id.
-    fn get_tx_id(&self) -> &Txid;
+    fn get_reveal_tx_id(&self) -> &Txid;
 
     /// Get the output 's point by the index for current tx.
     fn get_output(&self, output_index: u8) -> OutPoint {
-        OutPoint { txid: *self.get_tx_id(), vout: output_index as u32 }
+        OutPoint { txid: *self.get_reveal_tx_id(), vout: output_index as u32 }
     }
 
     fn is_valid(&self) -> bool;

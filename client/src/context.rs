@@ -1,6 +1,6 @@
 //! The context for all cmds
 
-use std::str::FromStr;
+use std::{collections::BTreeMap, str::FromStr};
 
 use anyhow::{Context as AnyhowContext, Result};
 
@@ -19,16 +19,51 @@ pub struct Context {
     pub wallet: Wallet,
     pub indexer: IndexerClient,
     pub to_address: Option<Address>,
+    pub to_amount: u64,
+    pub fee_rate: Option<f32>,
+    /// TODO: support replaceable
+    pub replaceable: bool,
+    pub utxo_resources: BTreeMap<Resource, LocalUtxo>,
+    pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
 }
 
 impl Context {
     pub async fn new(root_path: std::path::PathBuf, indexer: &str, wallet: Wallet) -> Result<Self> {
         let indexer = IndexerClient::new(indexer).await?;
+        let mut res = Self {
+            root_path,
+            wallet,
+            indexer,
+            to_address: None,
+            to_amount: 0,
+            fee_rate: None,
+            replaceable: false,
+            utxo_with_resources: Vec::new(),
+            utxo_resources: Default::default(),
+        };
 
-        Ok(Self { root_path, wallet, indexer, to_address: None })
+        let utxo_with_resources =
+            res.fetch_all_resources().await.context("get utxo with resources failed")?;
+
+        for utxo in utxo_with_resources.into_iter() {
+            res.utxo_with_resources.push(utxo.0.outpoint);
+            res.utxo_resources.insert(utxo.1, utxo.0);
+        }
+
+        Ok(res)
     }
 
-    pub fn with_to_address(mut self, to: &Option<impl ToString>) -> Result<Self> {
+    pub fn with_fee_rate(mut self, fee_rate: &Option<f32>) -> Self {
+        self.fee_rate = *fee_rate;
+        self
+    }
+
+    pub fn with_replaceable(mut self, replaceable: &bool) -> Self {
+        self.replaceable = *replaceable;
+        self
+    }
+
+    pub fn with_to_address(mut self, to: &Option<impl ToString>, amount: u64) -> Result<Self> {
         if let Some(to) = to {
             let to = Address::<NetworkUnchecked>::from_str(to.to_string().as_str())
                 .context("parse address failed")?
@@ -38,6 +73,8 @@ impl Context {
             self.to_address = Some(to);
         }
 
+        self.to_amount = amount;
+
         Ok(self)
     }
 
@@ -45,7 +82,11 @@ impl Context {
         self.wallet.wallet.network()
     }
 
-    pub async fn all_resources(&self) -> Result<Vec<(LocalUtxo, Resource)>> {
+    pub fn get_owned_resource(&self, resource: &Resource) -> Option<LocalUtxo> {
+        self.utxo_resources.get(resource).cloned()
+    }
+
+    pub async fn fetch_all_resources(&self) -> Result<Vec<(LocalUtxo, Resource)>> {
         let mut res = Vec::new();
 
         let outpoints = self.wallet.wallet.list_unspent().context("list unspents failed")?;
@@ -74,14 +115,5 @@ impl Context {
         }
 
         Ok(res)
-    }
-
-    pub async fn utxo_with_resources(&self) -> Result<Vec<bdk::bitcoin::OutPoint>> {
-        Ok(self
-            .all_resources()
-            .await?
-            .into_iter()
-            .map(|(unspent, _)| unspent.outpoint)
-            .collect())
     }
 }

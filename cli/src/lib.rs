@@ -66,6 +66,10 @@ enum SubCommands {
     #[command(subcommand)]
     Mint(mint::MintSubCommands),
 
+    /// Deploy tokens
+    #[command(subcommand)]
+    Deploy(deploy::DeploySubCommands),
+
     /// Transfer tokens
     #[command(subcommand)]
     Transfer(transfer::TransferSubCommands),
@@ -98,6 +102,7 @@ pub async fn run() -> Result<()> {
     match &cli.command {
         SubCommands::Query(cmd) => cmd.run(&cli).await,
         SubCommands::Mint(cmd) => cmd.run(&cli).await,
+        SubCommands::Deploy(cmd) => cmd.run(&cli).await,
         SubCommands::Transfer(cmd) => cmd.run(&cli).await,
         SubCommands::Wallet(cmd) => cmd.run(&cli).await,
         SubCommands::Utils(cmd) => cmd.run(&cli).await,
