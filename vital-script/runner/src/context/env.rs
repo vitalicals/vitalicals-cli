@@ -21,7 +21,6 @@ pub struct EnvContext<Functions: EnvFunctions> {
     commit_tx_inputs_previous_output: Vec<OutPoint>,
 
     /// The reveal_tx
-    reveal_tx: Transaction,
     reveal_tx_id: Txid,
 
     ops: Vec<(u8, Vec<u8>)>,
@@ -43,7 +42,6 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
         Self {
             env: env_interface,
             commit_tx_inputs_previous_output,
-            reveal_tx: reveal_tx.clone(),
             reveal_tx_id,
             ops,
             cached_output_resources: BTreeMap::new(),

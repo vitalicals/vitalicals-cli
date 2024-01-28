@@ -46,7 +46,7 @@ impl Context {
             res.fetch_all_resources().await.context("get utxo with resources failed")?;
 
         for utxo in utxo_with_resources.into_iter() {
-            res.utxo_with_resources.push(utxo.0.outpoint.clone());
+            res.utxo_with_resources.push(utxo.0.outpoint);
             res.utxo_resources.insert(utxo.1, utxo.0);
         }
 

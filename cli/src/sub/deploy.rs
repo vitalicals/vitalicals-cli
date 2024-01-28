@@ -120,7 +120,8 @@ async fn deploy_vrc20(context: &Context, name: String, meta: VRC20MetaData) -> R
         .ok_or_else(|| anyhow!("deploy vrc20 need required a name resource by {}", name))?;
 
     // build script.
-    let input_index = 1_u32;
+    // all begin with 0.
+    let input_index = 0_u32;
     let scripts_bytes =
         templates::deploy_vrc20(input_index, name, meta).context("build scripts failed")?;
 

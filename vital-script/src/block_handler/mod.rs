@@ -61,7 +61,7 @@ impl<'a> BlockRunner<'a> {
             {
                 log::info!(target: TARGET, "handle vital commit transaction {}", tx_id);
                 let outpoints =
-                    tx.input.iter().map(|input| input.previous_output.clone()).collect::<Vec<_>>();
+                    tx.input.iter().map(|input| input.previous_output).collect::<Vec<_>>();
                 chain_interface
                     .set_commit_tx_inputs_previous_output(tx_id, outpoints)
                     .context("set_commit_tx_inputs_previous_output")?;
