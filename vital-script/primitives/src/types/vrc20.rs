@@ -1,5 +1,3 @@
-use primitive_types::U256;
-
 use parity_scale_codec::{Decode, Encode};
 
 use super::MetaData;

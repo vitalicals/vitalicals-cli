@@ -1,23 +1,17 @@
-use std::str::FromStr;
-
-use anyhow::{Context, Result};
+use anyhow::{Context as AnyhowContext, Result};
 use bdk::{
-    bitcoin::{address::NetworkUnchecked, Address, Network},
     blockchain::Blockchain,
     wallet::AddressIndex,
 };
 use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
-use vital_script_primitives::{
-    types::{
-        vrc20::{VRC20MetaData, VRC20MintMeta},
-        MetaData,
-    },
-    U256,
+use vital_script_primitives::types::{
+    vrc20::{VRC20MetaData, VRC20MintMeta},
+    MetaData,
 };
 
-use crate::Cli;
+use crate::{build_context, Cli, Context};
 
 #[derive(Debug, Subcommand)]
 pub enum DeploySubCommands {
@@ -67,8 +61,8 @@ pub enum DeploySubCommands {
 }
 
 impl DeploySubCommands {
-    pub(crate) fn run(&self, cli: &Cli) -> Result<()> {
-        let network = cli.network();
+    pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
+        let context = build_context(cli).await.context("build context")?;
 
         match self {
             Self::VRC20 {
@@ -84,15 +78,7 @@ impl DeploySubCommands {
                 max_mints,
                 meta_data,
             } => {
-                let to_address = to
-                    .as_ref()
-                    .map(|address| {
-                        Address::<NetworkUnchecked>::from_str(address.as_str())
-                            .context("parse address failed")?
-                            .require_network(network)
-                            .context("the address is not for the network")
-                    })
-                    .transpose()?;
+                let context = context.with_to_address(to).context("with to address")?;
 
                 let meta_data =
                     meta_data.as_ref().map(|data| MetaData { raw: data.as_bytes().to_vec() });
@@ -109,7 +95,7 @@ impl DeploySubCommands {
                     meta: meta_data,
                 };
 
-                deploy_vrc20(network, cli, name.clone(), meta, to_address, *amount, fee_rate)?;
+                deploy_vrc20(&context, name.clone(), meta, *amount, fee_rate).await?;
             }
         }
 
@@ -117,12 +103,10 @@ impl DeploySubCommands {
     }
 }
 
-fn deploy_vrc20(
-    network: Network,
-    cli: &Cli,
+async fn deploy_vrc20(
+    context: &Context,
     name: String,
     meta: VRC20MetaData,
-    to_address: Option<Address>,
     amount: u64,
     fee_rate: &Option<f32>,
 ) -> Result<()> {
@@ -138,19 +122,27 @@ fn deploy_vrc20(
     println!("scripts_bytes {}", hex::encode(&scripts_bytes));
 
     // build tx
-    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
-        .context("load wallet failed")?;
+    let wallet = &context.wallet;
     let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    let to_address = if let Some(to) = to_address {
+    let to_address = if let Some(to) = context.to_address.clone() {
         to
     } else {
         bdk_wallet.get_address(AddressIndex::New).context("new address")?.address
     };
+    let utxo_with_resources =
+        context.utxo_with_resources().await.context("utxo_with_resources failed")?;
 
-    let builder = P2trBuilder::new(scripts_bytes, to_address, amount, *fee_rate, &wallet)
-        .context("builder build")?;
+    let builder = P2trBuilder::new(
+        scripts_bytes,
+        to_address,
+        amount,
+        *fee_rate,
+        &wallet,
+        utxo_with_resources,
+    )
+    .context("builder build")?;
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 
