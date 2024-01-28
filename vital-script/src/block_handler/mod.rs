@@ -67,7 +67,7 @@ impl<'a> BlockRunner<'a> {
             let commit_txid = tx.input[0].previous_output.txid;
             let commit_tx = chain_interface
                 .get_tx(&commit_txid)
-                .with_context(|| format!("get tx {}", commit_txid))?
+                .with_context(|| alloc::format!("get tx {}", commit_txid))?
                 .ok_or_else(|| anyhow!("not found tx by {}", commit_txid))?;
 
             // FIXME: find commit tx
