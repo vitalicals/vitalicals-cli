@@ -1,8 +1,10 @@
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use bitcoin::Transaction;
 use hex_literal::hex;
 
 use alloc::vec::Vec;
+
+use crate::traits::EnvFunctions;
 
 // TODO: move to primitive types
 
@@ -14,6 +16,31 @@ pub const INSCRIBE_TAG_LEN: usize = INSCRIBE_TAG_STR.len();
 
 /// The tag in script, just the Ascii (String) `vital` to hex
 pub const INSCRIBE_TAG: [u8; INSCRIBE_TAG_LEN] = hex!("766974616c");
+
+pub fn maybe_vital_commit_tx_with_input_resource<F: EnvFunctions>(
+    tx: &Transaction,
+    interface: &F,
+) -> Result<bool> {
+    // if a tx use resource as its input, need storage.
+    if !tx.output.iter().any(|output| output.script_pubkey.is_p2tr()) {
+        return Ok(false);
+    }
+
+    if tx.input.len() <= 1 {
+        return Ok(false);
+    }
+
+    for input in tx.input.iter() {
+        let resource = interface
+            .get_resources(&input.previous_output)
+            .with_context(|| alloc::format!("get resources {}", input.previous_output))?;
+        if let Some(_resource) = resource {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
 
 pub fn check_is_vital_script(tx: &Transaction) -> bool {
     // the input and output count should < u8::MAX

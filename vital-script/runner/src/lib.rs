@@ -20,7 +20,10 @@ mod resource_cache;
 #[cfg(test)]
 mod mock;
 
-pub use context::{script::check_is_vital_script, Context};
+pub use context::{
+    script::{check_is_vital_script, maybe_vital_commit_tx_with_input_resource},
+    Context,
+};
 
 use vital_script_ops::instruction::Instruction;
 use vital_script_primitives::traits::{Context as ContextT, Instruction as InstructionT};

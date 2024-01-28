@@ -1,10 +1,10 @@
 use alloc::vec::Vec;
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result};
 
 use bitcoin::{Block, Transaction, Txid};
 
 use vital_script_runner::{
-    check_is_vital_script,
+    check_is_vital_script, maybe_vital_commit_tx_with_input_resource,
     traits::{ChainFunctions, EnvFunctions},
     Context, Runner,
 };
@@ -56,6 +56,17 @@ impl<'a> BlockRunner<'a> {
             let tx_id = tx.txid();
             log::debug!(target: TARGET, "run tx index {}, {} on {}", index, tx_id, self.height);
 
+            if maybe_vital_commit_tx_with_input_resource(tx, &env_interface)
+                .context("maybe_vital_commit_tx_with_input_resource")?
+            {
+                log::info!(target: TARGET, "handle vital commit transaction {}", tx_id);
+                let outpoints =
+                    tx.input.iter().map(|input| input.previous_output.clone()).collect::<Vec<_>>();
+                chain_interface
+                    .set_commit_tx_inputs_previous_output(tx_id, outpoints)
+                    .context("set_commit_tx_inputs_previous_output")?;
+            }
+
             if !check_is_vital_script(tx) {
                 continue;
             }
@@ -65,17 +76,16 @@ impl<'a> BlockRunner<'a> {
             }
 
             let commit_txid = tx.input[0].previous_output.txid;
-            let commit_tx = chain_interface
+            let commit_tx_inputs_previous_output = chain_interface
                 .get_commit_tx_inputs_previous_output(&commit_txid)
                 .with_context(|| alloc::format!("get commit_tx {}", commit_txid))?
-                .ok_or_else(|| anyhow!("not found commit_tx by {}", commit_txid))?;
+                .unwrap_or_default();
 
             chain_interface
                 .delete_commit_tx_inputs_previous_output(&commit_txid)
                 .with_context(|| alloc::format!("delete commit_tx {}", commit_txid))?;
 
-            // FIXME: find commit tx
-            let context = Context::new(env_interface.clone(), commit_tx, tx);
+            let context = Context::new(env_interface.clone(), commit_tx_inputs_previous_output, tx);
             if !context.is_valid() {
                 continue;
             }
