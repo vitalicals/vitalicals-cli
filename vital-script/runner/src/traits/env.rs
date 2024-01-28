@@ -18,5 +18,10 @@ pub trait EnvFunctions: Clone {
 
 pub trait ChainFunctions: Clone {
     fn get_commit_tx_inputs_previous_output(&self, txid: &Txid) -> Result<Option<Vec<OutPoint>>>;
+    fn set_commit_tx_inputs_previous_output(
+        &self,
+        txid: Txid,
+        outpoints: Vec<OutPoint>,
+    ) -> Result<()>;
     fn delete_commit_tx_inputs_previous_output(&self, txid: &Txid) -> Result<()>;
 }
