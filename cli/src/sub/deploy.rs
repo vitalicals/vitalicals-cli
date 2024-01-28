@@ -1,11 +1,14 @@
-use anyhow::{Context as AnyhowContext, Result};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 use bdk::blockchain::Blockchain;
 use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
-use vital_script_primitives::types::{
-    vrc20::{VRC20MetaData, VRC20MintMeta},
-    MetaData,
+use vital_script_primitives::{
+    resources::{Name, Resource},
+    types::{
+        vrc20::{VRC20MetaData, VRC20MintMeta},
+        MetaData,
+    },
 };
 
 use crate::{build_context, Cli, Context};
@@ -107,6 +110,14 @@ async fn deploy_vrc20(context: &Context, name: String, meta: VRC20MetaData) -> R
     use vital_script_builder::templates;
 
     // TODO: check input resource
+    let name = Name::try_from(name.as_str())
+        .with_context(|| format!("the '{}' name format is invalid", name))?;
+    let name_resource = Resource::name(name);
+
+    // Got the name resource
+    let input_name_utxo = context
+        .get_owned_resource(&name_resource)
+        .ok_or_else(|| anyhow!("deploy vrc20 need required a name resource by {}", name))?;
 
     // build script.
     let input_index = 1_u32;
@@ -119,7 +130,9 @@ async fn deploy_vrc20(context: &Context, name: String, meta: VRC20MetaData) -> R
     let wallet = &context.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    let builder = P2trBuilder::new(context, scripts_bytes).context("builder build")?;
+    let builder = P2trBuilder::new(context, scripts_bytes)
+        .context("builder build")?
+        .with_reveal_input(input_name_utxo);
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 

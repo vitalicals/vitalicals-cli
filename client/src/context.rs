@@ -1,6 +1,6 @@
 //! The context for all cmds
 
-use std::str::FromStr;
+use std::{collections::BTreeMap, str::FromStr};
 
 use anyhow::{Context as AnyhowContext, Result};
 
@@ -23,6 +23,7 @@ pub struct Context {
     pub fee_rate: Option<f32>,
     /// TODO: support replaceable
     pub replaceable: bool,
+    pub utxo_resources: BTreeMap<Resource, LocalUtxo>,
     pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
 }
 
@@ -38,13 +39,16 @@ impl Context {
             fee_rate: None,
             replaceable: false,
             utxo_with_resources: Vec::new(),
+            utxo_resources: Default::default(),
         };
 
-        let utxo_with_resources = res
-            .fetch_utxo_with_resources()
-            .await
-            .context("get utxo with resources failed")?;
-        res.utxo_with_resources = utxo_with_resources;
+        let utxo_with_resources =
+            res.fetch_all_resources().await.context("get utxo with resources failed")?;
+
+        for utxo in utxo_with_resources.into_iter() {
+            res.utxo_with_resources.push(utxo.0.outpoint.clone());
+            res.utxo_resources.insert(utxo.1, utxo.0);
+        }
 
         Ok(res)
     }
@@ -78,6 +82,10 @@ impl Context {
         self.wallet.wallet.network()
     }
 
+    pub fn get_owned_resource(&self, resource: &Resource) -> Option<LocalUtxo> {
+        self.utxo_resources.get(resource).cloned()
+    }
+
     pub async fn fetch_all_resources(&self) -> Result<Vec<(LocalUtxo, Resource)>> {
         let mut res = Vec::new();
 
@@ -107,14 +115,5 @@ impl Context {
         }
 
         Ok(res)
-    }
-
-    async fn fetch_utxo_with_resources(&self) -> Result<Vec<bdk::bitcoin::OutPoint>> {
-        Ok(self
-            .fetch_all_resources()
-            .await?
-            .into_iter()
-            .map(|(unspent, _)| unspent.outpoint)
-            .collect())
     }
 }

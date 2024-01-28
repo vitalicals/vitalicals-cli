@@ -18,7 +18,7 @@ pub const NAME_BYTES_LEN: usize = 8;
 /// |   0    |    1      |     2     |    3   |   4    |    5       |     6     |   7    |   8    |    9      |  len |
 ///
 /// The len just for 0 - 3
-#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Default, Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
 #[derive(Encode, Decode)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 pub struct Name(pub [u8; NAME_BYTES_LEN]);

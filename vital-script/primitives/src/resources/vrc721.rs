@@ -5,7 +5,7 @@ use parity_scale_codec::{Decode, Encode};
 use super::Tag;
 use crate::H256;
 
-#[derive(Default, Clone, Encode, Decode, Debug, PartialEq, Eq)]
+#[derive(Default, Clone, Encode, Decode, Debug, PartialOrd, Ord, PartialEq, Eq)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VRC721 {

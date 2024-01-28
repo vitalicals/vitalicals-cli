@@ -16,7 +16,7 @@ use bdk::{
         Address, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Weight, Witness,
     },
     wallet::AddressIndex,
-    FeeRate, SignOptions,
+    FeeRate, LocalUtxo, SignOptions,
 };
 
 use btc_script_builder::InscriptionScriptBuilder;
@@ -37,6 +37,8 @@ pub struct P2trBuilder<'a> {
     derivation_path: DerivationPath,
 
     utxo_with_resources: Vec<OutPoint>,
+
+    reveal_inputs: Vec<LocalUtxo>,
 }
 
 impl<'a> P2trBuilder<'a> {
@@ -71,11 +73,18 @@ impl<'a> P2trBuilder<'a> {
             master_xpriv,
             derivation_path,
             utxo_with_resources,
+            reveal_inputs: Vec::new(),
         })
     }
 
     fn secp(&self) -> &Secp256k1<All> {
         &self.secp
+    }
+
+    pub fn with_reveal_input(mut self, utxo: LocalUtxo) -> Self {
+        self.reveal_inputs.push(utxo);
+
+        self
     }
 
     /// Generate a commit tx psbt
@@ -301,6 +310,88 @@ impl<'a> P2trBuilder<'a> {
             .context("generate_reveal_psbt")?;
 
         Ok((commit_psbt, reveal_psbt))
+    }
+
+    /// this will push input into index
+    fn update_psbt_input(
+        &self,
+        psbt: &mut PartiallySignedTransaction,
+        secp: &Secp256k1<All>,
+        input: &LocalUtxo,
+    ) -> Result<()> {
+        let internal_key = self.internal_key;
+
+        let leaf_hash = input.txout.script_pubkey.tapscript_leaf_hash();
+        let mut origins = BTreeMap::new();
+        origins.insert(
+            internal_key,
+            (vec![leaf_hash], (self.master_xpriv.fingerprint(secp), self.derivation_path.clone())),
+        );
+
+        let taproot_spend_info = TaprootBuilder::new()
+            .add_leaf(0, input.txout.script_pubkey.clone())
+            .context("TaprootBuilder add_leaf ")?
+            .finalize(secp, self.internal_key)
+            .map_err(|_| anyhow!("TaprootBuilder error"))?;
+
+        let ty = PsbtSighashType::from_str("SIGHASH_ALL")?;
+
+        let input = Input {
+            witness_utxo: { Some(input.txout.clone()) },
+            tap_key_origins: origins,
+            tap_merkle_root: taproot_spend_info.merkle_root(),
+            sighash_type: Some(ty),
+            tap_internal_key: Some(internal_key),
+            ..Default::default()
+        };
+
+        psbt.inputs.push(input);
+
+        Ok(())
+    }
+
+    /// this will push taproot input into index 0 for vital script
+    fn update_psbt_taproot_input(
+        &self,
+        psbt: &mut PartiallySignedTransaction,
+        secp: &Secp256k1<All>,
+        taproot_spend_info: &TaprootSpendInfo,
+        commit_script_pubkey: ScriptBuf,
+        send_amount: u64,
+    ) -> Result<()> {
+        let internal_key = self.internal_key;
+
+        let leaf_hash = self.reveal_script.tapscript_leaf_hash();
+        let mut origins = BTreeMap::new();
+        origins.insert(
+            internal_key,
+            (vec![leaf_hash], (self.master_xpriv.fingerprint(secp), self.derivation_path.clone())),
+        );
+
+        let ty = PsbtSighashType::from_str("SIGHASH_ALL")?;
+        let mut tap_scripts = BTreeMap::new();
+        tap_scripts.insert(
+            taproot_spend_info
+                .control_block(&(self.reveal_script.clone(), LeafVersion::TapScript))
+                .unwrap(),
+            (self.reveal_script.clone(), LeafVersion::TapScript),
+        );
+
+        let input = Input {
+            witness_utxo: {
+                Some(TxOut { value: send_amount, script_pubkey: commit_script_pubkey })
+            },
+            tap_key_origins: origins,
+            tap_merkle_root: taproot_spend_info.merkle_root(),
+            sighash_type: Some(ty),
+            tap_internal_key: Some(internal_key),
+            tap_scripts,
+            ..Default::default()
+        };
+
+        psbt.inputs.push(input);
+
+        Ok(())
     }
 }
 
