@@ -67,8 +67,9 @@ impl Context {
                 .context("the address is not for the network")?;
 
             self.to_address = Some(to);
-            self.to_amount = amount;
         }
+
+        self.to_amount = amount;
 
         Ok(self)
     }
