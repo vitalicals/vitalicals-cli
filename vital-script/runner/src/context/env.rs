@@ -18,9 +18,13 @@ const STORAGE_KEY_METADATA: &[u8; 8] = b"metadata";
 pub struct EnvContext<Functions: EnvFunctions> {
     env: Functions,
 
-    /// The tx
-    tx: Transaction,
-    tx_id: Txid,
+    commit_tx: Transaction,
+    commit_txid: Txid,
+
+    /// The reveal_tx
+    reveal_tx: Transaction,
+    reveal_tx_id: Txid,
+
     ops: Vec<(u8, Vec<u8>)>,
 
     /// The outputs need to bind to outputs.
@@ -28,32 +32,36 @@ pub struct EnvContext<Functions: EnvFunctions> {
 }
 
 impl<Functions: EnvFunctions> EnvContext<Functions> {
-    pub fn new(env_interface: Functions, tx: &Transaction) -> Self {
-        let ops = parse_vital_scripts(tx).expect("parse vital scripts");
-        let tx_id = tx.txid();
+    pub fn new(env_interface: Functions, commit_tx: &Transaction, reveal_tx: &Transaction) -> Self {
+        let ops = parse_vital_scripts(reveal_tx).expect("parse vital scripts");
+
+        let commit_txid = commit_tx.txid();
+        let reveal_tx_id = reveal_tx.txid();
 
         Self {
             env: env_interface,
-            tx: tx.clone(),
+            commit_tx: commit_tx.clone(),
+            commit_txid,
+            reveal_tx: reveal_tx.clone(),
+            reveal_tx_id,
             ops,
-            tx_id,
             cached_output_resources: BTreeMap::new(),
         }
     }
 
     fn get_input(&self, input_index: u8) -> Result<OutPoint> {
-        if self.tx.input.len() <= input_index as usize {
+        if self.commit_tx.input.len() <= input_index as usize {
             bail!("Input index out of range")
         }
 
-        Ok(self.tx.input[input_index as usize].previous_output)
+        Ok(self.commit_tx.input[input_index as usize].previous_output)
     }
 }
 
 impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
     /// get current tx id.
-    fn get_tx_id(&self) -> &Txid {
-        &self.tx_id
+    fn get_reveal_tx_id(&self) -> &Txid {
+        &self.reveal_tx_id
     }
 
     fn is_valid(&self) -> bool {

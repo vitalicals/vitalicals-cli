@@ -1,9 +1,13 @@
 use alloc::vec::Vec;
-use anyhow::{Context as AnyhowContext, Result};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
 
 use bitcoin::{Block, Transaction, Txid};
 
-use vital_script_runner::{check_is_vital_script, traits::EnvFunctions, Context, Runner};
+use vital_script_runner::{
+    check_is_vital_script,
+    traits::{ChainFunctions, EnvFunctions},
+    Context, Runner,
+};
 
 use crate::TARGET;
 
@@ -36,9 +40,14 @@ impl<'a> BlockRunner<'a> {
         Self { block, height }
     }
 
-    pub fn run<Functions>(&self, env_interface: Functions) -> Result<BlockRunResponse>
+    pub fn run<Functions, Chain>(
+        &self,
+        env_interface: Functions,
+        chain_interface: Chain,
+    ) -> Result<BlockRunResponse>
     where
         Functions: EnvFunctions,
+        Chain: ChainFunctions,
     {
         let mut res = Vec::with_capacity(self.block.txdata.len());
 
@@ -51,7 +60,18 @@ impl<'a> BlockRunner<'a> {
                 continue;
             }
 
-            let context = Context::new(env_interface.clone(), tx);
+            if tx.input.is_empty() {
+                continue;
+            }
+
+            let commit_txid = tx.input[0].previous_output.txid;
+            let commit_tx = chain_interface
+                .get_tx(&commit_txid)
+                .with_context(|| format!("get tx {}", commit_txid))?
+                .ok_or_else(|| anyhow!("not found tx by {}", commit_txid))?;
+
+            // FIXME: find commit tx
+            let context = Context::new(env_interface.clone(), &commit_tx, tx);
             if !context.is_valid() {
                 continue;
             }

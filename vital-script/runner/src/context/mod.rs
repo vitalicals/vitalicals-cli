@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use anyhow::{Context as AnyhowContext, Result};
 
-use bitcoin::Transaction;
+use bitcoin::{Transaction, Txid};
 use vital_script_ops::{instruction::Instruction, parser::Parser};
 pub use vital_script_primitives::traits::context::Context as ContextT;
 use vital_script_primitives::traits::{
@@ -100,10 +100,10 @@ impl<Functions> Context<Functions>
 where
     Functions: EnvFunctions,
 {
-    pub fn new(env_interface: Functions, tx: &Transaction) -> Self {
+    pub fn new(env_interface: Functions, commit_tx: &Transaction, reveal_tx: &Transaction) -> Self {
         let runner = RunnerContext::new();
         let input_resources = InputResourcesContext::new(CAP_SIZE);
-        let env = EnvContext::new(env_interface, tx);
+        let env = EnvContext::new(env_interface, commit_tx, reveal_tx);
 
         Self { env, input_resources, runner }
     }

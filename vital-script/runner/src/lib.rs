@@ -176,8 +176,8 @@ mod tests {
             log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
 
             let mut tx_mock2 = TxMock::new();
-            tx_mock2.push_input(outpoint);
             tx_mock2.push_ops(ops_bytes);
+            tx_mock2.push_input(outpoint);
             tx_mock2.push_output(2000);
 
             let mut context = ContextMock::new(tx_mock2, env_interface.clone());
@@ -300,7 +300,10 @@ mod tests {
 
         let outpoint = context1.env().get_output(0);
         let res = env_interface.get_resources(&outpoint).expect("get resources failed");
-        assert_eq!(res, Some(Resource::name(mint_name)));
+        let mint_name_resource = Resource::name(mint_name);
+        assert_eq!(res, Some(mint_name_resource.clone()));
+
+        log::info!("step 1: mint name to {} by {}", mint_name_resource, outpoint);
 
         let mut context2 = {
             // 2. deploy a vrc20 by the name
