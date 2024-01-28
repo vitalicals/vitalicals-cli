@@ -18,8 +18,7 @@ const STORAGE_KEY_METADATA: &[u8; 8] = b"metadata";
 pub struct EnvContext<Functions: EnvFunctions> {
     env: Functions,
 
-    commit_tx: Transaction,
-    commit_txid: Txid,
+    commit_tx_inputs_previous_output: Vec<OutPoint>,
 
     /// The reveal_tx
     reveal_tx: Transaction,
@@ -32,16 +31,18 @@ pub struct EnvContext<Functions: EnvFunctions> {
 }
 
 impl<Functions: EnvFunctions> EnvContext<Functions> {
-    pub fn new(env_interface: Functions, commit_tx: &Transaction, reveal_tx: &Transaction) -> Self {
+    pub fn new(
+        env_interface: Functions,
+        commit_tx_inputs_previous_output: Vec<OutPoint>,
+        reveal_tx: &Transaction,
+    ) -> Self {
         let ops = parse_vital_scripts(reveal_tx).expect("parse vital scripts");
 
-        let commit_txid = commit_tx.txid();
         let reveal_tx_id = reveal_tx.txid();
 
         Self {
             env: env_interface,
-            commit_tx: commit_tx.clone(),
-            commit_txid,
+            commit_tx_inputs_previous_output,
             reveal_tx: reveal_tx.clone(),
             reveal_tx_id,
             ops,
@@ -50,11 +51,11 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
     }
 
     fn get_input(&self, input_index: u8) -> Result<OutPoint> {
-        if self.commit_tx.input.len() <= input_index as usize {
+        if self.commit_tx_inputs_previous_output.len() <= input_index as usize {
             bail!("Input index out of range")
         }
 
-        Ok(self.commit_tx.input[input_index as usize].previous_output)
+        Ok(self.commit_tx_inputs_previous_output[input_index as usize])
     }
 }
 

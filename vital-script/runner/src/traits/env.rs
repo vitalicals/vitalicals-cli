@@ -3,7 +3,7 @@
 use alloc::vec::Vec;
 use anyhow::Result;
 
-use bitcoin::{OutPoint, Transaction, Txid};
+use bitcoin::{OutPoint, Txid};
 
 use vital_script_primitives::resources::Resource;
 
@@ -17,5 +17,5 @@ pub trait EnvFunctions: Clone {
 }
 
 pub trait ChainFunctions: Clone {
-    fn get_tx(&self, txid: &Txid) -> Result<Option<Transaction>>;
+    fn commit_tx_inputs_previous_output(&self, txid: &Txid) -> Result<Option<Vec<OutPoint>>>;
 }

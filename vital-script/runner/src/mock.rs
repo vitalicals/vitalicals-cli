@@ -141,7 +141,15 @@ pub struct ContextMock {
 impl ContextMock {
     pub fn new(tx: TxMock, env: EnvMock) -> Self {
         log::info!("new context mock {} -> {}", tx.commit_txid, tx.reveal_txid);
-        Self { inner: ContextMockInner::new(env, &tx.commit, &tx.reveal), tx }
+
+        let commit_tx_inputs_previous_output = tx
+            .commit
+            .input
+            .iter()
+            .map(|input| input.previous_output.clone())
+            .collect::<Vec<_>>();
+
+        Self { inner: ContextMockInner::new(env, commit_tx_inputs_previous_output, &tx.reveal), tx }
     }
 }
 
