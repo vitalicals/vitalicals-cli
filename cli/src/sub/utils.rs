@@ -44,20 +44,8 @@ pub enum UtilsSubCommands {
 
     /// inscribe to a given address.
     InscribeToAddress {
-        /// The bitcoin address to send to.
-        #[arg(long)]
-        address: Option<String>,
-
         /// The sat amount in BTC to send.
         amount: u64,
-
-        /// Specify a fee rate in sat/vB.
-        #[arg(short, long)]
-        fee_rate: Option<f32>,
-
-        /// Signal that this transaction can be replaced by a transaction (BIP 125).
-        #[arg(long)]
-        replaceable: bool,
 
         /// The datas to inscribe
         datas: String,
@@ -77,13 +65,8 @@ impl UtilsSubCommands {
 
                 send_to_address(network, cli, address, *amount, fee_rate, *replaceable)
             }
-            Self::InscribeToAddress { address, amount, fee_rate, replaceable, datas } => {
-                let context = crate::build_context(cli)
-                    .await?
-                    .with_to_address(address, *amount)
-                    .context("with to address failed")?
-                    .with_fee_rate(fee_rate)
-                    .with_replaceable(replaceable);
+            Self::InscribeToAddress { amount, datas } => {
+                let context = crate::build_context(cli).await?.with_amount(*amount);
 
                 inscribe_to_address(&context, datas.as_str()).await
             }

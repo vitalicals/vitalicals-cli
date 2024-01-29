@@ -75,7 +75,7 @@ impl<'a> P2trBuilder<'a> {
             master_xpriv,
             derivation_path,
             utxo_with_resources,
-            reveal_inputs: Vec::new(),
+            reveal_inputs: context.reveal_inputs.clone(),
         })
     }
 

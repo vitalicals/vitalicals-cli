@@ -41,6 +41,18 @@ struct Cli {
     /// Default value : "~/.vitalicals-cli
     #[clap(name = "DATADIR", short = 'd', long = "datadir", default_value = "./.vitalicals-cli")]
     pub datadir: std::path::PathBuf,
+
+    /// The bitcoin address to send to, if not set, will create a new address.
+    #[arg(long)]
+    to: Option<String>,
+
+    /// Specify a fee rate in sat/vB.
+    #[arg(short, long)]
+    fee_rate: Option<f32>,
+
+    /// Signal that this transaction can be replaced by a transaction (BIP 125).
+    #[arg(long)]
+    replaceable: bool,
 }
 
 impl Cli {

@@ -25,6 +25,7 @@ pub struct Context {
     pub replaceable: bool,
     pub utxo_resources: BTreeMap<Resource, LocalUtxo>,
     pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
+    pub reveal_inputs: Vec<LocalUtxo>,
 }
 
 impl Context {
@@ -40,6 +41,7 @@ impl Context {
             replaceable: false,
             utxo_with_resources: Vec::new(),
             utxo_resources: Default::default(),
+            reveal_inputs: Vec::new(),
         };
 
         let utxo_with_resources =
@@ -63,7 +65,7 @@ impl Context {
         self
     }
 
-    pub fn with_to_address(mut self, to: &Option<impl ToString>, amount: u64) -> Result<Self> {
+    pub fn with_to_address(mut self, to: &Option<impl ToString>) -> Result<Self> {
         if let Some(to) = to {
             let to = Address::<NetworkUnchecked>::from_str(to.to_string().as_str())
                 .context("parse address failed")?
@@ -73,9 +75,23 @@ impl Context {
             self.to_address = Some(to);
         }
 
+        Ok(self)
+    }
+
+    pub fn with_amount(mut self, amount: u64) -> Self {
         self.to_amount = amount;
 
-        Ok(self)
+        self
+    }
+
+    pub fn with_reveal_input(mut self, reveal_inputs: &[LocalUtxo]) -> Self {
+        self.reveal_inputs = reveal_inputs.to_vec();
+
+        self
+    }
+
+    pub fn append_reveal_input(&mut self, reveal_inputs: &[LocalUtxo]) {
+        self.reveal_inputs.append(&mut reveal_inputs.to_vec());
     }
 
     pub fn network(&self) -> Network {
