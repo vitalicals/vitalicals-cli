@@ -13,7 +13,7 @@ mod input;
 mod runner;
 pub mod script;
 
-use env::EnvContext;
+pub use env::EnvContext;
 use input::InputResourcesContext;
 use runner::RunnerContext;
 

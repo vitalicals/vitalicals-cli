@@ -10,7 +10,9 @@ use bdk::{
 };
 use bitcoin::{hashes::Hash, OutPoint, Txid};
 
-use vital_interfaces_indexer::{traits::IndexerClientT, IndexerClient};
+use vital_interfaces_indexer::{
+    traits::IndexerClientT, vital_env_for_query, IndexerClient, QueryEnvContext,
+};
 use vital_script_primitives::resources::Resource;
 use wallet::Wallet;
 
@@ -18,6 +20,7 @@ pub struct Context {
     pub root_path: std::path::PathBuf,
     pub wallet: Wallet,
     pub indexer: IndexerClient,
+    pub query_env_context: QueryEnvContext,
     pub to_address: Option<Address>,
     pub to_amount: u64,
     pub fee_rate: Option<f32>,
@@ -31,10 +34,13 @@ pub struct Context {
 impl Context {
     pub async fn new(root_path: std::path::PathBuf, indexer: &str, wallet: Wallet) -> Result<Self> {
         let indexer = IndexerClient::new(indexer).await?;
+        let query_env_context = vital_env_for_query(indexer.clone());
+
         let mut res = Self {
             root_path,
             wallet,
             indexer,
+            query_env_context,
             to_address: None,
             to_amount: 0,
             fee_rate: None,

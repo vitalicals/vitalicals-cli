@@ -89,6 +89,15 @@ where
     cache: Arc<Mutex<SimulatorStatus>>,
 }
 
+impl<Client> SimulatorEnvInterface<Client>
+where
+    Client: IndexerClientT,
+{
+    pub fn new(client: Client) -> Self {
+        Self { client, cache: Arc::new(Mutex::new(SimulatorStatus::default())) }
+    }
+}
+
 impl<Client> EnvFunctions for SimulatorEnvInterface<Client>
 where
     Client: IndexerClientT,
