@@ -1,6 +1,6 @@
 use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::{anyhow, bail, Context, Result};
-use bitcoin::{OutPoint, Transaction, Txid};
+use bitcoin::{hashes::Hash, OutPoint, Transaction, Txid};
 use parity_scale_codec::{Decode, Encode};
 
 use vital_script_primitives::{
@@ -44,6 +44,16 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
             commit_tx_inputs_previous_output,
             reveal_tx_id,
             ops,
+            cached_output_resources: BTreeMap::new(),
+        }
+    }
+
+    pub fn new_for_query(env_interface: Functions) -> Self {
+        Self {
+            env: env_interface,
+            commit_tx_inputs_previous_output: Default::default(),
+            reveal_tx_id: Txid::all_zeros(),
+            ops: Default::default(),
             cached_output_resources: BTreeMap::new(),
         }
     }

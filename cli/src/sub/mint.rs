@@ -1,8 +1,6 @@
-use anyhow::{Context as AnyhowContext, Result};
-use bdk::blockchain::Blockchain;
+use anyhow::{anyhow, bail, Context as AnyhowContext, Result};
 use clap::Subcommand;
-
-use btc_p2tr_builder::P2trBuilder;
+use vital_script_primitives::{resources::Name, traits::EnvContext};
 
 use crate::Cli;
 
@@ -10,35 +8,36 @@ use super::context::{build_context, Context};
 
 #[derive(Debug, Subcommand)]
 pub enum MintSubCommands {
-    /// Query vitalicals status.
+    /// Mint Name resource.
     Name {
         /// The name to mint
         name: String,
 
-        /// The bitcoin address to send to.
-        #[arg(long)]
-        to: Option<String>,
+        /// The sat amount in BTC to send.
+        amount: u64,
+    },
+    /// Mint VRC20 resource by it 's name.
+    VRC20 {
+        /// The vrc20 's name to mint.
+        vrc20_name: String,
 
         /// The sat amount in BTC to send.
         amount: u64,
-
-        /// Specify a fee rate in sat/vB.
-        #[arg(short, long)]
-        fee_rate: Option<f32>,
     },
 }
 
 impl MintSubCommands {
     pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
         match self {
-            Self::Name { name, to, amount, fee_rate } => {
-                let context = build_context(cli)
-                    .await?
-                    .with_to_address(to, *amount)
-                    .context("with to address failed")?
-                    .with_fee_rate(fee_rate);
+            Self::Name { name, amount } => {
+                let context = build_context(cli).await?.with_amount(*amount);
 
                 mint_name(&context, name.clone()).await?;
+            }
+            Self::VRC20 { vrc20_name, amount } => {
+                let context = build_context(cli).await?.with_amount(*amount);
+
+                mint_vrc20(&context, vrc20_name.clone()).await?;
             }
         }
 
@@ -53,32 +52,42 @@ async fn mint_name(context: &Context, name: String) -> Result<()> {
     let output_index = 0_u32;
     let scripts_bytes = templates::mint_name(output_index, name).context("build scripts failed")?;
 
-    println!("scripts_bytes {}", hex::encode(&scripts_bytes));
+    // build tx then send
+    crate::send_p2tr(context, scripts_bytes).await.context("send_p2tr failed")?;
 
-    // build tx
-    let wallet = &context.wallet;
-    let bdk_blockchain = &wallet.blockchain;
+    Ok(())
+}
 
-    let builder = P2trBuilder::new(context, scripts_bytes).context("builder build")?;
+async fn mint_vrc20(context: &Context, vrc20_name: String) -> Result<()> {
+    use vital_script_builder::templates;
 
-    let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
+    let name = Name::try_from(vrc20_name.as_str())
+        .with_context(|| format!("the vrc20 name {} format invalid", vrc20_name))?;
 
-    let commit_raw_transaction = commit_psbt.extract_tx();
-    let commit_txid = commit_raw_transaction.txid();
+    let vrc20_metadata = context
+        .query_env_context
+        .get_vrc20_metadata(name)
+        .context("get vrc20 metadata")?
+        .ok_or_else(|| anyhow!("not found vrc20 metadata by {}", name))?;
 
-    println!("tx: {}", serde_json::to_string_pretty(&reveal_psbt.unsigned_tx).expect("to"));
+    if vrc20_metadata.mint_count >= vrc20_metadata.meta.mint.max_mints {
+        bail!(
+            "the vrc20 mint count is {}, and it had reached it 's max mint count {}, so the mint will failed",
+            vrc20_metadata.mint_count,  vrc20_metadata.meta.mint.max_mints
+        );
+    }
 
-    let reveal_raw_transaction = reveal_psbt.extract_tx();
+    if vrc20_metadata.meta.mint.mint_height > 0 {
+        // TODO: impl mint height check.
+    }
 
-    println!("tx: {}", serde_json::to_string_pretty(&reveal_raw_transaction).expect("to"));
+    // build script.
+    let output_index = 0_u32;
+    let scripts_bytes =
+        templates::mint_vrc20(output_index, name).context("build scripts failed")?;
 
-    let reveal_txid = reveal_raw_transaction.txid();
-
-    bdk_blockchain.broadcast(&commit_raw_transaction)?;
-    println!("Commit Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = commit_txid);
-
-    bdk_blockchain.broadcast(&reveal_raw_transaction)?;
-    println!("Reveal Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = reveal_txid);
+    // build tx then send
+    crate::send_p2tr(context, scripts_bytes).await.context("send_p2tr failed")?;
 
     Ok(())
 }

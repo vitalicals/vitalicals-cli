@@ -10,7 +10,9 @@ use bdk::{
 };
 use bitcoin::{hashes::Hash, OutPoint, Txid};
 
-use vital_interfaces_indexer::{traits::IndexerClientT, IndexerClient};
+use vital_interfaces_indexer::{
+    traits::IndexerClientT, vital_env_for_query, IndexerClient, QueryEnvContext,
+};
 use vital_script_primitives::resources::Resource;
 use wallet::Wallet;
 
@@ -18,6 +20,7 @@ pub struct Context {
     pub root_path: std::path::PathBuf,
     pub wallet: Wallet,
     pub indexer: IndexerClient,
+    pub query_env_context: QueryEnvContext,
     pub to_address: Option<Address>,
     pub to_amount: u64,
     pub fee_rate: Option<f32>,
@@ -25,21 +28,26 @@ pub struct Context {
     pub replaceable: bool,
     pub utxo_resources: BTreeMap<Resource, LocalUtxo>,
     pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
+    pub reveal_inputs: Vec<LocalUtxo>,
 }
 
 impl Context {
     pub async fn new(root_path: std::path::PathBuf, indexer: &str, wallet: Wallet) -> Result<Self> {
         let indexer = IndexerClient::new(indexer).await?;
+        let query_env_context = vital_env_for_query(indexer.clone());
+
         let mut res = Self {
             root_path,
             wallet,
             indexer,
+            query_env_context,
             to_address: None,
             to_amount: 0,
             fee_rate: None,
             replaceable: false,
             utxo_with_resources: Vec::new(),
             utxo_resources: Default::default(),
+            reveal_inputs: Vec::new(),
         };
 
         let utxo_with_resources =
@@ -63,7 +71,7 @@ impl Context {
         self
     }
 
-    pub fn with_to_address(mut self, to: &Option<impl ToString>, amount: u64) -> Result<Self> {
+    pub fn with_to_address(mut self, to: &Option<impl ToString>) -> Result<Self> {
         if let Some(to) = to {
             let to = Address::<NetworkUnchecked>::from_str(to.to_string().as_str())
                 .context("parse address failed")?
@@ -73,9 +81,23 @@ impl Context {
             self.to_address = Some(to);
         }
 
+        Ok(self)
+    }
+
+    pub fn with_amount(mut self, amount: u64) -> Self {
         self.to_amount = amount;
 
-        Ok(self)
+        self
+    }
+
+    pub fn with_reveal_input(mut self, reveal_inputs: &[LocalUtxo]) -> Self {
+        self.reveal_inputs = reveal_inputs.to_vec();
+
+        self
+    }
+
+    pub fn append_reveal_input(&mut self, reveal_inputs: &[LocalUtxo]) {
+        self.reveal_inputs.append(&mut reveal_inputs.to_vec());
     }
 
     pub fn network(&self) -> Network {

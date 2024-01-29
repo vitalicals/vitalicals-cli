@@ -22,7 +22,7 @@ mod mock;
 
 pub use context::{
     script::{check_is_vital_script, maybe_vital_commit_tx_with_input_resource},
-    Context,
+    Context, EnvContext,
 };
 
 use vital_script_ops::instruction::Instruction;
