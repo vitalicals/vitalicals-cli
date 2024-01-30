@@ -1,9 +1,10 @@
-use anyhow::Result;
+use anyhow::{Context as AnyhowContext, Result};
 use clap::Subcommand;
 
-use crate::Cli;
+use crate::{build_context, Cli, Context};
 
 mod name;
+use name::*;
 
 #[derive(Debug, Subcommand)]
 pub enum MoveSubCommands {
@@ -24,7 +25,18 @@ pub enum MoveSubCommands {
 }
 
 impl MoveSubCommands {
-    pub(crate) async fn run(&self, _cli: &Cli) -> Result<()> {
+    pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
+        let mut context = build_context(cli).await.context("build context")?;
+
+        match self {
+            MoveSubCommands::Name { name, amount } => {
+                move_names(&mut context, &[name.clone()], *amount).await?;
+            }
+            MoveSubCommands::Names { names, amount } => {
+                move_names(&mut context, &names, *amount).await?;
+            }
+        }
+
         Ok(())
     }
 }

@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{Context as AnyhowContext, Result};
+use anyhow::{anyhow, bail, Context as AnyhowContext, Result};
 
 use bdk::{
     bitcoin::{address::NetworkUnchecked, hashes::Hash as BdkHash, Address, Network},
@@ -49,6 +49,7 @@ impl Context {
             outputs: vec![(None, 0)],
         };
 
+        // FIXME: the no use utxo should contains the pending utxo with resources!!!
         let utxo_with_resources =
             res.fetch_all_resources().await.context("get utxo with resources failed")?;
 
@@ -115,6 +116,28 @@ impl Context {
 
     pub fn append_output(&mut self, to: Option<Address>, amount: u64) {
         self.outputs.push((to, amount));
+    }
+
+    pub fn set_outputs_from(&mut self, from: u32, count: usize, amount: u64) -> Result<()> {
+        let to = self
+            .outputs
+            .first()
+            .ok_or_else(|| anyhow!("the output should not null"))?
+            .clone();
+
+        let mut outputs = Vec::with_capacity(count);
+
+        for i in from..from + count as u32 {
+            if i >= u8::MAX as u32 {
+                bail!("the output index too large for {}, should less then {}", i, u8::MAX);
+            }
+
+            outputs.push((to.0.clone(), amount));
+        }
+
+        self.outputs = outputs;
+
+        Ok(())
     }
 
     pub fn network(&self) -> Network {

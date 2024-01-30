@@ -11,10 +11,9 @@ use vital_script_primitives::{
 
 use crate::{build_context, Cli, Context};
 
-async fn move_names(context: &mut Context, names: &[String], amount: u64) -> Result<()> {
+pub async fn move_names(context: &mut Context, names: &[String], amount: u64) -> Result<()> {
     use vital_script_builder::templates;
 
-    let startup_output_index = 0;
     let mut utxos = Vec::with_capacity(names.len());
     let mut move_names = Vec::with_capacity(names.len());
 
@@ -27,13 +26,18 @@ async fn move_names(context: &mut Context, names: &[String], amount: u64) -> Res
         // Got the name resource
         let input_name_utxo = context
             .get_owned_resource(&name_resource)
-            .ok_or_else(|| anyhow!("deploy vrc20 need required a name resource by {}", name))?;
+            .ok_or_else(|| anyhow!("move name need required a name resource by {}", name))?;
 
         move_names.push(name);
         utxos.push(input_name_utxo);
     }
 
     context.append_reveal_input(&utxos);
+
+    let startup_output_index = 0;
+    context
+        .set_outputs_from(startup_output_index, names.len(), amount)
+        .context("set outputs")?;
 
     // build script.
     // all begin with 0.

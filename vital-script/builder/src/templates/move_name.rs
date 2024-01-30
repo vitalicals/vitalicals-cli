@@ -1,9 +1,11 @@
 use anyhow::{bail, Context, Result};
 use vital_script_ops::{
     builder::instruction::ScriptBuilderFromInstructions,
-    instruction::{assert_output::InstructionOutputAssert, Instruction},
+    instruction::{
+        assert_input::InstructionInputAssert, assert_output::InstructionOutputAssert, Instruction,
+    },
 };
-use vital_script_primitives::names::Name;
+use vital_script_primitives::{names::Name, resources::Resource};
 
 /// Build a script to move a short name / name to a output index.
 pub fn move_name(output_index: u32, name: Name) -> Result<Vec<u8>> {
@@ -77,6 +79,19 @@ pub fn move_names(names: &[Name], start_output_index: Option<u32>) -> Result<Vec
     let mut instructions =
         [Instruction::Output(InstructionOutputAssert { indexs: outputs.clone() })].to_vec();
 
+    // input assert
+    for (input_index, name) in names.iter().enumerate() {
+        if input_index >= u8::MAX as usize {
+            bail!("the input index too large");
+        }
+
+        instructions.push(Instruction::Input(InstructionInputAssert {
+            index: input_index as u8,
+            resource: name.clone().into(),
+        }))
+    }
+
+    // move instruction
     for (index, name) in names.iter().enumerate() {
         let output_index = outputs[index];
         let move_instruction = Instruction::move_to(output_index, *name);
