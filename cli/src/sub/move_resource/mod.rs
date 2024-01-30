@@ -1,10 +1,14 @@
 use anyhow::{Context as AnyhowContext, Result};
 use clap::Subcommand;
+use vital_script_primitives::U256;
 
 use crate::{build_context, Cli};
 
 mod name;
+mod vrc20;
+
 use name::*;
+use vrc20::*;
 
 #[derive(Debug, Subcommand)]
 pub enum MoveSubCommands {
@@ -22,6 +26,16 @@ pub enum MoveSubCommands {
         /// The amount for each output.
         amount: u64,
     },
+    /// Move vrc20 to outpoint with charge.
+    VRC20 {
+        /// The name of vrc20
+        name: String,
+        /// The amount
+        amount: u128,
+        /// The btc sats for output
+        #[arg(long, default_value = "1000")]
+        sats: u64,
+    },
 }
 
 impl MoveSubCommands {
@@ -34,6 +48,9 @@ impl MoveSubCommands {
             }
             MoveSubCommands::Names { names, amount } => {
                 move_names(&mut context, &names, *amount).await?;
+            }
+            MoveSubCommands::VRC20 { name, amount, sats } => {
+                move_vrc20(&mut context, name, U256::from(*amount), *sats).await?;
             }
         }
 

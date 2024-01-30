@@ -13,7 +13,10 @@ use bitcoin::{hashes::Hash, OutPoint, Txid};
 use vital_interfaces_indexer::{
     traits::IndexerClientT, vital_env_for_query, IndexerClient, QueryEnvContext,
 };
-use vital_script_primitives::resources::Resource;
+use vital_script_primitives::{
+    resources::{Name, Resource, ResourceType},
+    U256,
+};
 use wallet::Wallet;
 
 pub struct Context {
@@ -100,6 +103,15 @@ impl Context {
         self
     }
 
+    pub fn set_amount(&mut self, amount: u64) {
+        self.outputs = self
+            .outputs
+            .clone()
+            .into_iter()
+            .map(|(output, _)| (output, amount))
+            .collect::<Vec<_>>();
+    }
+
     pub fn with_reveal_input(mut self, reveal_inputs: &[LocalUtxo]) -> Self {
         self.reveal_inputs = reveal_inputs.to_vec();
 
@@ -177,5 +189,28 @@ impl Context {
         }
 
         Ok(res)
+    }
+
+    pub async fn fetch_all_vrc20_by_name(
+        &self,
+        name: Name,
+    ) -> Result<(U256, Vec<(LocalUtxo, Resource)>)> {
+        let resource_type = ResourceType::vrc20(name);
+
+        let owned_vrc20s = self
+            .fetch_all_resources()
+            .await
+            .context("fetch all resources")?
+            .into_iter()
+            .filter(|(_, resource)| resource.resource_type() == resource_type)
+            .collect::<Vec<_>>();
+
+        let mut sum = U256::zero();
+        for (_, v) in owned_vrc20s.iter() {
+            let v = v.as_vrc20().context("not vrc20")?;
+            sum += v.amount;
+        }
+
+        Ok((sum, owned_vrc20s))
     }
 }

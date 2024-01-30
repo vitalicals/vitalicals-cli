@@ -109,6 +109,14 @@ impl Resource {
         Ok(Self::VRC20(VRC20::new(name, amount)))
     }
 
+    pub fn as_vrc20(&self) -> Result<&VRC20> {
+        if let Self::VRC20(v) = self {
+            Ok(v)
+        } else {
+            bail!("resource is not vrc20")
+        }
+    }
+
     pub fn name(name: impl Into<Tag>) -> Self {
         Self::Name(name.into())
     }

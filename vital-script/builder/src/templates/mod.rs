@@ -13,3 +13,6 @@ pub use mint_name::*;
 pub use mint_vrc20::*;
 pub use move_name::*;
 pub use move_vrc20::*;
+
+/// The outputs used by template
+pub type Outputs = Vec<u8>;
