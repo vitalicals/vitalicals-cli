@@ -1,15 +1,8 @@
 use anyhow::{anyhow, Context as AnyhowContext, Result};
-use clap::Subcommand;
 
-use vital_script_primitives::{
-    resources::{Name, Resource},
-    types::{
-        vrc20::{VRC20MetaData, VRC20MintMeta},
-        MetaData,
-    },
-};
+use vital_script_primitives::resources::{Name, Resource};
 
-use crate::{build_context, Cli, Context};
+use crate::Context;
 
 pub async fn move_names(context: &mut Context, names: &[String], amount: u64) -> Result<()> {
     use vital_script_builder::templates;

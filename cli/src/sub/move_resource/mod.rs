@@ -1,7 +1,7 @@
 use anyhow::{Context as AnyhowContext, Result};
 use clap::Subcommand;
 
-use crate::{build_context, Cli, Context};
+use crate::{build_context, Cli};
 
 mod name;
 use name::*;
