@@ -8,6 +8,8 @@ use crate::traits::EnvFunctions;
 
 // TODO: move to primitive types
 
+const TARGET: &str = "vital::check";
+
 /// The tag string for inscribe
 pub const INSCRIBE_TAG_STR: &str = "vital";
 
@@ -45,10 +47,12 @@ pub fn maybe_vital_commit_tx_with_input_resource<F: EnvFunctions>(
 pub fn check_is_vital_script(tx: &Transaction) -> bool {
     // the input and output count should < u8::MAX
     if tx.input.len() >= u8::MAX as usize {
+        log::debug!(target: TARGET, "no vital by input len too long: {}", tx.input.len());
         return false;
     }
 
     if tx.output.len() >= u8::MAX as usize {
+        log::debug!(target: TARGET, "no vital by output len too long: {}", tx.output.len());
         return false;
     }
 
@@ -62,7 +66,10 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
             match try_get_vital_script(&script_bytes) {
                 Ok(s) => {
                     if !s.is_empty() {
+                        log::debug!(target: TARGET, "is vital script {}", input.previous_output);
                         at_least_one_script = true;
+                    } else {
+                        log::debug!(target: TARGET, "no vital script bytes len zero {}", input.previous_output);
                     }
                 }
                 Err(err) => {
