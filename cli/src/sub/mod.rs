@@ -2,8 +2,8 @@ mod context;
 
 pub mod deploy;
 pub mod mint;
+pub mod move_resource;
 pub mod query;
-pub mod transfer;
 pub mod utils;
 pub mod wallet;
 

@@ -21,14 +21,13 @@ pub struct Context {
     pub wallet: Wallet,
     pub indexer: IndexerClient,
     pub query_env_context: QueryEnvContext,
-    pub to_address: Option<Address>,
-    pub to_amount: u64,
     pub fee_rate: Option<f32>,
     /// TODO: support replaceable
     pub replaceable: bool,
     pub utxo_resources: BTreeMap<Resource, LocalUtxo>,
     pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
     pub reveal_inputs: Vec<LocalUtxo>,
+    pub outputs: Vec<(Option<Address>, u64)>,
 }
 
 impl Context {
@@ -41,13 +40,13 @@ impl Context {
             wallet,
             indexer,
             query_env_context,
-            to_address: None,
-            to_amount: 0,
             fee_rate: None,
             replaceable: false,
             utxo_with_resources: Vec::new(),
             utxo_resources: Default::default(),
             reveal_inputs: Vec::new(),
+            // At least one outputs
+            outputs: vec![(None, 0)],
         };
 
         let utxo_with_resources =
@@ -78,14 +77,24 @@ impl Context {
                 .require_network(self.network())
                 .context("the address is not for the network")?;
 
-            self.to_address = Some(to);
+            self.outputs = self
+                .outputs
+                .clone()
+                .into_iter()
+                .map(|(_, amount)| (Some(to.clone()), amount))
+                .collect::<Vec<_>>();
         }
 
         Ok(self)
     }
 
     pub fn with_amount(mut self, amount: u64) -> Self {
-        self.to_amount = amount;
+        self.outputs = self
+            .outputs
+            .clone()
+            .into_iter()
+            .map(|(output, _)| (output, amount))
+            .collect::<Vec<_>>();
 
         self
     }
@@ -98,6 +107,14 @@ impl Context {
 
     pub fn append_reveal_input(&mut self, reveal_inputs: &[LocalUtxo]) {
         self.reveal_inputs.append(&mut reveal_inputs.to_vec());
+    }
+
+    pub fn set_outputs(&mut self, outputs: &[(Option<Address>, u64)]) {
+        self.outputs = outputs.to_vec();
+    }
+
+    pub fn append_output(&mut self, to: Option<Address>, amount: u64) {
+        self.outputs.push((to, amount));
     }
 
     pub fn network(&self) -> Network {

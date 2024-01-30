@@ -84,7 +84,7 @@ enum SubCommands {
 
     /// Transfer tokens
     #[command(subcommand)]
-    Transfer(transfer::TransferSubCommands),
+    Move(move_resource::MoveSubCommands),
 
     /// Wallet cmds
     #[command(subcommand)]
@@ -115,7 +115,7 @@ pub async fn run() -> Result<()> {
         SubCommands::Query(cmd) => cmd.run(&cli).await,
         SubCommands::Mint(cmd) => cmd.run(&cli).await,
         SubCommands::Deploy(cmd) => cmd.run(&cli).await,
-        SubCommands::Transfer(cmd) => cmd.run(&cli).await,
+        SubCommands::Move(cmd) => cmd.run(&cli).await,
         SubCommands::Wallet(cmd) => cmd.run(&cli).await,
         SubCommands::Utils(cmd) => cmd.run(&cli).await,
     }

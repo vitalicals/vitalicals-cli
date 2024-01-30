@@ -27,8 +27,6 @@ use client::context::Context;
 use wallet::Wallet;
 
 pub struct P2trBuilder<'a> {
-    to_address: Address,
-    amount: u64,
     fee_rate: Option<FeeRate>,
     wallet: &'a Wallet,
 
@@ -41,6 +39,7 @@ pub struct P2trBuilder<'a> {
     utxo_with_resources: Vec<OutPoint>,
 
     reveal_inputs: Vec<LocalUtxo>,
+    outputs: Vec<(Address, u64)>,
 }
 
 impl<'a> P2trBuilder<'a> {
@@ -50,11 +49,19 @@ impl<'a> P2trBuilder<'a> {
         let wallet = &context.wallet;
         let utxo_with_resources = context.utxo_with_resources.clone();
 
-        let to_address = if let Some(to) = context.to_address.clone() {
-            to
-        } else {
-            wallet.wallet.get_address(AddressIndex::New).context("new address")?.address
-        };
+        let outputs = context
+            .outputs
+            .iter()
+            .map(|(to, amount)| {
+                let to_address = if let Some(to) = to.clone() {
+                    to
+                } else {
+                    wallet.wallet.get_address(AddressIndex::New).context("new address")?.address
+                };
+
+                Ok((to_address, *amount))
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         let internal_key = wallet.derive_x_only_public_key(&secp)?;
         let reveal_script = InscriptionScriptBuilder::new(data)
@@ -66,8 +73,6 @@ impl<'a> P2trBuilder<'a> {
 
         Ok(Self {
             reveal_script,
-            to_address,
-            amount: context.to_amount,
             fee_rate: context.fee_rate.map(FeeRate::from_sat_per_vb),
             wallet,
             secp,
@@ -76,11 +81,16 @@ impl<'a> P2trBuilder<'a> {
             derivation_path,
             utxo_with_resources,
             reveal_inputs: context.reveal_inputs.clone(),
+            outputs,
         })
     }
 
     fn secp(&self) -> &Secp256k1<All> {
         &self.secp
+    }
+
+    fn amount(&self) -> u64 {
+        self.outputs.iter().map(|(_, amount)| amount).sum()
     }
 
     pub fn with_reveal_input(mut self, utxo: LocalUtxo) -> Self {
@@ -114,7 +124,7 @@ impl<'a> P2trBuilder<'a> {
 
         // the total amount send to output, need the amount and fee for next tx.
         // TODO: support merge amount to output mod.
-        let amount_to_trans = self.amount + fee_for_reveal_tx.unwrap_or_default();
+        let amount_to_trans = self.amount() + fee_for_reveal_tx.unwrap_or_default();
 
         let reveal_inputs = self.reveal_inputs.iter().map(|i| i.outpoint).collect::<Vec<_>>();
 
@@ -174,6 +184,12 @@ impl<'a> P2trBuilder<'a> {
         let secp = self.secp();
         let internal_key = self.internal_key;
 
+        let output = self
+            .outputs
+            .iter()
+            .map(|(to, amount)| TxOut { value: *amount, script_pubkey: to.script_pubkey() })
+            .collect::<Vec<_>>();
+
         let next_tx = Transaction {
             version: 1,
             lock_time: absolute::LockTime::ZERO,
@@ -183,10 +199,7 @@ impl<'a> P2trBuilder<'a> {
                 sequence: Sequence(0xFFFFFFFD),
                 witness: Witness::default(),
             }],
-            output: vec![TxOut {
-                value: self.amount,
-                script_pubkey: self.to_address.script_pubkey(),
-            }],
+            output,
         };
 
         let mut psbt = PartiallySignedTransaction::from_unsigned_tx(next_tx)?;
@@ -300,7 +313,7 @@ impl<'a> P2trBuilder<'a> {
                 OutPoint::new(Txid::all_zeros(), 0),
                 commit_script_pubkey.clone(),
                 &taproot_spend_info.clone(),
-                self.amount,
+                self.amount(),
             )
             .context("generate_reveal_psbt")?;
 
@@ -324,7 +337,7 @@ impl<'a> P2trBuilder<'a> {
             .generate_commit_psbt(commit_script_pubkey.clone(), Some(fee_for_reveal))
             .context("generate_commit_psbt")?;
 
-        let amount = self.amount + fee_for_reveal;
+        let amount = self.amount() + fee_for_reveal;
 
         let reveal_psbt = self
             .generate_reveal_psbt(
