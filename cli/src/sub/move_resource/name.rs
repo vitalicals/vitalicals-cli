@@ -14,7 +14,7 @@ pub async fn move_names(context: &mut Context, names: &[String], amount: u64) ->
         let name = Name::try_from(name.as_str())
             .with_context(|| format!("the '{}' name format is invalid", name))?;
 
-        let name_resource = Resource::name(name.clone());
+        let name_resource = Resource::name(name);
 
         // Got the name resource
         let input_name_utxo = context

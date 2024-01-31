@@ -31,7 +31,7 @@ pub fn move_names_with_index(output_index_name: &[(u32, Name)]) -> Result<Vec<u8
 
         instructions.push(Instruction::Input(InstructionInputAssert {
             index: input_index as u8,
-            resource: name.clone().into(),
+            resource: (*name).into(),
         }))
     }
 
@@ -57,7 +57,6 @@ pub fn move_names(names: &[Name], start_output_index: Option<u32>) -> Result<Vec
     let start_output_index = start_output_index.unwrap_or_default();
 
     let outputs = (0..names.len())
-        .into_iter()
         .map(|i| {
             let output_index = start_output_index + i as u32;
             if output_index >= u8::MAX as u32 {
@@ -79,7 +78,7 @@ pub fn move_names(names: &[Name], start_output_index: Option<u32>) -> Result<Vec
 
         instructions.push(Instruction::Input(InstructionInputAssert {
             index: input_index as u8,
-            resource: name.clone().into(),
+            resource: (*name).into(),
         }))
     }
 

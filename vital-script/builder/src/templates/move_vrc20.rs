@@ -132,6 +132,7 @@ pub fn split_vrc20s(name: Name, input_index: u8, outputs: Vec<U256>) -> Result<V
     builder.build()
 }
 
+#[derive(Default)]
 pub struct MoveVrc20InstructionBuilder {
     inputs: Vec<(u8, Name, U256)>,
     outputs: Vec<(u8, Name, U256)>,
@@ -139,7 +140,7 @@ pub struct MoveVrc20InstructionBuilder {
 
 impl MoveVrc20InstructionBuilder {
     pub fn new() -> Self {
-        Self { inputs: Vec::new(), outputs: Vec::new() }
+        Self::default()
     }
 
     pub fn is_input_output_eq(&self) -> bool {
@@ -162,12 +163,7 @@ impl MoveVrc20InstructionBuilder {
         let output_indexs = self
             .outputs
             .iter()
-            .map(|(output_index, _, _)| {
-                if *output_index >= u8::MAX {
-                    bail!("the output index not supported >= {}", u8::MAX);
-                }
-                Ok(*output_index as u8)
-            })
+            .map(|(output_index, _, _)| Ok(*output_index))
             .collect::<Result<Vec<_>>>()
             .context("output index")?;
 
@@ -175,10 +171,6 @@ impl MoveVrc20InstructionBuilder {
             [Instruction::Output(InstructionOutputAssert { indexs: output_indexs })].to_vec();
 
         for (input_index, name, amount) in self.inputs.iter() {
-            if *input_index >= u8::MAX {
-                bail!("the input index too large");
-            }
-
             instructions.push(Instruction::Input(InstructionInputAssert {
                 index: *input_index,
                 resource: Resource::VRC20(VRC20::new(*name, *amount)),
@@ -186,10 +178,6 @@ impl MoveVrc20InstructionBuilder {
         }
 
         for (output_index, name, amount) in self.outputs.iter() {
-            if *output_index >= u8::MAX {
-                bail!("the output index not supported >= {}", u8::MAX);
-            }
-
             let move_instruction =
                 Instruction::move_to(*output_index, Resource::VRC20(VRC20::new(*name, *amount)));
 

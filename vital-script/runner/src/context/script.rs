@@ -175,7 +175,6 @@ pub fn try_get_vital_script(script: &[u8]) -> Result<Vec<u8>> {
 }
 
 fn try_get_script_bytes(bytes: &[u8]) -> Result<Vec<u8>> {
-    //FIXME: fix to support OP_PUSHDATA1
     let push_op = bytes[0];
     if push_op <= OP_PUSHBYTES_75.to_u8() {
         // use OP_PUSHBYTES_XX, the op is eq the len
@@ -209,8 +208,22 @@ fn try_get_script_bytes(bytes: &[u8]) -> Result<Vec<u8>> {
         return Ok(bytes[2..=(1 + script_len)].to_vec())
     }
 
-    // FIXME: support 2
-    if push_op == OP_PUSHDATA2.to_u8() {}
+    if push_op == OP_PUSHDATA2.to_u8() {
+        // use OP_PUSHDATA2(0x4d), the bytes will be:
+        // [OP_PUSHDATA1(0x4d), Len([u8[2], u8[1]]), [script_bytes..], OP_ENDIF]
+        let script_len = u16::from_le_bytes([bytes[1], bytes[2]]) as usize;
+
+        let expect_len = 1 + 2 + script_len + 1;
+        if bytes.len() != expect_len {
+            bail!("data len not match {}, {}", bytes.len(), expect_len);
+        }
+
+        if bytes[1 + 2 + script_len] != 0x68 {
+            bail!("OP_ENDIF")
+        }
+
+        return Ok(bytes[(1 + 2)..=(2 + script_len)].to_vec())
+    }
 
     bail!("currently not support {}", push_op);
 }
@@ -218,16 +231,6 @@ fn try_get_script_bytes(bytes: &[u8]) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn init_logger() {
-        let _ = env_logger::Builder::from_default_env()
-            .format_module_path(true)
-            .format_level(true)
-            .filter_level(log::LevelFilter::Info)
-            .parse_filters(format!("{}=debug", TARGET).as_str())
-            .parse_filters("vital::ops=debug")
-            .try_init();
-    }
 
     const MINT_TX: &str = "{
         \"version\": 1,
@@ -275,6 +278,29 @@ mod tests {
         ]
       }";
 
+    const MINT_TX3: &str = "{
+        \"version\": 1,
+        \"lock_time\": 0,
+        \"input\": [
+          {
+            \"previous_output\": \"e2adb8e239191c8b3b9ecdc52a6f04fcee3467387debf74355d981aecc27c8eb:1\",
+            \"script_sig\": \"\",
+            \"sequence\": 4294967293,
+            \"witness\": [
+              \"18b699622ed7f091866742470d1a54bb739e2327e7821cbe7ffd93b0868c46fa92fe1e32498131ae599e46cf764f58d8296a0720a8986884e57b04784b6bec7d01\",
+              \"20d2e7612f73d26067ae83e2a9d8bfa496193374677490dff0792242bbacba6922ac006305766974616c4d25010b030010c2010000154200000010e8030000154200000110e8030000154200000210e8030000154200000310e8030000154200000410e8030000154200000510e8030000154200000610e8030000154200000710e8030000154200000810e8030000154200000910e8030000154200000a10e8030000154200000b10e8030000154200000c10e8030000154200000d10e8030000154200000e10e8030000154200000f10e8030000154200001010e8030000154200001110e8030000154200001210e8030000154200001310e8030000154200001410e8030000154200001510e8030000154200001610e8030000154200001710e8030000154200001810e803000015420000191036290000154200001a1e154200009f8c0000001e15420000010000000168\",
+              \"c1d2e7612f73d26067ae83e2a9d8bfa496193374677490dff0792242bbacba6922\"
+            ]
+          }
+        ],
+        \"output\": [
+          {
+            \"value\": 1000,
+            \"script_pubkey\": \"51208de147fc78c74363ad51d75b9f6e2ee82ff11f35b46416e075b37c4d3ed39bf5\"
+          }
+        ]
+      }";
+
     #[test]
     fn test_check_is_vital_script() {
         // init_logger();
@@ -284,15 +310,9 @@ mod tests {
     }
 
     #[test]
-    fn test_check_is_vital_script2() {
-        init_logger();
+    fn test_check_is_vital_script_match() {
+        // init_logger();
 
-        let tx: Transaction = serde_json::from_str(MINT_TX2).expect("from");
-        assert!(check_is_vital_script(&tx), "check_is_vital_script is true");
-    }
-
-    #[test]
-    fn test_check_is_vital_script_match2() {
         let tx: Transaction = serde_json::from_str(MINT_TX).expect("from");
         let script = parse_vital_scripts(&tx).expect("should be vital script");
         assert_eq!(script.len(), 1);
@@ -301,13 +321,36 @@ mod tests {
     }
 
     #[test]
-    fn test_check_is_vital_script_match() {
-        init_logger();
+    fn test_check_is_vital_script_for_push_data1() {
+        // init_logger();
 
+        let tx: Transaction = serde_json::from_str(MINT_TX2).expect("from");
+        assert!(check_is_vital_script(&tx), "check_is_vital_script is true");
+    }
+
+    #[test]
+    fn test_check_is_vital_script_match_for_push_data1() {
         let tx: Transaction = serde_json::from_str(MINT_TX2).expect("from");
         let script = parse_vital_scripts(&tx).expect("should be vital script");
         assert_eq!(script.len(), 1);
         assert_eq!(script[0].0, 0);
         assert_eq!(script[0].1, hex::decode("0b030010e8030000154200000010e8030000154200000110e8030000154200000210e8030000154200000310e8030000154200000410e8030000154200000510e8030000154200000610e8030000154200000710e8030000154200000810e8030000154200000910e8030000154200000a1e1542000036290000001e15420000c201000001").expect("hex"));
+    }
+
+    #[test]
+    fn test_check_is_vital_script_for_push_data2() {
+        // init_logger();
+
+        let tx: Transaction = serde_json::from_str(MINT_TX3).expect("from");
+        assert!(check_is_vital_script(&tx), "check_is_vital_script is true");
+    }
+
+    #[test]
+    fn test_check_is_vital_script_match_for_push_data2() {
+        let tx: Transaction = serde_json::from_str(MINT_TX3).expect("from");
+        let script = parse_vital_scripts(&tx).expect("should be vital script");
+        assert_eq!(script.len(), 1);
+        assert_eq!(script[0].0, 0);
+        assert_eq!(script[0].1, hex::decode("0b030010c2010000154200000010e8030000154200000110e8030000154200000210e8030000154200000310e8030000154200000410e8030000154200000510e8030000154200000610e8030000154200000710e8030000154200000810e8030000154200000910e8030000154200000a10e8030000154200000b10e8030000154200000c10e8030000154200000d10e8030000154200000e10e8030000154200000f10e8030000154200001010e8030000154200001110e8030000154200001210e8030000154200001310e8030000154200001410e8030000154200001510e8030000154200001610e8030000154200001710e8030000154200001810e803000015420000191036290000154200001a1e154200009f8c0000001e154200000100000001").expect("hex"));
     }
 }

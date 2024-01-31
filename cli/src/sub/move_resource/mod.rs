@@ -47,7 +47,7 @@ impl MoveSubCommands {
                 move_names(&mut context, &[name.clone()], *amount).await?;
             }
             MoveSubCommands::Names { names, amount } => {
-                move_names(&mut context, &names, *amount).await?;
+                move_names(&mut context, names, *amount).await?;
             }
             MoveSubCommands::VRC20 { name, amount, sats } => {
                 move_vrc20(&mut context, name, U256::from(*amount), *sats).await?;
