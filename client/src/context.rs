@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{Context as AnyhowContext, Result};
+use anyhow::{anyhow, bail, Context as AnyhowContext, Result};
 
 use bdk::{
     bitcoin::{address::NetworkUnchecked, hashes::Hash as BdkHash, Address, Network},
@@ -13,7 +13,10 @@ use bitcoin::{hashes::Hash, OutPoint, Txid};
 use vital_interfaces_indexer::{
     traits::IndexerClientT, vital_env_for_query, IndexerClient, QueryEnvContext,
 };
-use vital_script_primitives::resources::Resource;
+use vital_script_primitives::{
+    resources::{Name, Resource, ResourceType},
+    U256,
+};
 use wallet::Wallet;
 
 pub struct Context {
@@ -21,14 +24,13 @@ pub struct Context {
     pub wallet: Wallet,
     pub indexer: IndexerClient,
     pub query_env_context: QueryEnvContext,
-    pub to_address: Option<Address>,
-    pub to_amount: u64,
     pub fee_rate: Option<f32>,
     /// TODO: support replaceable
     pub replaceable: bool,
     pub utxo_resources: BTreeMap<Resource, LocalUtxo>,
     pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
     pub reveal_inputs: Vec<LocalUtxo>,
+    pub outputs: Vec<(Option<Address>, u64)>,
 }
 
 impl Context {
@@ -41,15 +43,16 @@ impl Context {
             wallet,
             indexer,
             query_env_context,
-            to_address: None,
-            to_amount: 0,
             fee_rate: None,
             replaceable: false,
             utxo_with_resources: Vec::new(),
             utxo_resources: Default::default(),
             reveal_inputs: Vec::new(),
+            // At least one outputs
+            outputs: vec![(None, 0)],
         };
 
+        // FIXME: the no use utxo should contains the pending utxo with resources!!!
         let utxo_with_resources =
             res.fetch_all_resources().await.context("get utxo with resources failed")?;
 
@@ -78,16 +81,35 @@ impl Context {
                 .require_network(self.network())
                 .context("the address is not for the network")?;
 
-            self.to_address = Some(to);
+            self.outputs = self
+                .outputs
+                .clone()
+                .into_iter()
+                .map(|(_, amount)| (Some(to.clone()), amount))
+                .collect::<Vec<_>>();
         }
 
         Ok(self)
     }
 
     pub fn with_amount(mut self, amount: u64) -> Self {
-        self.to_amount = amount;
+        self.outputs = self
+            .outputs
+            .clone()
+            .into_iter()
+            .map(|(output, _)| (output, amount))
+            .collect::<Vec<_>>();
 
         self
+    }
+
+    pub fn set_amount(&mut self, amount: u64) {
+        self.outputs = self
+            .outputs
+            .clone()
+            .into_iter()
+            .map(|(output, _)| (output, amount))
+            .collect::<Vec<_>>();
     }
 
     pub fn with_reveal_input(mut self, reveal_inputs: &[LocalUtxo]) -> Self {
@@ -98,6 +120,36 @@ impl Context {
 
     pub fn append_reveal_input(&mut self, reveal_inputs: &[LocalUtxo]) {
         self.reveal_inputs.append(&mut reveal_inputs.to_vec());
+    }
+
+    pub fn set_outputs(&mut self, outputs: &[(Option<Address>, u64)]) {
+        self.outputs = outputs.to_vec();
+    }
+
+    pub fn append_output(&mut self, to: Option<Address>, amount: u64) {
+        self.outputs.push((to, amount));
+    }
+
+    pub fn set_outputs_from(&mut self, from: u32, count: usize, amount: u64) -> Result<()> {
+        let to = self
+            .outputs
+            .first()
+            .ok_or_else(|| anyhow!("the output should not null"))?
+            .clone();
+
+        let mut outputs = Vec::with_capacity(count);
+
+        for i in from..from + count as u32 {
+            if i >= u8::MAX as u32 {
+                bail!("the output index too large for {}, should less then {}", i, u8::MAX);
+            }
+
+            outputs.push((to.0.clone(), amount));
+        }
+
+        self.outputs = outputs;
+
+        Ok(())
     }
 
     pub fn network(&self) -> Network {
@@ -137,5 +189,28 @@ impl Context {
         }
 
         Ok(res)
+    }
+
+    pub async fn fetch_all_vrc20_by_name(
+        &self,
+        name: Name,
+    ) -> Result<(U256, Vec<(LocalUtxo, Resource)>)> {
+        let resource_type = ResourceType::vrc20(name);
+
+        let owned_vrc20s = self
+            .fetch_all_resources()
+            .await
+            .context("fetch all resources")?
+            .into_iter()
+            .filter(|(_, resource)| resource.resource_type() == resource_type)
+            .collect::<Vec<_>>();
+
+        let mut sum = U256::zero();
+        for (_, v) in owned_vrc20s.iter() {
+            let v = v.as_vrc20().context("not vrc20")?;
+            sum += v.amount;
+        }
+
+        Ok((sum, owned_vrc20s))
     }
 }

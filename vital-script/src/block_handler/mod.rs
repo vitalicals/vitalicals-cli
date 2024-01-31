@@ -72,6 +72,7 @@ impl<'a> BlockRunner<'a> {
             }
 
             if tx.input.is_empty() {
+                log::debug!(target: TARGET, "skip by input is zero");
                 continue;
             }
 
@@ -81,12 +82,15 @@ impl<'a> BlockRunner<'a> {
                 .with_context(|| alloc::format!("get commit_tx {}", commit_txid))?
                 .unwrap_or_default();
 
+            log::debug!(target: TARGET, "process vital tx with commit txid {}", commit_txid);
+
             chain_interface
                 .delete_commit_tx_inputs_previous_output(&commit_txid)
                 .with_context(|| alloc::format!("delete commit_tx {}", commit_txid))?;
 
             let context = Context::new(env_interface.clone(), commit_tx_inputs_previous_output, tx);
             if !context.is_valid() {
+                log::debug!(target: TARGET, "context is not valid");
                 continue;
             }
 
