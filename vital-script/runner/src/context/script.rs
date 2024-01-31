@@ -1,5 +1,8 @@
 use anyhow::{bail, Context, Result};
-use bitcoin::{opcodes::all::{OP_PUSHBYTES_75, OP_PUSHDATA1}, Transaction};
+use bitcoin::{
+    opcodes::all::{OP_PUSHBYTES_75, OP_PUSHDATA1, OP_PUSHDATA2},
+    Transaction,
+};
 use hex_literal::hex;
 
 use alloc::vec::Vec;
@@ -174,7 +177,7 @@ pub fn try_get_vital_script(script: &[u8]) -> Result<Vec<u8>> {
 fn try_get_script_bytes(bytes: &[u8]) -> Result<Vec<u8>> {
     //FIXME: fix to support OP_PUSHDATA1
     let push_op = bytes[0];
-    if push_op <= OP_PUSHBYTES_75.to_u8(){
+    if push_op <= OP_PUSHBYTES_75.to_u8() {
         // use OP_PUSHBYTES_XX, the op is eq the len
         let script_len = push_op as usize;
         // the bytes will be [OP_PUSHBYTES_XX, [script_bytes..], OP_ENDIF]
@@ -185,11 +188,11 @@ fn try_get_script_bytes(bytes: &[u8]) -> Result<Vec<u8>> {
         if bytes[1 + script_len] != 0x68 {
             bail!("OP_ENDIF")
         }
-    
+
         return Ok(bytes[1..=script_len].to_vec())
     }
 
-    if push_op == OP_PUSHDATA1.to_u8(){
+    if push_op == OP_PUSHDATA1.to_u8() {
         // use OP_PUSHDATA1(0x4c), the bytes will be:
         // [OP_PUSHDATA1(0x4c), Len(u8), [script_bytes..], OP_ENDIF]
         let script_len = bytes[1] as usize;
@@ -205,6 +208,9 @@ fn try_get_script_bytes(bytes: &[u8]) -> Result<Vec<u8>> {
 
         return Ok(bytes[2..=(1 + script_len)].to_vec())
     }
+
+    // FIXME: support 2
+    if push_op == OP_PUSHDATA2.to_u8() {}
 
     bail!("currently not support {}", push_op);
 }
@@ -222,7 +228,6 @@ mod tests {
             .parse_filters("vital::ops=debug")
             .try_init();
     }
-    
 
     const MINT_TX: &str = "{
         \"version\": 1,
@@ -247,7 +252,7 @@ mod tests {
         ]
       }";
 
-      const MINT_TX2: &str = "{
+    const MINT_TX2: &str = "{
         \"version\": 1,
         \"lock_time\": 0,
         \"input\": [
@@ -281,7 +286,7 @@ mod tests {
     #[test]
     fn test_check_is_vital_script2() {
         init_logger();
-        
+
         let tx: Transaction = serde_json::from_str(MINT_TX2).expect("from");
         assert!(check_is_vital_script(&tx), "check_is_vital_script is true");
     }
@@ -293,7 +298,6 @@ mod tests {
         assert_eq!(script.len(), 1);
         assert_eq!(script[0].0, 0);
         assert_eq!(script[0].1, hex::decode("0a00270420c41400").expect("hex"));
-
     }
 
     #[test]
