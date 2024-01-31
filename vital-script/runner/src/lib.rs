@@ -21,7 +21,9 @@ mod resource_cache;
 mod mock;
 
 pub use context::{
-    script::{check_is_vital_script, maybe_vital_commit_tx_with_input_resource},
+    script::{
+        check_is_vital_script, maybe_vital_commit_tx_with_input_resource, parse_vital_scripts,
+    },
     Context, EnvContext,
 };
 

@@ -1,14 +1,20 @@
 //! The context for all cmds
 
-use std::{collections::BTreeMap, str::FromStr};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    str::FromStr,
+};
 
 use anyhow::{anyhow, bail, Context as AnyhowContext, Result};
 
 use bdk::{
-    bitcoin::{address::NetworkUnchecked, hashes::Hash as BdkHash, Address, Network},
+    bitcoin::{
+        address::NetworkUnchecked, hashes::Hash as BdkHash, Address, Network, OutPoint, Transaction,
+    },
+    database::Database,
     LocalUtxo,
 };
-use bitcoin::{hashes::Hash, OutPoint, Txid};
+use bitcoin::{hashes::Hash, Txid};
 
 use vital_interfaces_indexer::{
     traits::IndexerClientT, vital_env_for_query, IndexerClient, QueryEnvContext,
@@ -17,7 +23,10 @@ use vital_script_primitives::{
     resources::{Name, Resource, ResourceType},
     U256,
 };
+use vital_script_runner::*;
 use wallet::Wallet;
+
+use crate::{parser::tx_from_bdk, resource::LocalResource, vital_script_runner::LocalRunner};
 
 pub struct Context {
     pub root_path: std::path::PathBuf,
@@ -52,13 +61,12 @@ impl Context {
             outputs: vec![(None, 0)],
         };
 
-        // FIXME: the no use utxo should contains the pending utxo with resources!!!
         let utxo_with_resources =
             res.fetch_all_resources().await.context("get utxo with resources failed")?;
 
         for utxo in utxo_with_resources.into_iter() {
-            res.utxo_with_resources.push(utxo.0.outpoint);
-            res.utxo_resources.insert(utxo.1, utxo.0);
+            res.utxo_with_resources.push(utxo.utxo.outpoint);
+            res.utxo_resources.insert(utxo.resource, utxo.utxo);
         }
 
         Ok(res)
@@ -160,10 +168,93 @@ impl Context {
         self.utxo_resources.get(resource).cloned()
     }
 
-    pub async fn fetch_all_resources(&self) -> Result<Vec<(LocalUtxo, Resource)>> {
+    pub async fn run_tx_in_local(
+        &self,
+        tx: Transaction,
+    ) -> Result<Option<Vec<(OutPoint, Resource)>>> {
+        let txid = tx.txid();
+        let tx = tx_from_bdk(tx);
+        if !check_is_vital_script(&tx) {
+            return Ok(None);
+        }
+
+        let runner = LocalRunner::new(self);
+        let res = runner.run(&tx).await?;
+
+        Ok(Some(
+            res.into_iter()
+                .map(|(index, resource)| (OutPoint::new(txid, index as u32), resource))
+                .collect::<Vec<_>>(),
+        ))
+    }
+
+    pub async fn try_get_pending_resources(
+        &self,
+        unspents: &[LocalUtxo],
+    ) -> Result<Vec<LocalResource>> {
+        let mut resource_pendings = Vec::new();
+
+        let db = self.wallet.wallet.database();
+
+        let mut processed_tx = BTreeSet::new();
+
+        // process pendings
+        for unspent in unspents.iter() {
+            let txid = unspent.outpoint.txid;
+            if processed_tx.contains(&txid) {
+                continue;
+            }
+            processed_tx.insert(txid);
+
+            let tx = db.get_tx(&txid, true).context("get_tx")?;
+            if let Some(tx) = tx {
+                log::debug!("unspent tx: {} for {:?}", unspent.outpoint, tx.confirmation_time);
+                if tx.confirmation_time.is_none() {
+                    // process pendings
+                    log::debug!(
+                        "unspent tx details: {} for {:?}",
+                        unspent.outpoint,
+                        tx.transaction
+                    );
+
+                    let tx = if let Some(tx) = tx.transaction {
+                        tx
+                    } else {
+                        continue;
+                    };
+
+                    let outputs = self.run_tx_in_local(tx).await.context("run_tx_in_local")?;
+                    if let Some(mut outputs) = outputs {
+                        resource_pendings.append(&mut outputs);
+                    }
+                }
+            }
+        }
+
+        let mut res = Vec::with_capacity(resource_pendings.len());
+
+        for (outpoint, resource) in resource_pendings.into_iter() {
+            let local = db
+                .get_utxo(&outpoint)
+                .context("get utxo")?
+                .ok_or_else(|| anyhow!("the outpoint from pending should get"))?;
+
+            res.push(LocalResource { utxo: local, resource, pending: true })
+        }
+
+        Ok(res)
+    }
+
+    pub async fn fetch_all_resources(&self) -> Result<Vec<LocalResource>> {
         let mut res = Vec::new();
 
         let outpoints = self.wallet.wallet.list_unspent().context("list unspents failed")?;
+
+        // process pendings
+        let mut pending_resources = self
+            .try_get_pending_resources(&outpoints)
+            .await
+            .context("try_get_pending_resources")?;
 
         for unspent in outpoints.into_iter() {
             log::debug!(
@@ -171,30 +262,29 @@ impl Context {
                 unspent.is_spent,
                 unspent.keychain,
                 unspent.outpoint,
-                unspent.txout.script_pubkey
+                unspent.txout.value,
             );
             let outpoint = unspent.outpoint;
 
             let resource = self
                 .indexer
-                .get_resource(&OutPoint {
+                .get_resource(&bitcoin::OutPoint {
                     txid: Txid::from_byte_array(*outpoint.txid.as_byte_array()),
                     vout: outpoint.vout,
                 })
                 .await?;
             if let Some(resource) = resource {
                 log::debug!("find {} contain with resource {}", outpoint, resource);
-                res.push((unspent, resource));
+                res.push(LocalResource { utxo: unspent, resource, pending: false });
             }
         }
+
+        res.append(&mut pending_resources);
 
         Ok(res)
     }
 
-    pub async fn fetch_all_vrc20_by_name(
-        &self,
-        name: Name,
-    ) -> Result<(U256, Vec<(LocalUtxo, Resource)>)> {
+    pub async fn fetch_all_vrc20_by_name(&self, name: Name) -> Result<(U256, Vec<LocalResource>)> {
         let resource_type = ResourceType::vrc20(name);
 
         let owned_vrc20s = self
@@ -202,12 +292,12 @@ impl Context {
             .await
             .context("fetch all resources")?
             .into_iter()
-            .filter(|(_, resource)| resource.resource_type() == resource_type)
+            .filter(|local| local.resource.resource_type() == resource_type)
             .collect::<Vec<_>>();
 
         let mut sum = U256::zero();
-        for (_, v) in owned_vrc20s.iter() {
-            let v = v.as_vrc20().context("not vrc20")?;
+        for local in owned_vrc20s.iter() {
+            let v = local.resource.as_vrc20().context("not vrc20")?;
             sum += v.amount;
         }
 

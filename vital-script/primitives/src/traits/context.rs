@@ -136,6 +136,21 @@ pub trait Instruction {
     fn into_ops_bytes(self) -> Result<Vec<u8>>;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunMode {
+    Normal,
+    Simulator,
+}
+
+impl RunMode {
+    pub fn is_skip_check(&self) -> bool {
+        match self {
+            RunMode::Normal => false,
+            RunMode::Simulator => true,
+        }
+    }
+}
+
 pub trait Context {
     type Env: EnvContext;
     type Runner: RunnerContext;
@@ -152,6 +167,8 @@ pub trait Context {
     fn get_instructions(&self) -> Result<Vec<Self::Instruction>>;
     fn pre_check(&self) -> Result<()>;
     fn post_check(&self) -> Result<()>;
+
+    fn run_mod(&self) -> RunMode;
 
     /// Apply changes to indexer, will do:
     ///   - del all inputs 's resources bind
@@ -187,8 +204,12 @@ pub trait Context {
         .context("the output cannot merge to")?;
 
         // 3. set the resource to output
-        self.env().set_resource_to_output(index, resource).context("set")?;
+        self.env().set_resource_to_output(index, resource.clone()).context("set")?;
+
+        self.on_output(index, resource);
 
         Ok(())
     }
+
+    fn on_output(&mut self, _index: u8, _resource: Resource) {}
 }

@@ -48,6 +48,10 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
         }
     }
 
+    pub fn new_for_sim(env_interface: Functions, reveal_tx: &Transaction) -> Self {
+        Self::new(env_interface, Vec::new(), reveal_tx)
+    }
+
     pub fn new_for_query(env_interface: Functions) -> Self {
         Self {
             env: env_interface,

@@ -4,8 +4,12 @@ use anyhow::{Context as AnyhowContext, Result};
 use bitcoin::{OutPoint, Transaction};
 use vital_script_ops::{instruction::Instruction, parser::Parser};
 pub use vital_script_primitives::traits::context::Context as ContextT;
-use vital_script_primitives::traits::{
-    context::EnvContext as EnvContextT, InputResourcesContext as InputResourcesContextT,
+use vital_script_primitives::{
+    resources::Resource,
+    traits::{
+        context::EnvContext as EnvContextT, InputResourcesContext as InputResourcesContextT,
+        RunMode,
+    },
 };
 
 mod env;
@@ -26,6 +30,8 @@ pub struct Context<Functions: EnvFunctions> {
     env: EnvContext<Functions>,
     input_resources: InputResourcesContext,
     runner: RunnerContext,
+    pub outputs: Vec<(u8, Resource)>,
+    mode: RunMode,
 }
 
 impl<Functions> ContextT for Context<Functions>
@@ -37,6 +43,10 @@ where
     type Runner = RunnerContext;
 
     type Instruction = Instruction;
+
+    fn run_mod(&self) -> RunMode {
+        self.mode
+    }
 
     fn env(&mut self) -> &mut Self::Env {
         &mut self.env
@@ -82,17 +92,25 @@ where
     ///   - set all outputs 's resources bind
     ///   - storage all uncosted inputs 's resources to space.
     fn apply_resources(&mut self) -> Result<()> {
-        // del all inputs 's resources bind
-        let all = self.input_resource().all().to_vec();
-        self.env().remove_input_resources(&all).context("remove")?;
+        if !self.run_mod().is_skip_check() {
+            // del all inputs 's resources bind
+            let all = self.input_resource().all().to_vec();
+            self.env().remove_input_resources(&all).context("remove")?;
 
-        // set all outputs 's resources bind
-        self.env().apply_output_resources().context("apply")?;
+            // set all outputs 's resources bind
+            self.env().apply_output_resources().context("apply")?;
+        }
 
         // storage all uncosted inputs 's resources to space.
         // TODO: impl
 
         Ok(())
+    }
+
+    fn on_output(&mut self, index: u8, resource: Resource) {
+        if self.run_mod() == RunMode::Simulator {
+            self.outputs.push((index, resource));
+        }
     }
 }
 
@@ -109,7 +127,15 @@ where
         let input_resources = InputResourcesContext::new(CAP_SIZE);
         let env = EnvContext::new(env_interface, commit_tx_inputs_previous_output, reveal_tx);
 
-        Self { env, input_resources, runner }
+        Self { env, input_resources, runner, mode: RunMode::Normal, outputs: Vec::new() }
+    }
+
+    pub fn simulator(env_interface: Functions, reveal_tx: &Transaction) -> Self {
+        let runner = RunnerContext::new();
+        let input_resources = InputResourcesContext::new(CAP_SIZE);
+        let env = EnvContext::new_for_sim(env_interface, reveal_tx);
+
+        Self { env, input_resources, runner, mode: RunMode::Simulator, outputs: Vec::new() }
     }
 
     pub fn is_valid(&self) -> bool {

@@ -8,7 +8,10 @@ use bitcoin::{
     Transaction, TxIn, TxOut,
 };
 use vital_script_ops::{instruction::Instruction, parser::Parser};
-use vital_script_primitives::{resources::Resource, traits::Context as ContextT};
+use vital_script_primitives::{
+    resources::Resource,
+    traits::{Context as ContextT, RunMode},
+};
 
 use crate::{traits::EnvFunctions, Context};
 
@@ -159,6 +162,10 @@ impl ContextT for ContextMock {
     type Runner = <ContextMockInner as ContextT>::Runner;
 
     type Instruction = Instruction;
+
+    fn run_mod(&self) -> RunMode {
+        RunMode::Normal
+    }
 
     fn env(&mut self) -> &mut Self::Env {
         self.inner.env()
