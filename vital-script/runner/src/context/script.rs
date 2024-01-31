@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use bitcoin::Transaction;
+use bitcoin::{opcodes::all::{OP_PUSHBYTES_75, OP_PUSHDATA1}, Transaction};
 use hex_literal::hex;
 
 use alloc::vec::Vec;
@@ -73,7 +73,7 @@ pub fn check_is_vital_script(tx: &Transaction) -> bool {
                     }
                 }
                 Err(err) => {
-                    log::debug!("parse error: {}", err);
+                    log::debug!(target: TARGET, "parse error: {}", err);
                 }
             }
         }
@@ -106,7 +106,7 @@ pub fn parse_vital_scripts(tx: &Transaction) -> Result<Vec<(u8, Vec<u8>)>> {
                     }
                 }
                 Err(err) => {
-                    log::debug!("parse error: {}", err);
+                    log::debug!(target: TARGET, "parse error: {}", err);
                 }
             }
         }
@@ -166,23 +166,63 @@ pub fn try_get_vital_script(script: &[u8]) -> Result<Vec<u8>> {
 
     n += INSCRIBE_TAG_LEN;
 
-    let script_len = script[n] as usize;
-    n += 1;
+    let script_bytes = try_get_script_bytes(&script[n..]).context("try_get_script_bytes")?;
 
-    if script.len() != n + script_len + 1 {
-        bail!("data len not match {}, {}", script.len(), n + script_len);
+    Ok(script_bytes)
+}
+
+fn try_get_script_bytes(bytes: &[u8]) -> Result<Vec<u8>> {
+    //FIXME: fix to support OP_PUSHDATA1
+    let push_op = bytes[0];
+    if push_op <= OP_PUSHBYTES_75.to_u8(){
+        // use OP_PUSHBYTES_XX, the op is eq the len
+        let script_len = push_op as usize;
+        // the bytes will be [OP_PUSHBYTES_XX, [script_bytes..], OP_ENDIF]
+        if bytes.len() != 1 + script_len + 1 {
+            bail!("data len not match {}, {}", bytes.len(), 1 + script_len);
+        }
+
+        if bytes[1 + script_len] != 0x68 {
+            bail!("OP_ENDIF")
+        }
+    
+        return Ok(bytes[1..=script_len].to_vec())
     }
 
-    if script[n + script_len] != 0x68 {
-        bail!("OP_ENDIF")
+    if push_op == OP_PUSHDATA1.to_u8(){
+        // use OP_PUSHDATA1(0x4c), the bytes will be:
+        // [OP_PUSHDATA1(0x4c), Len(u8), [script_bytes..], OP_ENDIF]
+        let script_len = bytes[1] as usize;
+
+        let expect_len = 1 + 1 + script_len + 1;
+        if bytes.len() != expect_len {
+            bail!("data len not match {}, {}", bytes.len(), expect_len);
+        }
+
+        if bytes[1 + 1 + script_len] != 0x68 {
+            bail!("OP_ENDIF")
+        }
+
+        return Ok(bytes[2..=(1 + script_len)].to_vec())
     }
 
-    Ok(script[n..n + script_len].to_vec())
+    bail!("currently not support {}", push_op);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn init_logger() {
+        let _ = env_logger::Builder::from_default_env()
+            .format_module_path(true)
+            .format_level(true)
+            .filter_level(log::LevelFilter::Info)
+            .parse_filters(format!("{}=debug", TARGET).as_str())
+            .parse_filters("vital::ops=debug")
+            .try_init();
+    }
+    
 
     const MINT_TX: &str = "{
         \"version\": 1,
@@ -207,18 +247,63 @@ mod tests {
         ]
       }";
 
+      const MINT_TX2: &str = "{
+        \"version\": 1,
+        \"lock_time\": 0,
+        \"input\": [
+          {
+            \"previous_output\": \"e2adb8e239191c8b3b9ecdc52a6f04fcee3467387debf74355d981aecc27c8eb:1\",
+            \"script_sig\": \"\",
+            \"sequence\": 4294967293,
+            \"witness\": [
+              \"7f55716ac0527032967ebe766552f2976e4a07a4f6eba27fead625b3987a62eadc0ad2bea97fc60b3d258633a5e49bc7ca4b1d6cfe1174699386d786edfc3fb101\",
+              \"20d2e7612f73d26067ae83e2a9d8bfa496193374677490dff0792242bbacba6922ac006305766974616c4c850b030010e8030000154200000010e8030000154200000110e8030000154200000210e8030000154200000310e8030000154200000410e8030000154200000510e8030000154200000610e8030000154200000710e8030000154200000810e8030000154200000910e8030000154200000a1e1542000036290000001e15420000c20100000168\",
+              \"c1d2e7612f73d26067ae83e2a9d8bfa496193374677490dff0792242bbacba6922\"
+            ]
+          }
+        ],
+        \"output\": [
+          {
+            \"value\": 1000,
+            \"script_pubkey\": \"51208de147fc78c74363ad51d75b9f6e2ee82ff11f35b46416e075b37c4d3ed39bf5\"
+          }
+        ]
+      }";
+
     #[test]
     fn test_check_is_vital_script() {
+        // init_logger();
+
         let tx: Transaction = serde_json::from_str(MINT_TX).expect("from");
-        assert!(check_is_vital_script(&tx), "check_is_vital_script is true")
+        assert!(check_is_vital_script(&tx), "check_is_vital_script is true");
     }
 
     #[test]
-    fn test_check_is_vital_script_match() {
+    fn test_check_is_vital_script2() {
+        init_logger();
+        
+        let tx: Transaction = serde_json::from_str(MINT_TX2).expect("from");
+        assert!(check_is_vital_script(&tx), "check_is_vital_script is true");
+    }
+
+    #[test]
+    fn test_check_is_vital_script_match2() {
         let tx: Transaction = serde_json::from_str(MINT_TX).expect("from");
         let script = parse_vital_scripts(&tx).expect("should be vital script");
         assert_eq!(script.len(), 1);
         assert_eq!(script[0].0, 0);
         assert_eq!(script[0].1, hex::decode("0a00270420c41400").expect("hex"));
+
+    }
+
+    #[test]
+    fn test_check_is_vital_script_match() {
+        init_logger();
+
+        let tx: Transaction = serde_json::from_str(MINT_TX2).expect("from");
+        let script = parse_vital_scripts(&tx).expect("should be vital script");
+        assert_eq!(script.len(), 1);
+        assert_eq!(script[0].0, 0);
+        assert_eq!(script[0].1, hex::decode("0b030010e8030000154200000010e8030000154200000110e8030000154200000210e8030000154200000310e8030000154200000410e8030000154200000510e8030000154200000610e8030000154200000710e8030000154200000810e8030000154200000910e8030000154200000a1e1542000036290000001e15420000c201000001").expect("hex"));
     }
 }
