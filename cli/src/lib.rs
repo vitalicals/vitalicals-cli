@@ -103,6 +103,7 @@ pub async fn run() -> Result<()> {
         .format_module_path(true)
         .format_level(true)
         .filter_level(log_level)
+        .parse_filters("bdk::blockchain::script_sync=info")
         .try_init();
 
     log::debug!("Run cli {:?}", cli);

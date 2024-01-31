@@ -33,8 +33,18 @@ impl QueryResources {
             let resources =
                 context.fetch_all_resources().await?.into_iter().enumerate().collect::<Vec<_>>();
             println!("find {} resources", resources.len());
-            for (i, (utxo, resource)) in resources.into_iter() {
-                println!("{}. find {} contain with resource {}", i, utxo.outpoint, resource);
+            for (i, local) in resources.into_iter() {
+                if local.pending {
+                    println!(
+                        "{}. find pending {} contain with resource {}",
+                        i, local.utxo.outpoint, local.resource
+                    );
+                } else {
+                    println!(
+                        "{}. find {} contain with resource {}",
+                        i, local.utxo.outpoint, local.resource
+                    );
+                }
             }
         }
 

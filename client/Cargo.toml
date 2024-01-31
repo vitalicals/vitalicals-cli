@@ -22,3 +22,5 @@ wallet.workspace = true
 
 vital-interfaces-indexer.workspace = true
 vital-script-primitives.workspace = true
+vital-script-runner.workspace = true
+vital-script-ops.workspace = true

@@ -33,11 +33,16 @@ impl Instruction for InstructionInputAssert {
         context.runner().try_assert_input(self.index)?;
 
         // 2. ensure the resource is expected by index.
-        let resource_from_env =
-            context.env().get_input_resource(self.index).context("get input resource")?;
-        if resource_from_env != self.resource {
-            log::debug!(target: TARGET, "resource from {:?} expect {:?}", resource_from_env, self.resource);
-            bail!("the resource not expected")
+        if context.run_mod().is_skip_check() {
+            log::debug!(target: TARGET, "skip input resource check by in sim mode" )
+        } else {
+            let resource_from_env =
+                context.env().get_input_resource(self.index).context("get input resource")?;
+
+            if resource_from_env != self.resource {
+                log::debug!(target: TARGET, "resource from {:?} expect {:?}", resource_from_env, self.resource);
+                bail!("the resource not expected")
+            }
         }
 
         // 3. push the resource into resources.

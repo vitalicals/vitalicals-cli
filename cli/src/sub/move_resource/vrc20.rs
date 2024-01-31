@@ -31,13 +31,14 @@ pub async fn move_vrc20(
 
     // TODO: we need a way to select inputs
     owned_vrc20s.sort_by(|a, b| {
-        a.1.as_vrc20()
+        a.resource
+            .as_vrc20()
             .expect("should be vrc20")
             .amount
-            .cmp(&b.1.as_vrc20().expect("should be vrc20").amount)
+            .cmp(&b.resource.as_vrc20().expect("should be vrc20").amount)
     });
 
-    for (index, (utxo, res)) in owned_vrc20s.into_iter().enumerate() {
+    for (index, local) in owned_vrc20s.into_iter().enumerate() {
         if pushed_amount >= amount {
             break;
         }
@@ -46,9 +47,9 @@ pub async fn move_vrc20(
             bail!("the index index not supported >= {}", u8::MAX);
         }
 
-        let add_amount = res.as_vrc20().expect("should be vrc20").amount;
+        let add_amount = local.resource.as_vrc20().expect("should be vrc20").amount;
 
-        utxos.push(utxo);
+        utxos.push(local.utxo);
         inputs.push((index as u8, add_amount));
         pushed_amount += add_amount;
     }
