@@ -26,7 +26,12 @@ use vital_script_primitives::{
 use vital_script_runner::*;
 use wallet::Wallet;
 
-use crate::{parser::tx_from_bdk, resource::LocalResource, vital_script_runner::LocalRunner};
+use crate::{
+    parser::tx_from_bdk,
+    resource::LocalResource,
+    used_utxo::{append_used_utxos, load_used_utxos, save_used_utxos},
+    vital_script_runner::LocalRunner,
+};
 
 pub struct Context {
     pub root_path: std::path::PathBuf,
@@ -39,6 +44,7 @@ pub struct Context {
     pub utxo_resources: BTreeMap<Resource, LocalUtxo>,
     pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
     pub reveal_inputs: Vec<LocalUtxo>,
+    pub used_utxos: Vec<bdk::bitcoin::OutPoint>,
     pub outputs: Vec<(Option<Address>, u64)>,
     pub sats_amount: u64,
 }
@@ -47,6 +53,14 @@ impl Context {
     pub async fn new(root_path: std::path::PathBuf, indexer: &str, wallet: Wallet) -> Result<Self> {
         let indexer = IndexerClient::new(indexer).await?;
         let query_env_context = vital_env_for_query(indexer.clone());
+
+        let used_utxos = if wallet.synced {
+            let empty = Vec::new();
+            save_used_utxos(&root_path, &empty).expect("save failed");
+            empty
+        } else {
+            load_used_utxos(&root_path).expect("load failed")
+        };
 
         let mut res = Self {
             root_path,
@@ -61,6 +75,7 @@ impl Context {
             // At least one outputs
             outputs: vec![(None, 0)],
             sats_amount: 0,
+            used_utxos,
         };
 
         let utxo_with_resources =
@@ -72,6 +87,10 @@ impl Context {
         }
 
         Ok(res)
+    }
+
+    pub fn append_used_utxos(&self, utxos: &[OutPoint]) -> Result<()> {
+        append_used_utxos(&self.root_path, utxos)
     }
 
     pub fn with_fee_rate(mut self, fee_rate: &Option<f32>) -> Self {

@@ -36,7 +36,7 @@ pub struct P2trBuilder<'a> {
     master_xpriv: ExtendedPrivKey,
     derivation_path: DerivationPath,
 
-    utxo_with_resources: Vec<OutPoint>,
+    no_alive_utxos: Vec<OutPoint>,
 
     reveal_inputs: Vec<LocalUtxo>,
     outputs: Vec<(Address, u64)>,
@@ -47,7 +47,8 @@ impl<'a> P2trBuilder<'a> {
         let secp = Secp256k1::new();
 
         let wallet = &context.wallet;
-        let utxo_with_resources = context.utxo_with_resources.clone();
+        let no_alive_utxos =
+            [context.utxo_with_resources.clone(), context.used_utxos.clone()].concat();
 
         let outputs = context
             .outputs
@@ -79,7 +80,7 @@ impl<'a> P2trBuilder<'a> {
             internal_key,
             master_xpriv,
             derivation_path,
-            utxo_with_resources,
+            no_alive_utxos,
             reveal_inputs: context.reveal_inputs.clone(),
             outputs,
         })
@@ -137,7 +138,7 @@ impl<'a> P2trBuilder<'a> {
 
         builder.set_recipients(vec![(commit_script_pubkey, amount_to_trans)]);
         // Note we not use this utxos, because it will cost the resource.
-        builder.unspendable(self.utxo_with_resources.clone());
+        builder.unspendable(self.no_alive_utxos.clone());
 
         if let Some(fee_rate) = &self.fee_rate {
             builder.fee_rate(*fee_rate);

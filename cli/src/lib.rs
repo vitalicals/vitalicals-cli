@@ -57,6 +57,10 @@ struct Cli {
     /// Signal that this transaction can be replaced by a transaction (BIP 125).
     #[arg(long)]
     replaceable: bool,
+
+    /// If need forced sync
+    #[arg(long, default_value = "false")]
+    no_sync: bool,
 }
 
 impl Cli {
@@ -107,7 +111,7 @@ pub async fn run() -> Result<()> {
         .format_module_path(true)
         .format_level(true)
         .filter_level(log_level)
-        .parse_filters("bdk::blockchain::script_sync=info")
+        // .parse_filters("bdk::blockchain::script_sync=info")
         .try_init();
 
     log::debug!("Run cli {:?}", cli);

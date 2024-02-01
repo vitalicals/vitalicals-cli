@@ -82,7 +82,7 @@ fn send_to_address(
     fee_rate: &Option<f32>,
     replaceable: bool,
 ) -> Result<()> {
-    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
+    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir, true)
         .context("load wallet failed")?;
     let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
@@ -163,7 +163,7 @@ fn inscribe_to_address_impl(
     _replaceable: bool,
     datas: &str,
 ) -> Result<()> {
-    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir)
+    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir, true)
         .context("load wallet failed")?;
     let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;

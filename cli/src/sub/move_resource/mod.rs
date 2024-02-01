@@ -47,6 +47,8 @@ impl MoveSubCommands {
             }
         }
 
+        context.wallet.flush()?;
+
         Ok(())
     }
 }
