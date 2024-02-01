@@ -12,31 +12,23 @@ pub enum MintSubCommands {
     Name {
         /// The name to mint
         name: String,
-
-        /// The sat amount in BTC to send.
-        amount: u64,
     },
     /// Mint VRC20 resource by it 's name.
     VRC20 {
         /// The vrc20 's name to mint.
         vrc20_name: String,
-
-        /// The sat amount in BTC to send.
-        amount: u64,
     },
 }
 
 impl MintSubCommands {
     pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
-        match self {
-            Self::Name { name, amount } => {
-                let context = build_context(cli).await?.with_amount(*amount);
+        let context = build_context(cli).await?;
 
+        match self {
+            Self::Name { name } => {
                 mint_name(&context, name.clone()).await?;
             }
-            Self::VRC20 { vrc20_name, amount } => {
-                let context = build_context(cli).await?.with_amount(*amount);
-
+            Self::VRC20 { vrc20_name } => {
                 mint_vrc20(&context, vrc20_name.clone()).await?;
             }
         }

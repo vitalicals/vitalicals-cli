@@ -66,7 +66,7 @@ impl UtilsSubCommands {
                 send_to_address(network, cli, address, *amount, fee_rate, *replaceable)
             }
             Self::InscribeToAddress { amount, datas } => {
-                let context = crate::build_context(cli).await?.with_amount(*amount);
+                let context = crate::build_context(cli).await?.with_sats_amount(*amount);
 
                 inscribe_to_address(&context, datas.as_str()).await
             }

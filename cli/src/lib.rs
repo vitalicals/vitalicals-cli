@@ -46,6 +46,10 @@ struct Cli {
     #[arg(long)]
     to: Option<String>,
 
+    /// The btc sats for output
+    #[arg(long, default_value = "600")]
+    sats: u64,
+
     /// Specify a fee rate in sat/vB.
     #[arg(short, long)]
     fee_rate: Option<f32>,
