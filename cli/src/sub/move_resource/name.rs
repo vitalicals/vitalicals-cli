@@ -4,7 +4,7 @@ use vital_script_primitives::resources::{Name, Resource};
 
 use crate::Context;
 
-pub async fn move_names(context: &mut Context, names: &[String], amount: u64) -> Result<()> {
+pub async fn move_names(context: &mut Context, names: &[String]) -> Result<()> {
     use vital_script_builder::templates;
 
     let mut utxos = Vec::with_capacity(names.len());
@@ -29,7 +29,7 @@ pub async fn move_names(context: &mut Context, names: &[String], amount: u64) ->
 
     let startup_output_index = 0;
     context
-        .set_outputs_from(startup_output_index, names.len(), amount)
+        .set_outputs_from(startup_output_index, names.len(), context.sats_amount)
         .context("set outputs")?;
 
     // build script.

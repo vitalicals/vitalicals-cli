@@ -43,31 +43,24 @@ pub enum DeploySubCommands {
         /// The ext datas for vrc20
         #[arg(long)]
         meta_data: Option<String>,
-
-        /// The sat amount in BTC to send.
-        #[arg(long, default_value = "1000")]
-        amount: u64,
     },
 }
 
 impl DeploySubCommands {
     pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
-        let context = build_context(cli).await.context("build context")?;
+        let mut context = build_context(cli).await.context("build context")?;
 
         match self {
             Self::VRC20 {
                 name,
                 decimals,
                 nonce,
-                amount,
                 bworkc,
                 mint_amount,
                 mint_height,
                 max_mints,
                 meta_data,
             } => {
-                let mut context = context.with_amount(*amount);
-
                 let meta_data =
                     meta_data.as_ref().map(|data| MetaData { raw: data.as_bytes().to_vec() });
 

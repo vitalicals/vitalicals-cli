@@ -16,15 +16,11 @@ pub enum MoveSubCommands {
     Name {
         /// The name to move.
         name: String,
-        /// The amount for output.
-        amount: u64,
     },
     /// Move name to outpoint.
     Names {
         /// The name to move.
         names: Vec<String>,
-        /// The amount for each output.
-        amount: u64,
     },
     /// Move vrc20 to outpoint with charge.
     VRC20 {
@@ -32,9 +28,6 @@ pub enum MoveSubCommands {
         name: String,
         /// The amount
         amount: u128,
-        /// The btc sats for output
-        #[arg(long, default_value = "1000")]
-        sats: u64,
     },
 }
 
@@ -43,14 +36,14 @@ impl MoveSubCommands {
         let mut context = build_context(cli).await.context("build context")?;
 
         match self {
-            MoveSubCommands::Name { name, amount } => {
-                move_names(&mut context, &[name.clone()], *amount).await?;
+            MoveSubCommands::Name { name } => {
+                move_names(&mut context, &[name.clone()]).await?;
             }
-            MoveSubCommands::Names { names, amount } => {
-                move_names(&mut context, names, *amount).await?;
+            MoveSubCommands::Names { names } => {
+                move_names(&mut context, names).await?;
             }
-            MoveSubCommands::VRC20 { name, amount, sats } => {
-                move_vrc20(&mut context, name, U256::from(*amount), *sats).await?;
+            MoveSubCommands::VRC20 { name, amount } => {
+                move_vrc20(&mut context, name, U256::from(*amount)).await?;
             }
         }
 

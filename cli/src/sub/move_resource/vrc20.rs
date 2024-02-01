@@ -4,12 +4,7 @@ use vital_script_primitives::{resources::Name, U256};
 
 use crate::Context;
 
-pub async fn move_vrc20(
-    context: &mut Context,
-    name: &String,
-    amount: U256,
-    sats: u64,
-) -> Result<()> {
+pub async fn move_vrc20(context: &mut Context, name: &String, amount: U256) -> Result<()> {
     use vital_script_builder::templates;
 
     let vrc20_name =
@@ -64,11 +59,11 @@ pub async fn move_vrc20(
     }
 
     context.append_reveal_input(&utxos);
-    context.set_amount(sats);
+    context.set_amount(context.sats_amount);
 
     // the move had charge
     if outputs.len() == 2 {
-        context.append_output(None, sats)
+        context.append_output(None, context.sats_amount)
     }
 
     // build tx then send

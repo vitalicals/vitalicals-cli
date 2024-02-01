@@ -40,6 +40,7 @@ pub struct Context {
     pub utxo_with_resources: Vec<bdk::bitcoin::OutPoint>,
     pub reveal_inputs: Vec<LocalUtxo>,
     pub outputs: Vec<(Option<Address>, u64)>,
+    pub sats_amount: u64,
 }
 
 impl Context {
@@ -59,6 +60,7 @@ impl Context {
             reveal_inputs: Vec::new(),
             // At least one outputs
             outputs: vec![(None, 0)],
+            sats_amount: 0,
         };
 
         let utxo_with_resources =
@@ -100,13 +102,14 @@ impl Context {
         Ok(self)
     }
 
-    pub fn with_amount(mut self, amount: u64) -> Self {
+    pub fn with_sats_amount(mut self, amount: u64) -> Self {
         self.outputs = self
             .outputs
             .clone()
             .into_iter()
             .map(|(output, _)| (output, amount))
             .collect::<Vec<_>>();
+        self.sats_amount = amount;
 
         self
     }
@@ -118,6 +121,7 @@ impl Context {
             .into_iter()
             .map(|(output, _)| (output, amount))
             .collect::<Vec<_>>();
+        self.sats_amount = amount;
     }
 
     pub fn with_reveal_input(mut self, reveal_inputs: &[LocalUtxo]) -> Self {

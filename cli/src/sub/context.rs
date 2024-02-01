@@ -15,7 +15,8 @@ pub async fn build_context(cli: &Cli) -> Result<Context> {
         .with_fee_rate(&cli.fee_rate)
         .with_replaceable(&cli.replaceable)
         .with_to_address(&cli.to)
-        .context("with address")?;
+        .context("with address")?
+        .with_sats_amount(cli.sats);
 
     Ok(context)
 }
