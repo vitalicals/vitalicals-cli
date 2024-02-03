@@ -41,7 +41,7 @@ impl RunnerContextT for RunnerContext {
     }
 
     fn try_mint(&mut self) -> Result<()> {
-        if self.had_mint{
+        if self.had_mint {
             bail!("each tx can only have one mint");
         }
 

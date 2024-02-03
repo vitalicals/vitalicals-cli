@@ -33,7 +33,10 @@ impl core::fmt::Display for InstructionResourceMove {
 
 impl Instruction for InstructionResourceMove {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
-        context.input_resource().cost(&self.resource).context("cost resource failed")?;
+        context
+            .input_resource_mut()
+            .cost(&self.resource)
+            .context("cost resource failed")?;
 
         context
             .send_resource_to_output(self.output_index, self.resource.clone())
@@ -97,7 +100,7 @@ impl Instruction for InstructionResourceMoveAll {
             .get_vrc20(self.resource_type.name)
             .ok_or_else(|| anyhow!("not found vrc20 resource by name"))?;
 
-        context.input_resource().cost(&resource).context("cost resource failed")?;
+        context.input_resource_mut().cost(&resource).context("cost resource failed")?;
 
         context
             .send_resource_to_output(self.output_index, resource)

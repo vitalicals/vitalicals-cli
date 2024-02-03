@@ -21,7 +21,7 @@ pub use env::EnvContext;
 use input::InputResourcesContext;
 use runner::RunnerContext;
 
-use crate::traits::EnvFunctions;
+use crate::{traits::EnvFunctions, TARGET};
 
 const CAP_SIZE: usize = 16;
 
@@ -48,15 +48,27 @@ where
         self.mode
     }
 
-    fn env(&mut self) -> &mut Self::Env {
+    fn env(&self) -> &Self::Env {
+        &self.env
+    }
+
+    fn env_mut(&mut self) -> &mut Self::Env {
         &mut self.env
     }
 
-    fn input_resource(&mut self) -> &mut Self::InputResource {
+    fn input_resource(&self) -> &Self::InputResource {
+        &self.input_resources
+    }
+
+    fn input_resource_mut(&mut self) -> &mut Self::InputResource {
         &mut self.input_resources
     }
 
-    fn runner(&mut self) -> &mut Self::Runner {
+    fn runner(&self) -> &Self::Runner {
+        &self.runner
+    }
+
+    fn runner_mut(&mut self) -> &mut Self::Runner {
         &mut self.runner
     }
 
@@ -83,7 +95,12 @@ where
 
     /// Do post check
     fn post_check(&self) -> Result<()> {
-        // TODO: post check
+        let uncosted = self.input_resource().uncosted();
+
+        if !uncosted.is_empty() {
+            log::warn!(target: TARGET, "the input not all costed yet");
+        }
+
         Ok(())
     }
 
@@ -98,7 +115,7 @@ where
             self.env().remove_input_resources(&all).context("remove")?;
 
             // set all outputs 's resources bind
-            self.env().apply_output_resources().context("apply")?;
+            self.env_mut().apply_output_resources().context("apply")?;
         }
 
         // storage all uncosted inputs 's resources to space.
