@@ -23,6 +23,13 @@ pub(crate) async fn send_p2tr(context: &Context, scripts_bytes: Vec<u8>) -> Resu
 
     let (commit_psbt, reveal_psbt) = builder.build().context("build tx error")?;
 
+    let outpoints_used = commit_psbt
+        .unsigned_tx
+        .input
+        .iter()
+        .map(|input| input.previous_output)
+        .collect::<Vec<_>>();
+
     let commit_raw_transaction = commit_psbt.extract_tx();
     let commit_txid = commit_raw_transaction.txid();
 
@@ -39,6 +46,10 @@ pub(crate) async fn send_p2tr(context: &Context, scripts_bytes: Vec<u8>) -> Resu
 
     bdk_blockchain.broadcast(&reveal_raw_transaction)?;
     println!("Reveal Transaction broadcast! TXID: {txid}.\nExplorer URL: https://mempool.space/testnet/tx/{txid}", txid = reveal_txid);
+
+    if let Err(err) = context.append_used_utxos(&outpoints_used) {
+        println!("save used utxos failed by {}, should use --sync to ensure synced", err);
+    };
 
     Ok(())
 }

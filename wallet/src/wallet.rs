@@ -1,7 +1,7 @@
 //! The wallet wrapper implementation by bdk
 
 use anyhow::{anyhow, bail, Context, Result};
-use std::{path::Path, str::FromStr};
+use std::{path::Path, str::FromStr, time::UNIX_EPOCH};
 
 use bdk::{
     bitcoin::{
@@ -9,8 +9,8 @@ use bdk::{
         secp256k1::{All, Secp256k1, XOnlyPublicKey},
         Network,
     },
-    blockchain::AnyBlockchain,
-    database::AnyDatabase,
+    blockchain::{AnyBlockchain, GetHeight, Progress},
+    database::{AnyDatabase, Database},
     descriptor::IntoWalletDescriptor,
     keys::{
         bip39::{Language, Mnemonic, WordCount},
@@ -29,6 +29,7 @@ pub struct Wallet {
     pub xpriv: ExtendedPrivKey,
     pub wallet: BdkWallet<AnyDatabase>,
     pub blockchain: AnyBlockchain,
+    pub synced: bool,
 }
 
 impl Wallet {
@@ -38,10 +39,15 @@ impl Wallet {
         blockchain: AnyBlockchain,
     ) -> Result<Self> {
         let xpriv = ExtendedPrivKey::from_str(xprv.as_str()).context("ExtendedPrivKey from str")?;
-        Ok(Self { xprv, xpriv, wallet, blockchain })
+        Ok(Self { xprv, xpriv, wallet, blockchain, synced: false })
     }
 
-    pub fn create(network: Network, endpoint: String, path: &std::path::PathBuf) -> Result<Wallet> {
+    pub fn create(
+        network: Network,
+        endpoint: String,
+        path: &std::path::PathBuf,
+        forced_sync: bool,
+    ) -> Result<Wallet> {
         // Generate fresh mnemonic
         let mnemonic: GeneratedKey<_, miniscript::Segwitv0> =
             Mnemonic::generate((WordCount::Words12, Language::English))
@@ -49,7 +55,7 @@ impl Wallet {
         // Convert mnemonic to string
         let mnemonic_words = mnemonic.to_string();
 
-        Self::create_by_mnemonic(network, endpoint, path, mnemonic_words)
+        Self::create_by_mnemonic(network, endpoint, path, mnemonic_words, forced_sync)
     }
 
     pub fn create_by_mnemonic(
@@ -57,6 +63,7 @@ impl Wallet {
         endpoint: String,
         root: &std::path::PathBuf,
         mnemonic_words: String,
+        forced_sync: bool,
     ) -> Result<Self> {
         // clean database datas.
         rm_database(network, root)?;
@@ -68,12 +75,13 @@ impl Wallet {
         // Get xprv from the extended key
         let xprv = xkey.into_xprv(network).ok_or(anyhow!("not got xprv"))?;
 
-        let (wallet, blockchain) = Self::load_wallet(
+        let (wallet, blockchain, synced) = Self::load_wallet(
             network,
             endpoint,
             root,
             Bip86(xprv, KeychainKind::External),
             Some(Bip86(xprv, KeychainKind::Internal)),
+            forced_sync,
         )
         .context("load_wallet")?;
 
@@ -84,8 +92,10 @@ impl Wallet {
             wallet.get_descriptor_for_keychain(KeychainKind::Internal).to_string()
         );
 
-        let res = Self::create_from_wallet(xprv.to_string(), wallet, blockchain)?;
+        let mut res = Self::create_from_wallet(xprv.to_string(), wallet, blockchain)?;
         res.save(root)?;
+
+        res.synced = synced;
 
         Ok(res)
     }
@@ -96,20 +106,26 @@ impl Wallet {
         to_file.save(root)
     }
 
-    pub fn load(network: Network, endpoint: String, root: &std::path::PathBuf) -> Result<Self> {
+    pub fn load(
+        network: Network,
+        endpoint: String,
+        root: &std::path::PathBuf,
+        forced_sync: bool,
+    ) -> Result<Self> {
         let from_file = WalletFile::load(root, network).context("load file failed")?;
         let xpriv = bip32::ExtendedPrivKey::from_str(from_file.xpriv.as_str()).unwrap();
 
-        let (wallet, blockchain) = Self::load_wallet(
+        let (wallet, blockchain, synced) = Self::load_wallet(
             network,
             endpoint,
             root,
             Bip86(xpriv, KeychainKind::External),
             Some(Bip86(xpriv, KeychainKind::Internal)),
+            forced_sync,
         )
         .context("load wallet")?;
 
-        Ok(Self { xpriv, xprv: from_file.xpriv, wallet, blockchain })
+        Ok(Self { xpriv, xprv: from_file.xpriv, wallet, blockchain, synced })
     }
 
     fn load_wallet<E: IntoWalletDescriptor>(
@@ -118,15 +134,46 @@ impl Wallet {
         root: &std::path::PathBuf,
         descriptor: E,
         change_descriptor: Option<E>,
-    ) -> Result<(BdkWallet<AnyDatabase>, AnyBlockchain)> {
+        forced_sync: bool,
+    ) -> Result<(BdkWallet<AnyDatabase>, AnyBlockchain, bool)> {
         let database = open_database(network, root).context("open_database")?;
         let blockchain = new_electrum_blockchain(endpoint).context("new_electrum_blockchain")?;
 
+        let sync_time = database
+            .get_sync_time()
+            .map_err(|err| anyhow!("get sync time failed by {}", err))?;
+
         let wallet = BdkWallet::new(descriptor, change_descriptor, network, database)?;
 
-        wallet.sync(&blockchain, SyncOptions::default()).context("sync")?;
+        let need_sync = forced_sync
+            || if let Some(sync_time) = sync_time {
+                let current =
+                    std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
-        Ok((wallet, blockchain))
+                let latest_block_height = blockchain
+                    .get_height()
+                    .map_err(|err| anyhow!("get block height failed by {}", err))?;
+
+                latest_block_height != sync_time.block_time.height
+                    || current >= sync_time.block_time.timestamp + 60
+            } else {
+                false
+            };
+
+        if need_sync {
+            wallet
+                .sync(&blockchain, SyncOptions { progress: Some(Box::new(ProgressLogger {})) })
+                .context("sync")?;
+
+            match &*wallet.database() {
+                AnyDatabase::Memory(_) => {}
+                AnyDatabase::Sled(sled) => {
+                    sled.flush().map_err(|err| anyhow!("flush failed: {:?}", err))?;
+                }
+            }
+        }
+
+        Ok((wallet, blockchain, need_sync))
     }
 }
 
@@ -147,6 +194,17 @@ impl Wallet {
         &self.xpriv
     }
 
+    pub fn flush(&self) -> Result<()> {
+        match &*self.wallet.database() {
+            AnyDatabase::Memory(_) => {}
+            AnyDatabase::Sled(sled) => {
+                sled.flush().map_err(|err| anyhow!("flush failed: {:?}", err))?;
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn derive_x_only_public_key(&self, secp: &Secp256k1<All>) -> Result<XOnlyPublicKey> {
         let derivation_path = self.full_derivation_path().context("get full derivation")?;
         let (internal_key, _) = self
@@ -160,5 +218,24 @@ impl Wallet {
 
     pub fn network(&self) -> Network {
         self.wallet.network()
+    }
+}
+
+#[derive(Debug)]
+pub struct ProgressLogger {}
+
+impl Progress for ProgressLogger {
+    fn update(
+        &self,
+        progress: f32,
+        message: Option<String>,
+    ) -> std::prelude::v1::Result<(), bdk::Error> {
+        if let Some(message) = message {
+            println!("sync progress {} : {}", message, progress)
+        } else {
+            println!("sync progress: {}", progress)
+        }
+
+        Ok(())
     }
 }

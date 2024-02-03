@@ -80,6 +80,8 @@ impl DeploySubCommands {
             }
         }
 
+        context.wallet.flush()?;
+
         Ok(())
     }
 }

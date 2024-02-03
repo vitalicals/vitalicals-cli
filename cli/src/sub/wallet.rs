@@ -45,7 +45,7 @@ impl WalletSubCommands {
 fn create_wallet(cli: &Cli) -> Result<()> {
     let network = cli.network();
 
-    Wallet::create(network, cli.endpoint.clone(), &cli.datadir)?;
+    Wallet::create(network, cli.endpoint.clone(), &cli.datadir, true)?;
 
     Ok(())
 }
@@ -53,15 +53,15 @@ fn create_wallet(cli: &Cli) -> Result<()> {
 fn import_mnemonic(cli: &Cli, mnemonic: String) -> Result<()> {
     let network = cli.network();
 
-    Wallet::create_by_mnemonic(network, cli.endpoint.clone(), &cli.datadir, mnemonic)?;
+    Wallet::create_by_mnemonic(network, cli.endpoint.clone(), &cli.datadir, mnemonic, true)?;
 
     Ok(())
 }
 
 fn balance(cli: &Cli) -> Result<()> {
     let network = cli.network();
-    let wallet =
-        Wallet::load(network, cli.endpoint.clone(), &cli.datadir).context("load wallet failed")?;
+    let wallet = Wallet::load(network, cli.endpoint.clone(), &cli.datadir, true)
+        .context("load wallet failed")?;
 
     let balance = wallet.wallet.get_balance().context("get balance failed")?;
     println!("balance: {}", balance);
@@ -71,8 +71,8 @@ fn balance(cli: &Cli) -> Result<()> {
 
 fn address(cli: &Cli, index: &Option<u32>) -> Result<()> {
     let network = cli.network();
-    let wallet =
-        Wallet::load(network, cli.endpoint.clone(), &cli.datadir).context("load wallet failed")?;
+    let wallet = Wallet::load(network, cli.endpoint.clone(), &cli.datadir, true)
+        .context("load wallet failed")?;
 
     let address = if let Some(index) = index {
         wallet.wallet.get_address(AddressIndex::Peek(*index))
