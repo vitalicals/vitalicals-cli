@@ -106,7 +106,9 @@ impl<'a> BlockRunner<'a> {
                     tx_id,
                     resp: res,
                 },
-                Err(_err) => {
+                Err(err) => {
+                    log::warn!(target: TARGET, "tx run failed by {}", err);
+        
                     TxRunResponse { status: TxRunStatus::Failed, tx_index: index, tx_id, resp: () }
                 }
             };
