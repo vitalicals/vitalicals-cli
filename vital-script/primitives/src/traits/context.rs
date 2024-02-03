@@ -18,6 +18,9 @@ pub enum MetaDataType {
 }
 
 pub trait EnvContext {
+    /// get current block height
+    fn get_block_height(&self) -> u32;
+
     /// get current tx id.
     fn get_reveal_tx_id(&self) -> &Txid;
 
@@ -114,6 +117,7 @@ pub trait RunnerContext {
     fn try_assert_input(&mut self, index: u8) -> Result<()>;
     fn try_assert_output(&mut self, index: u8) -> Result<()>;
     fn is_output_available(&self, index: u8) -> bool;
+    fn try_mint(&mut self) -> Result<()>;
 }
 
 pub trait InputResourcesContext {
@@ -158,10 +162,12 @@ pub trait Context {
 
     type Instruction: Instruction;
 
-    // TODO use env_mut
-    fn env(&mut self) -> &mut Self::Env;
-    fn runner(&mut self) -> &mut Self::Runner;
-    fn input_resource(&mut self) -> &mut Self::InputResource;
+    fn env(&self) -> &Self::Env;
+    fn env_mut(&mut self) -> &mut Self::Env;
+    fn runner(&self) -> &Self::Runner;
+    fn runner_mut(&mut self) -> &mut Self::Runner;
+    fn input_resource(&self) -> &Self::InputResource;
+    fn input_resource_mut(&mut self) -> &mut Self::InputResource;
 
     fn get_ops(&self) -> &[(u8, Vec<u8>)];
     fn get_instructions(&self) -> Result<Vec<Self::Instruction>>;
@@ -175,12 +181,14 @@ pub trait Context {
     ///   - set all outputs 's resources bind
     ///   - storage all uncosted inputs 's resources to space.
     fn apply_resources(&mut self) -> Result<()> {
-        // del all inputs 's resources bind
-        let all = self.input_resource().all().to_vec();
-        self.env().remove_input_resources(&all).context("remove")?;
+        if !self.run_mod().is_skip_check() {
+            // del all inputs 's resources bind
+            let all = self.input_resource().all().to_vec();
+            self.env().remove_input_resources(&all).context("remove")?;
 
-        // set all outputs 's resources bind
-        self.env().apply_output_resources().context("apply")?;
+            // set all outputs 's resources bind
+            self.env_mut().apply_output_resources().context("apply")?;
+        }
 
         // storage all uncosted inputs 's resources to space.
         // TODO: impl
@@ -204,7 +212,7 @@ pub trait Context {
         .context("the output cannot merge to")?;
 
         // 3. set the resource to output
-        self.env().set_resource_to_output(index, resource.clone()).context("set")?;
+        self.env_mut().set_resource_to_output(index, resource.clone()).context("set")?;
 
         self.on_output(index, resource);
 

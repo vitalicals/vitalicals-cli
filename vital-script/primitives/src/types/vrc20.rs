@@ -7,7 +7,7 @@ use super::MetaData;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VRC20MintMeta {
     pub mint_amount: u128,
-    pub mint_height: u64,
+    pub mint_height: u32,
     pub max_mints: u64,
 }
 

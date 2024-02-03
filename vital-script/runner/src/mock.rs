@@ -152,7 +152,10 @@ impl ContextMock {
             .map(|input| input.previous_output.clone())
             .collect::<Vec<_>>();
 
-        Self { inner: ContextMockInner::new(env, commit_tx_inputs_previous_output, &tx.reveal), tx }
+        Self {
+            inner: ContextMockInner::new(env, commit_tx_inputs_previous_output, &tx.reveal, 10000),
+            tx,
+        }
     }
 }
 
@@ -167,16 +170,28 @@ impl ContextT for ContextMock {
         RunMode::Normal
     }
 
-    fn env(&mut self) -> &mut Self::Env {
+    fn env(&self) -> &Self::Env {
         self.inner.env()
     }
 
-    fn input_resource(&mut self) -> &mut Self::InputResource {
+    fn input_resource(&self) -> &Self::InputResource {
         self.inner.input_resource()
     }
 
-    fn runner(&mut self) -> &mut Self::Runner {
+    fn runner(&self) -> &Self::Runner {
         self.inner.runner()
+    }
+
+    fn env_mut(&mut self) -> &mut Self::Env {
+        self.inner.env_mut()
+    }
+
+    fn input_resource_mut(&mut self) -> &mut Self::InputResource {
+        self.inner.input_resource_mut()
+    }
+
+    fn runner_mut(&mut self) -> &mut Self::Runner {
+        self.inner.runner_mut()
     }
 
     fn get_ops(&self) -> &[(u8, Vec<u8>)] {

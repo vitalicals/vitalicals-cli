@@ -52,7 +52,7 @@ impl<Context: ContextT<Instruction = Instruction>> Runner<Context> {
         log::debug!(target: TARGET, "run instructions len {}", instructions.len());
 
         // 1. run pre check
-        context.pre_check().context("context")?;
+        context.pre_check().context("pre check")?;
 
         for (index, instruction) in instructions.iter().enumerate() {
             instruction
@@ -68,6 +68,7 @@ impl<Context: ContextT<Instruction = Instruction>> Runner<Context> {
         }
 
         // 3. post check
+        context.post_check().context("post check")?;
 
         // 4. apply the resources
         context.apply_resources().context("apply")?;
@@ -128,7 +129,7 @@ mod tests {
 
         let env_interface = EnvMock::new();
 
-        let mut context1 = {
+        let context1 = {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -156,7 +157,7 @@ mod tests {
         let res = env_interface.get_resources(&outpoint).expect("get resources failed");
         assert_eq!(res, Some(Resource::name(mint_name)));
 
-        let mut context2 = {
+        let context2 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -211,7 +212,7 @@ mod tests {
         // 3. mint vrc20
         let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount.into()).expect("res");
 
-        let mut context3 = {
+        let context3 = {
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::vrc20(mint_name)),
@@ -236,7 +237,7 @@ mod tests {
         };
 
         // 4. transfer vrc20
-        let mut context4 = {
+        let context4 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -279,7 +280,7 @@ mod tests {
 
         let env_interface = EnvMock::new();
 
-        let mut context1 = {
+        let context1 = {
             // 1. mint a name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -310,7 +311,7 @@ mod tests {
 
         log::info!("step 1: mint name to {} by {}", mint_name_resource, outpoint);
 
-        let mut context2 = {
+        let context2 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
@@ -365,7 +366,7 @@ mod tests {
         // 3. mint vrc20
         let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount.into()).expect("res");
 
-        let mut context3 = {
+        let context3 = {
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::vrc20(mint_name)),
@@ -390,7 +391,7 @@ mod tests {
         };
 
         // 4. transfer vrc20
-        let mut context4 = {
+        let context4 = {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {

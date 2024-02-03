@@ -88,7 +88,12 @@ impl<'a> BlockRunner<'a> {
                 .delete_commit_tx_inputs_previous_output(&commit_txid)
                 .with_context(|| alloc::format!("delete commit_tx {}", commit_txid))?;
 
-            let context = Context::new(env_interface.clone(), commit_tx_inputs_previous_output, tx);
+            let context = Context::new(
+                env_interface.clone(),
+                commit_tx_inputs_previous_output,
+                tx,
+                self.height,
+            );
             if !context.is_valid() {
                 log::debug!(target: TARGET, "context is not valid");
                 continue;

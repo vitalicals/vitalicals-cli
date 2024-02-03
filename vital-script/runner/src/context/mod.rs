@@ -21,7 +21,7 @@ pub use env::EnvContext;
 use input::InputResourcesContext;
 use runner::RunnerContext;
 
-use crate::traits::EnvFunctions;
+use crate::{traits::EnvFunctions, TARGET};
 
 const CAP_SIZE: usize = 16;
 
@@ -48,15 +48,27 @@ where
         self.mode
     }
 
-    fn env(&mut self) -> &mut Self::Env {
+    fn env(&self) -> &Self::Env {
+        &self.env
+    }
+
+    fn env_mut(&mut self) -> &mut Self::Env {
         &mut self.env
     }
 
-    fn input_resource(&mut self) -> &mut Self::InputResource {
+    fn input_resource(&self) -> &Self::InputResource {
+        &self.input_resources
+    }
+
+    fn input_resource_mut(&mut self) -> &mut Self::InputResource {
         &mut self.input_resources
     }
 
-    fn runner(&mut self) -> &mut Self::Runner {
+    fn runner(&self) -> &Self::Runner {
+        &self.runner
+    }
+
+    fn runner_mut(&mut self) -> &mut Self::Runner {
         &mut self.runner
     }
 
@@ -83,26 +95,11 @@ where
 
     /// Do post check
     fn post_check(&self) -> Result<()> {
-        // TODO: post check
-        Ok(())
-    }
+        let uncosted = self.input_resource().uncosted();
 
-    /// Apply changes to indexer, will do:
-    ///   - del all inputs 's resources bind
-    ///   - set all outputs 's resources bind
-    ///   - storage all uncosted inputs 's resources to space.
-    fn apply_resources(&mut self) -> Result<()> {
-        if !self.run_mod().is_skip_check() {
-            // del all inputs 's resources bind
-            let all = self.input_resource().all().to_vec();
-            self.env().remove_input_resources(&all).context("remove")?;
-
-            // set all outputs 's resources bind
-            self.env().apply_output_resources().context("apply")?;
+        if !uncosted.is_empty() {
+            log::warn!(target: TARGET, "the input not all costed yet");
         }
-
-        // storage all uncosted inputs 's resources to space.
-        // TODO: impl
 
         Ok(())
     }
@@ -122,18 +119,24 @@ where
         env_interface: Functions,
         commit_tx_inputs_previous_output: Vec<OutPoint>,
         reveal_tx: &Transaction,
+        block_height: u32,
     ) -> Self {
         let runner = RunnerContext::new();
         let input_resources = InputResourcesContext::new(CAP_SIZE);
-        let env = EnvContext::new(env_interface, commit_tx_inputs_previous_output, reveal_tx);
+        let env = EnvContext::new(
+            env_interface,
+            commit_tx_inputs_previous_output,
+            reveal_tx,
+            block_height,
+        );
 
         Self { env, input_resources, runner, mode: RunMode::Normal, outputs: Vec::new() }
     }
 
-    pub fn simulator(env_interface: Functions, reveal_tx: &Transaction) -> Self {
+    pub fn simulator(env_interface: Functions, reveal_tx: &Transaction, block_height: u32) -> Self {
         let runner = RunnerContext::new();
         let input_resources = InputResourcesContext::new(CAP_SIZE);
-        let env = EnvContext::new_for_sim(env_interface, reveal_tx);
+        let env = EnvContext::new_for_sim(env_interface, reveal_tx, block_height);
 
         Self { env, input_resources, runner, mode: RunMode::Simulator, outputs: Vec::new() }
     }

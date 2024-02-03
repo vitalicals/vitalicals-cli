@@ -72,7 +72,14 @@ async fn mint_vrc20(context: &Context, vrc20_name: String) -> Result<()> {
     }
 
     if vrc20_metadata.meta.mint.mint_height > 0 {
-        // TODO: impl mint height check.
+        let current_height = context.get_btc_block_height()?;
+
+        if current_height + 1 < vrc20_metadata.meta.mint.mint_height {
+            bail!(
+                "the vrc20 mint height is {}, and the current height is {}, so the mint will failed",
+                vrc20_metadata.meta.mint.mint_height, current_height
+            );
+        }
     }
 
     // build script.

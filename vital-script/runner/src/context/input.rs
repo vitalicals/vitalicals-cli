@@ -37,11 +37,7 @@ impl InputResourcesContextT for InputResourcesContext {
     }
 
     fn cost(&mut self, resource: &Resource) -> Result<()> {
-        match resource {
-            Resource::Name(name) => self.inputs.cost_name(name),
-            Resource::VRC20(v) => self.inputs.cost_vrc20(v),
-            Resource::VRC721(v) => self.inputs.cost_vrc721(v),
-        }
+        self.inputs.cost(resource)
     }
 
     fn get_vrc20(&self, name: Tag) -> Option<Resource> {
@@ -194,6 +190,7 @@ impl InputResources {
     }
 
     /// If all input resources had been costed.
+    #[allow(dead_code)]
     pub fn is_costed(&self) -> bool {
         self.vrc20s.iter().all(|v| v.is_costed())
             && self.vrc721s.iter().all(|v| v.is_costed())

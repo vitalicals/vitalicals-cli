@@ -30,7 +30,7 @@ impl core::fmt::Display for InstructionInputAssert {
 impl Instruction for InstructionInputAssert {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // 1. ensure if current input index is not asserted.
-        context.runner().try_assert_input(self.index)?;
+        context.runner_mut().try_assert_input(self.index)?;
 
         // 2. ensure the resource is expected by index.
         if context.run_mod().is_skip_check() {
@@ -47,7 +47,7 @@ impl Instruction for InstructionInputAssert {
 
         // 3. push the resource into resources.
         context
-            .input_resource()
+            .input_resource_mut()
             .push(self.index, self.resource.clone())
             .context("push input resource")?;
 

@@ -60,21 +60,20 @@ impl InstructionResourceMint {
 
 impl Instruction for InstructionResourceMint {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
-        // TODO:: check if can mint
-
         // println!("InstructionResourceMint");
 
-        let resource = self.make_mint_resource(context)?;
+        context.runner_mut().try_mint()?;
 
+        let resource = self.make_mint_resource(context)?;
         match &resource {
             Resource::Name(n) => {
                 // for name, we need flag it
-                context.env().new_name(*n).context("new name failed")?;
+                context.env_mut().new_name(*n).context("new name failed")?;
             }
             Resource::VRC20(v) => {
                 // for vrc20, we need add mint count
                 context
-                    .env()
+                    .env_mut()
                     .increase_vrc20_mint_count(v.name)
                     .context("increase mint count failed")?;
             }

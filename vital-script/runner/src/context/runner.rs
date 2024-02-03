@@ -6,6 +6,7 @@ use vital_script_primitives::traits::context::RunnerContext as RunnerContextT;
 pub struct RunnerContext {
     inputs: BTreeSet<u8>,
     outputs: BTreeSet<u8>,
+    had_mint: bool,
 }
 
 impl RunnerContext {
@@ -35,6 +36,16 @@ impl RunnerContextT for RunnerContext {
         }
 
         self.outputs.insert(index);
+
+        Ok(())
+    }
+
+    fn try_mint(&mut self) -> Result<()> {
+        if self.had_mint {
+            bail!("each tx can only have one mint");
+        }
+
+        self.had_mint = true;
 
         Ok(())
     }

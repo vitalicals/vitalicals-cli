@@ -39,15 +39,15 @@ impl Instruction for InstructionVRC20Deploy {
             bail!("the name input is invalid");
         }
         context
-            .input_resource()
+            .input_resource_mut()
             .cost(&name_resource)
             .context("cost name resource input")?;
 
         // cost the name for deploy the vrc20
-        context.env().cost_name(self.name).context("cost name")?;
+        context.env_mut().cost_name(self.name).context("cost name")?;
 
         // set vrc metadata
-        context.env().deploy_vrc20(self.name, self.meta.clone()).context("deploy")?;
+        context.env_mut().deploy_vrc20(self.name, self.meta.clone()).context("deploy")?;
 
         Ok(())
     }
