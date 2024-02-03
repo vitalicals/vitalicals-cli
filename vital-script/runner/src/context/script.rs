@@ -28,10 +28,12 @@ pub fn maybe_vital_commit_tx_with_input_resource<F: EnvFunctions>(
 ) -> Result<bool> {
     // if a tx use resource as its input, need storage.
     if !tx.output.iter().any(|output| output.script_pubkey.is_p2tr()) {
+        log::debug!(target: TARGET, "maybe_vital_commit_tx_with_input_resource false by no p2tr");
         return Ok(false);
     }
 
-    if tx.input.len() <= 1 {
+    if tx.input.is_empty() {
+        log::debug!(target: TARGET, "maybe_vital_commit_tx_with_input_resource false by no input");
         return Ok(false);
     }
 
@@ -44,6 +46,7 @@ pub fn maybe_vital_commit_tx_with_input_resource<F: EnvFunctions>(
         }
     }
 
+    log::debug!(target: TARGET, "maybe_vital_commit_tx_with_input_resource false by no resource");
     Ok(false)
 }
 
