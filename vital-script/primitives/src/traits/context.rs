@@ -18,6 +18,9 @@ pub enum MetaDataType {
 }
 
 pub trait EnvContext {
+    /// get current block height
+    fn get_block_height(&self) -> u32;
+
     /// get current tx id.
     fn get_reveal_tx_id(&self) -> &Txid;
 

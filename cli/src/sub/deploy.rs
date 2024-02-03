@@ -35,7 +35,7 @@ pub enum DeploySubCommands {
 
         /// The block height can mint
         #[arg(long, default_value = "0")]
-        mint_height: u64,
+        mint_height: u32,
 
         /// The max count for mint
         max_mints: u64,
@@ -89,7 +89,6 @@ impl DeploySubCommands {
 async fn deploy_vrc20(context: &mut Context, name: String, meta: VRC20MetaData) -> Result<()> {
     use vital_script_builder::templates;
 
-    // TODO: check input resource
     let name = Name::try_from(name.as_str())
         .with_context(|| format!("the '{}' name format is invalid", name))?;
     let name_resource = Resource::name(name);

@@ -152,7 +152,10 @@ impl ContextMock {
             .map(|input| input.previous_output.clone())
             .collect::<Vec<_>>();
 
-        Self { inner: ContextMockInner::new(env, commit_tx_inputs_previous_output, &tx.reveal), tx }
+        Self {
+            inner: ContextMockInner::new(env, commit_tx_inputs_previous_output, &tx.reveal, 10000),
+            tx,
+        }
     }
 }
 

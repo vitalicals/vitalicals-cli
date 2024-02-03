@@ -11,6 +11,7 @@ use bdk::{
     bitcoin::{
         address::NetworkUnchecked, hashes::Hash as BdkHash, Address, Network, OutPoint, Transaction,
     },
+    blockchain::GetHeight,
     database::Database,
     LocalUtxo,
 };
@@ -52,7 +53,8 @@ pub struct Context {
 impl Context {
     pub async fn new(root_path: std::path::PathBuf, indexer: &str, wallet: Wallet) -> Result<Self> {
         let indexer = IndexerClient::new(indexer).await?;
-        let query_env_context = vital_env_for_query(indexer.clone());
+        let block_height = wallet.blockchain.get_height().context("get height")?;
+        let query_env_context = vital_env_for_query(indexer.clone(), block_height);
 
         let used_utxos = if wallet.synced {
             let empty = Vec::new();
@@ -193,6 +195,7 @@ impl Context {
 
     pub async fn run_tx_in_local(
         &self,
+        block_height: u32,
         tx: Transaction,
     ) -> Result<Option<Vec<(OutPoint, Resource)>>> {
         let txid = tx.txid();
@@ -202,7 +205,7 @@ impl Context {
         }
 
         let runner = LocalRunner::new(self);
-        let res = runner.run(&tx).await?;
+        let res = runner.run(block_height, &tx).await?;
 
         Ok(Some(
             res.into_iter()
@@ -220,6 +223,7 @@ impl Context {
         let db = self.wallet.wallet.database();
 
         let mut processed_tx = BTreeSet::new();
+        let block_height = self.wallet.blockchain.get_height().context("get block height")?;
 
         // process pendings
         for unspent in unspents.iter() {
@@ -246,7 +250,8 @@ impl Context {
                         continue;
                     };
 
-                    let outputs = self.run_tx_in_local(tx).await.context("run_tx_in_local")?;
+                    let outputs =
+                        self.run_tx_in_local(block_height, tx).await.context("run_tx_in_local")?;
                     if let Some(mut outputs) = outputs {
                         resource_pendings.append(&mut outputs);
                     }
@@ -325,5 +330,9 @@ impl Context {
         }
 
         Ok((sum, owned_vrc20s))
+    }
+
+    pub fn get_btc_block_height(&self) -> Result<u32> {
+        self.wallet.blockchain.get_height().context("get height")
     }
 }

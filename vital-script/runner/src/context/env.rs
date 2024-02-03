@@ -22,6 +22,7 @@ pub struct EnvContext<Functions: EnvFunctions> {
 
     /// The reveal_tx
     reveal_tx_id: Txid,
+    block_height: u32,
 
     ops: Vec<(u8, Vec<u8>)>,
 
@@ -34,6 +35,7 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
         env_interface: Functions,
         commit_tx_inputs_previous_output: Vec<OutPoint>,
         reveal_tx: &Transaction,
+        block_height: u32,
     ) -> Self {
         let ops = parse_vital_scripts(reveal_tx).expect("parse vital scripts");
 
@@ -43,22 +45,28 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
             env: env_interface,
             commit_tx_inputs_previous_output,
             reveal_tx_id,
+            block_height,
             ops,
             cached_output_resources: BTreeMap::new(),
         }
     }
 
-    pub fn new_for_sim(env_interface: Functions, reveal_tx: &Transaction) -> Self {
-        Self::new(env_interface, Vec::new(), reveal_tx)
+    pub fn new_for_sim(
+        env_interface: Functions,
+        reveal_tx: &Transaction,
+        block_height: u32,
+    ) -> Self {
+        Self::new(env_interface, Vec::new(), reveal_tx, block_height)
     }
 
-    pub fn new_for_query(env_interface: Functions) -> Self {
+    pub fn new_for_query(env_interface: Functions, block_height: u32) -> Self {
         Self {
             env: env_interface,
             commit_tx_inputs_previous_output: Default::default(),
             reveal_tx_id: Txid::all_zeros(),
             ops: Default::default(),
             cached_output_resources: BTreeMap::new(),
+            block_height,
         }
     }
 
@@ -72,6 +80,10 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
 }
 
 impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
+    fn get_block_height(&self) -> u32 {
+        self.block_height
+    }
+
     /// get current tx id.
     fn get_reveal_tx_id(&self) -> &Txid {
         &self.reveal_tx_id

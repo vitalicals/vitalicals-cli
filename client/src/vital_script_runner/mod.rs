@@ -18,21 +18,22 @@ impl<'a> LocalRunner<'a> {
 
     pub fn new_runner_context(
         &self,
+        block_height: u32,
         tx: &Transaction,
     ) -> RunnerContext<SimulatorEnvInterface<IndexerClient>> {
         let env_interface = SimulatorEnvInterface::new(self.context.indexer.clone());
 
-        RunnerContext::simulator(env_interface, tx)
+        RunnerContext::simulator(env_interface, tx, block_height)
     }
 
-    pub async fn run(&self, tx: &Transaction) -> Result<Vec<(u8, Resource)>> {
+    pub async fn run(&self, block_height: u32, tx: &Transaction) -> Result<Vec<(u8, Resource)>> {
         // need got commit tx
         let scripts = parse_vital_scripts(tx).context("parse_vital_scripts")?;
         if scripts.len() > 1 {
             todo!("Currently we not support more than one script");
         }
 
-        let mut ctx = self.new_runner_context(tx);
+        let mut ctx = self.new_runner_context(block_height, tx);
         if !ctx.is_valid() {
             bail!("context not valid")
         }

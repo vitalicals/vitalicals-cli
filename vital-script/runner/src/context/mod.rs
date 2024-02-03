@@ -139,18 +139,24 @@ where
         env_interface: Functions,
         commit_tx_inputs_previous_output: Vec<OutPoint>,
         reveal_tx: &Transaction,
+        block_height: u32,
     ) -> Self {
         let runner = RunnerContext::new();
         let input_resources = InputResourcesContext::new(CAP_SIZE);
-        let env = EnvContext::new(env_interface, commit_tx_inputs_previous_output, reveal_tx);
+        let env = EnvContext::new(
+            env_interface,
+            commit_tx_inputs_previous_output,
+            reveal_tx,
+            block_height,
+        );
 
         Self { env, input_resources, runner, mode: RunMode::Normal, outputs: Vec::new() }
     }
 
-    pub fn simulator(env_interface: Functions, reveal_tx: &Transaction) -> Self {
+    pub fn simulator(env_interface: Functions, reveal_tx: &Transaction, block_height: u32) -> Self {
         let runner = RunnerContext::new();
         let input_resources = InputResourcesContext::new(CAP_SIZE);
-        let env = EnvContext::new_for_sim(env_interface, reveal_tx);
+        let env = EnvContext::new_for_sim(env_interface, reveal_tx, block_height);
 
         Self { env, input_resources, runner, mode: RunMode::Simulator, outputs: Vec::new() }
     }
