@@ -31,7 +31,7 @@ pub fn maybe_vital_commit_tx_with_input_resource<F: EnvFunctions>(
         return Ok(false);
     }
 
-    if tx.input.len() <= 1 {
+    if tx.input.is_empty() {
         return Ok(false);
     }
 
