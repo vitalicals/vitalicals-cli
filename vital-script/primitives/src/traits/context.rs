@@ -181,12 +181,14 @@ pub trait Context {
     ///   - set all outputs 's resources bind
     ///   - storage all uncosted inputs 's resources to space.
     fn apply_resources(&mut self) -> Result<()> {
-        // del all inputs 's resources bind
-        let all = self.input_resource().all().to_vec();
-        self.env().remove_input_resources(&all).context("remove")?;
+        if !self.run_mod().is_skip_check() {
+            // del all inputs 's resources bind
+            let all = self.input_resource().all().to_vec();
+            self.env().remove_input_resources(&all).context("remove")?;
 
-        // set all outputs 's resources bind
-        self.env_mut().apply_output_resources().context("apply")?;
+            // set all outputs 's resources bind
+            self.env_mut().apply_output_resources().context("apply")?;
+        }
 
         // storage all uncosted inputs 's resources to space.
         // TODO: impl

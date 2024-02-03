@@ -104,26 +104,6 @@ where
         Ok(())
     }
 
-    /// Apply changes to indexer, will do:
-    ///   - del all inputs 's resources bind
-    ///   - set all outputs 's resources bind
-    ///   - storage all uncosted inputs 's resources to space.
-    fn apply_resources(&mut self) -> Result<()> {
-        if !self.run_mod().is_skip_check() {
-            // del all inputs 's resources bind
-            let all = self.input_resource().all().to_vec();
-            self.env().remove_input_resources(&all).context("remove")?;
-
-            // set all outputs 's resources bind
-            self.env_mut().apply_output_resources().context("apply")?;
-        }
-
-        // storage all uncosted inputs 's resources to space.
-        // TODO: impl
-
-        Ok(())
-    }
-
     fn on_output(&mut self, index: u8, resource: Resource) {
         if self.run_mod() == RunMode::Simulator {
             self.outputs.push((index, resource));
