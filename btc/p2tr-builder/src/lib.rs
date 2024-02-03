@@ -4,19 +4,20 @@ mod coin_selector;
 
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{anyhow, bail, Context as AnyhowContext, Result};
 use bdk::{
     bitcoin::{
         absolute,
         bip32::{DerivationPath, ExtendedPrivKey},
         hashes::Hash,
         key::TapTweak,
-        psbt::{Input, PartiallySignedTransaction, Psbt, PsbtSighashType},
+        psbt::{self, Input, PartiallySignedTransaction, Psbt, PsbtSighashType},
         secp256k1::{All, KeyPair, Secp256k1, SecretKey, XOnlyPublicKey},
         sighash::{self, SighashCache, TapSighash, TapSighashType},
         taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo},
         Address, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Weight, Witness,
     },
+    psbt::PsbtUtils,
     wallet::AddressIndex,
     FeeRate, LocalUtxo, SignOptions,
 };
@@ -127,14 +128,10 @@ impl<'a> P2trBuilder<'a> {
         // TODO: support merge amount to output mod.
         let amount_to_trans = self.amount() + fee_for_reveal_tx.unwrap_or_default();
 
-        let reveal_inputs = self.reveal_inputs.iter().map(|i| i.outpoint).collect::<Vec<_>>();
-
         let mut builder = bdk_wallet
             .build_tx()
-            .coin_selection(coin_selector::CoinSelector::new(reveal_inputs.clone()));
+            .coin_selection(coin_selector::CoinSelector::new(Vec::new()));
         builder.ordering(bdk::wallet::tx_builder::TxOrdering::Untouched);
-        // for the inputs, push into the builder
-        builder.add_utxos(&reveal_inputs).context("add utxo failed")?;
 
         builder.set_recipients(vec![(commit_script_pubkey, amount_to_trans)]);
         // Note we not use this utxos, because it will cost the resource.
@@ -183,7 +180,6 @@ impl<'a> P2trBuilder<'a> {
         send_amount: u64,
     ) -> Result<Psbt> {
         let secp = self.secp();
-        let internal_key = self.internal_key;
 
         let output = self
             .outputs
@@ -191,87 +187,59 @@ impl<'a> P2trBuilder<'a> {
             .map(|(to, amount)| TxOut { value: *amount, script_pubkey: to.script_pubkey() })
             .collect::<Vec<_>>();
 
-        let next_tx = Transaction {
-            version: 1,
-            lock_time: absolute::LockTime::ZERO,
-            input: vec![TxIn {
-                previous_output: commit_outpoint,
+        let mut input = vec![TxIn {
+            previous_output: commit_outpoint,
+            script_sig: ScriptBuf::new(),
+            sequence: Sequence(0xFFFFFFFD),
+            witness: Witness::default(),
+        }];
+
+        for resource_input in self.reveal_inputs.iter() {
+            input.push(TxIn {
+                previous_output: resource_input.outpoint,
                 script_sig: ScriptBuf::new(),
                 sequence: Sequence(0xFFFFFFFD),
                 witness: Witness::default(),
-            }],
-            output,
-        };
+            });
+        }
+
+        let next_tx =
+            Transaction { version: 1, lock_time: absolute::LockTime::ZERO, input, output };
 
         let mut psbt = PartiallySignedTransaction::from_unsigned_tx(next_tx)?;
 
-        let leaf_hash = self.reveal_script.tapscript_leaf_hash();
-        let mut origins = BTreeMap::new();
-        origins.insert(
-            internal_key,
-            (vec![leaf_hash], (self.master_xpriv.fingerprint(secp), self.derivation_path.clone())),
-        );
+        // clean the inputs, will push by update func
+        psbt.inputs = Vec::with_capacity(psbt.unsigned_tx.input.len());
 
-        let ty = PsbtSighashType::from_str("SIGHASH_ALL")?;
-        let mut tap_scripts = BTreeMap::new();
-        tap_scripts.insert(
-            taproot_spend_info
-                .control_block(&(self.reveal_script.clone(), LeafVersion::TapScript))
-                .unwrap(),
-            (self.reveal_script.clone(), LeafVersion::TapScript),
-        );
+        self.update_psbt_taproot_input(
+            &mut psbt,
+            secp,
+            taproot_spend_info,
+            commit_script_pubkey,
+            send_amount,
+        )
+        .context("update_psbt_taproot_input")?;
 
-        let input = Input {
-            witness_utxo: {
-                Some(TxOut { value: send_amount, script_pubkey: commit_script_pubkey })
-            },
-            tap_key_origins: origins,
-            tap_merkle_root: taproot_spend_info.merkle_root(),
-            sighash_type: Some(ty),
-            tap_internal_key: Some(internal_key),
-            tap_scripts,
-            ..Default::default()
-        };
+        self.update_psbt_resource_inputs(&mut psbt, secp)
+            .context("update_psbt_resource_inputs")?;
 
         psbt.version = 1;
-        psbt.inputs = vec![input];
 
-        // Sign and finalize the PSBT with the signing wallet
-        let unsigned_tx = psbt.unsigned_tx.clone();
-        let input_value = psbt.inputs[0].witness_utxo.as_ref().unwrap().value;
-        let input_script_pubkey =
-            psbt.inputs[0].witness_utxo.as_ref().unwrap().script_pubkey.clone();
+        // println!("psbt input {}", serde_json::to_string_pretty(&psbt.unsigned_tx.input).unwrap());
+        println!("psbt input update {}", serde_json::to_string_pretty(&psbt.inputs).unwrap());
 
-        // SIGNER
-        for (x_only_pubkey, (leaf_hashes, (_, derivation_path))) in
-            &psbt.inputs[0].tap_key_origins.clone()
-        {
-            let secret_key = self.master_xpriv.derive_priv(secp, &derivation_path)?.to_priv().inner;
-            for lh in leaf_hashes {
-                let hash_ty = TapSighashType::All;
-                let hash = SighashCache::new(&unsigned_tx).taproot_script_spend_signature_hash(
-                    0,
-                    &sighash::Prevouts::All(&[TxOut {
-                        value: input_value,
-                        script_pubkey: input_script_pubkey.clone(),
-                    }]),
-                    *lh,
-                    hash_ty,
-                )?;
-                sign_psbt_taproot(
-                    &secret_key,
-                    *x_only_pubkey,
-                    Some(*lh),
-                    &mut psbt.inputs[0],
-                    hash,
-                    hash_ty,
-                    secp,
-                );
-            }
-        }
+        self.sign_psbt_inputs(&mut psbt, secp).context("sign_psbt_inputs")?;
+
+        println!(
+            "psbt input sign_psbt_inputs {}",
+            serde_json::to_string_pretty(&psbt.inputs).unwrap()
+        );
 
         psbt.inputs.iter_mut().for_each(|input| {
             let mut script_witness: Witness = Witness::new();
+            if let Some(tap_key_sig) = input.tap_key_sig {
+                script_witness.push(tap_key_sig.to_vec());
+            }
             for (_, signature) in input.tap_script_sigs.iter() {
                 script_witness.push(signature.to_vec());
             }
@@ -295,12 +263,20 @@ impl<'a> P2trBuilder<'a> {
         Ok(psbt)
     }
 
-    pub fn build(self) -> Result<(Psbt, Psbt)> {
+    fn taproot_spend_info(&self, script: ScriptBuf) -> Result<TaprootSpendInfo> {
         let taproot_spend_info = TaprootBuilder::new()
-            .add_leaf(0, self.reveal_script.clone())
+            .add_leaf(0, script)
             .context("TaprootBuilder add_leaf ")?
             .finalize(self.secp(), self.internal_key)
             .map_err(|_| anyhow!("TaprootBuilder error"))?;
+
+        Ok(taproot_spend_info)
+    }
+
+    pub fn build(self) -> Result<(Psbt, Psbt)> {
+        let taproot_spend_info = self
+            .taproot_spend_info(self.reveal_script.clone())
+            .context("taproot_spend_info for vital script input")?;
 
         let commit_script_pubkey = ScriptBuf::new_v1_p2tr(
             self.secp(),
@@ -353,7 +329,6 @@ impl<'a> P2trBuilder<'a> {
     }
 
     /// this will push taproot input into index 0 for vital script
-    #[allow(dead_code)]
     fn update_psbt_taproot_input(
         &self,
         psbt: &mut PartiallySignedTransaction,
@@ -396,6 +371,140 @@ impl<'a> P2trBuilder<'a> {
 
         Ok(())
     }
+
+    /// this will push taproot input from index 1 for vital script
+    fn update_psbt_resource_inputs(
+        &self,
+        psbt: &mut PartiallySignedTransaction,
+        secp: &Secp256k1<All>,
+    ) -> Result<()> {
+        let internal_key = self.internal_key;
+
+        for input_index in 1..psbt.unsigned_tx.input.len() {
+            let input = &psbt.unsigned_tx.input[input_index];
+            let reveal_input = &self.reveal_inputs[input_index - 1];
+
+            assert_eq!(input.previous_output, reveal_input.outpoint);
+
+            println!("update_psbt_resource_inputs {}", reveal_input.outpoint);
+
+            let mut origins = BTreeMap::new();
+            origins.insert(
+                internal_key,
+                (vec![], (self.master_xpriv.fingerprint(secp), self.derivation_path.clone())),
+            );
+
+            let psbt_input = self
+                .wallet
+                .wallet
+                .get_psbt_input(reveal_input.clone(), None, false)
+                .context("get_psbt_input")?;
+            println!("psbt_input {}", serde_json::to_string_pretty(&psbt_input).unwrap());
+
+            let input = Input {
+                witness_utxo: { Some(reveal_input.txout.clone()) },
+                tap_key_origins: origins,
+                tap_internal_key: Some(internal_key),
+                ..Default::default()
+            };
+
+            psbt.inputs.push(psbt_input);
+        }
+
+        Ok(())
+    }
+
+    fn sighash(
+        psbt: &PartiallySignedTransaction,
+        input_index: usize,
+        extra: Option<taproot::TapLeafHash>,
+    ) -> Result<(TapSighash, TapSighashType)> {
+        if input_index >= psbt.inputs.len() || input_index >= psbt.unsigned_tx.input.len() {
+            bail!("InputIndexOutOfRange");
+        }
+
+        let psbt_input = &psbt.inputs[input_index];
+
+        let sighash_type = psbt_input
+            .sighash_type
+            .unwrap_or_else(|| TapSighashType::Default.into())
+            .taproot_hash_ty()
+            .map_err(|_| anyhow!("InvalidSighash"))?;
+        let witness_utxos =
+            (0..psbt.inputs.len()).map(|i| psbt.get_utxo_for(i)).collect::<Vec<_>>();
+        let mut all_witness_utxos = vec![];
+
+        let mut cache = sighash::SighashCache::new(&psbt.unsigned_tx);
+        let is_anyone_can_pay = psbt::PsbtSighashType::from(sighash_type).to_u32() & 0x80 != 0;
+        let prevouts = if is_anyone_can_pay {
+            sighash::Prevouts::One(
+                input_index,
+                witness_utxos[input_index].as_ref().ok_or(anyhow!("MissingWitnessUtxo"))?,
+            )
+        } else if witness_utxos.iter().all(Option::is_some) {
+            all_witness_utxos.extend(witness_utxos.iter().filter_map(|x| x.as_ref()));
+            sighash::Prevouts::All(&all_witness_utxos)
+        } else {
+            return Err(anyhow!("MissingWitnessUtxo"));
+        };
+
+        // Assume no OP_CODESEPARATOR
+        let extra = extra.map(|leaf_hash| (leaf_hash, 0xFFFFFFFF));
+
+        Ok((
+            cache.taproot_signature_hash(input_index, &prevouts, None, extra, sighash_type)?,
+            sighash_type,
+        ))
+    }
+
+    fn sign_psbt_inputs(
+        &self,
+        psbt: &mut PartiallySignedTransaction,
+        secp: &Secp256k1<All>,
+    ) -> Result<()> {
+        // Sign and finalize the PSBT with the signing wallet
+        let internal_key = self.internal_key;
+
+        // SIGNER
+        for (_, (leaf_hashes, (_, path))) in &psbt.inputs[0].tap_key_origins.clone() {
+            let secret_key = self.master_xpriv.derive_priv(secp, path)?.to_priv().inner;
+
+            for lh in leaf_hashes {
+                let (hash, hash_ty) =
+                    Self::sighash(psbt, 0, Some(lh.clone())).context("sighash")?;
+
+                sign_psbt_taproot(
+                    &secret_key,
+                    internal_key,
+                    Some(*lh),
+                    &mut psbt.inputs[0],
+                    hash,
+                    hash_ty,
+                    secp,
+                );
+            }
+        }
+
+        for input_index in 1..psbt.inputs.len() {
+            for (key, (_, (_, path))) in &psbt.inputs[input_index].tap_key_origins.clone() {
+                let (hash, hash_ty) = Self::sighash(psbt, input_index, None).context("sighash")?;
+
+                let secret_key = self.master_xpriv.derive_priv(secp, path)?.to_priv().inner;
+
+                sign_psbt_taproot(
+                    &secret_key,
+                    *key,
+                    None,
+                    &mut psbt.inputs[input_index],
+                    hash,
+                    hash_ty,
+                    secp,
+                );
+            }
+        }
+
+        Ok(())
+    }
 }
 
 // Calling this with `leaf_hash` = `None` will sign for key-spend
@@ -408,13 +517,18 @@ fn sign_psbt_taproot(
     hash_ty: TapSighashType,
     secp: &Secp256k1<All>,
 ) {
+    use bdk::bitcoin::secp256k1::Message;
+
     let keypair = KeyPair::from_seckey_slice(secp, secret_key.as_ref()).unwrap();
     let keypair = match leaf_hash {
         None => keypair.tap_tweak(secp, psbt_input.tap_merkle_root).to_inner(),
         Some(_) => keypair, // no tweak for script spend
     };
 
-    let sig = secp.sign_schnorr(&hash.into(), &keypair);
+    let msg = &Message::from(hash);
+    let sig = secp.sign_schnorr(msg, &keypair);
+    secp.verify_schnorr(&sig, msg, &XOnlyPublicKey::from_keypair(&keypair).0)
+        .expect("invalid or corrupted schnorr signature");
 
     let final_signature = taproot::Signature { sig, hash_ty };
 

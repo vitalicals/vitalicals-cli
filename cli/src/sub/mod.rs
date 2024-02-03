@@ -7,9 +7,9 @@ pub mod query;
 pub mod utils;
 pub mod wallet;
 
-const MAX_SCRIPT_LEN : usize = 480;
+const MAX_SCRIPT_LEN: usize = 480;
 
-use anyhow::{Context as AnyhowContext, Result, bail};
+use anyhow::{bail, Context as AnyhowContext, Result};
 use bdk::blockchain::Blockchain;
 use btc_p2tr_builder::P2trBuilder;
 
@@ -19,8 +19,12 @@ pub(crate) async fn send_p2tr(context: &Context, scripts_bytes: Vec<u8>) -> Resu
     let wallet = &context.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
-    if scripts_bytes.len() >= MAX_SCRIPT_LEN{
-        bail!("the script must be less then {}, currently is {}", MAX_SCRIPT_LEN, scripts_bytes.len());
+    if scripts_bytes.len() >= MAX_SCRIPT_LEN {
+        bail!(
+            "the script must be less then {}, currently is {}",
+            MAX_SCRIPT_LEN,
+            scripts_bytes.len()
+        );
     }
 
     println!("scripts_bytes {}", hex::encode(&scripts_bytes));
