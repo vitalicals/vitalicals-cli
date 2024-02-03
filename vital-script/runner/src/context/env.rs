@@ -102,6 +102,8 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
 
         let out_point = self.get_input(index).context("get input")?;
 
+        log::debug!(target: TARGET, "get_input_resource for {}", out_point);
+
         let res = self
             .env
             .get_resources(&out_point)

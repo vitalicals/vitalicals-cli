@@ -13,7 +13,7 @@ use vital_script_primitives::{
     traits::{Context as ContextT, RunMode},
 };
 
-use crate::{traits::EnvFunctions, Context};
+use crate::{traits::EnvFunctions, Context, TARGET};
 
 pub fn init_logger() {
     let _ = env_logger::Builder::from_default_env()
@@ -106,6 +106,8 @@ impl EnvFunctions for EnvMock {
     fn bind_resource(&self, output: OutPoint, res: Resource) -> Result<()> {
         assert!(!self.resource_storage.lock().expect("lock").contains_key(&output));
 
+        log::debug!(target: TARGET, "bind_resource {} to {}", res, output);
+
         self.resource_storage.lock().expect("lock").insert(output, res);
 
         Ok(())
@@ -113,6 +115,8 @@ impl EnvFunctions for EnvMock {
 
     fn unbind_resource(&self, input: &OutPoint) -> Result<()> {
         assert!(self.resource_storage.lock().expect("lock").contains_key(input));
+
+        log::debug!(target: TARGET, "unbind_resource {}", input);
 
         self.resource_storage.lock().expect("lock").remove(input);
 
