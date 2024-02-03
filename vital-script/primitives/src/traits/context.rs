@@ -114,6 +114,7 @@ pub trait RunnerContext {
     fn try_assert_input(&mut self, index: u8) -> Result<()>;
     fn try_assert_output(&mut self, index: u8) -> Result<()>;
     fn is_output_available(&self, index: u8) -> bool;
+    fn try_mint(&mut self) -> Result<()>;
 }
 
 pub trait InputResourcesContext {

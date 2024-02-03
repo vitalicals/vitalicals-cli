@@ -60,12 +60,11 @@ impl InstructionResourceMint {
 
 impl Instruction for InstructionResourceMint {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
-        // TODO:: check if can mint
-
         // println!("InstructionResourceMint");
 
-        let resource = self.make_mint_resource(context)?;
+        context.runner().try_mint()?;
 
+        let resource = self.make_mint_resource(context)?;
         match &resource {
             Resource::Name(n) => {
                 // for name, we need flag it
