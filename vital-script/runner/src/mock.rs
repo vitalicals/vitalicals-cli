@@ -27,8 +27,6 @@ pub fn init_logger() {
 
 #[derive(Debug, Clone)]
 pub struct TxMock {
-    pub commit: Transaction,
-    pub commit_txid: Txid,
     pub reveal: Transaction,
     pub reveal_txid: Txid,
     ops_bytes: Vec<(u8, Vec<u8>)>,
@@ -44,13 +42,7 @@ impl TxMock {
         };
         let txid = tx.txid();
 
-        Self {
-            commit: tx.clone(),
-            commit_txid: txid,
-            reveal: tx,
-            reveal_txid: txid,
-            ops_bytes: Vec::new(),
-        }
+        Self { reveal: tx, reveal_txid: txid, ops_bytes: Vec::new() }
     }
 
     pub fn push_input(&mut self, input: OutPoint) {
@@ -59,8 +51,8 @@ impl TxMock {
 
         // println!("push_input input by index: {:?}", txin);
 
-        self.commit.input.push(txin);
-        self.commit_txid = self.commit.txid();
+        self.reveal.input.push(txin);
+        self.reveal_txid = self.reveal.txid();
     }
 
     pub fn push_ops(&mut self, ops_bytes: Vec<u8>) {
@@ -147,19 +139,9 @@ pub struct ContextMock {
 
 impl ContextMock {
     pub fn new(tx: TxMock, env: EnvMock) -> Self {
-        log::info!("new context mock {} -> {}", tx.commit_txid, tx.reveal_txid);
+        log::info!("new context mock {}", tx.reveal_txid);
 
-        let commit_tx_inputs_previous_output = tx
-            .commit
-            .input
-            .iter()
-            .map(|input| input.previous_output.clone())
-            .collect::<Vec<_>>();
-
-        Self {
-            inner: ContextMockInner::new(env, commit_tx_inputs_previous_output, &tx.reveal, 10000),
-            tx,
-        }
+        Self { inner: ContextMockInner::new(env, &tx.reveal, 10000), tx }
     }
 }
 

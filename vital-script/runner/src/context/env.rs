@@ -18,11 +18,12 @@ const STORAGE_KEY_METADATA: &[u8; 8] = b"metadata";
 pub struct EnvContext<Functions: EnvFunctions> {
     env: Functions,
 
-    commit_tx_inputs_previous_output: Vec<OutPoint>,
+    /// The block height
+    block_height: u32,
 
     /// The reveal_tx
     reveal_tx_id: Txid,
-    block_height: u32,
+    inputs: Vec<OutPoint>,
 
     ops: Vec<(u8, Vec<u8>)>,
 
@@ -33,7 +34,7 @@ pub struct EnvContext<Functions: EnvFunctions> {
 impl<Functions: EnvFunctions> EnvContext<Functions> {
     pub fn new(
         env_interface: Functions,
-        commit_tx_inputs_previous_output: Vec<OutPoint>,
+        inputs: Vec<OutPoint>,
         reveal_tx: &Transaction,
         block_height: u32,
     ) -> Self {
@@ -43,7 +44,7 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
 
         Self {
             env: env_interface,
-            commit_tx_inputs_previous_output,
+            inputs,
             reveal_tx_id,
             block_height,
             ops,
@@ -62,7 +63,7 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
     pub fn new_for_query(env_interface: Functions, block_height: u32) -> Self {
         Self {
             env: env_interface,
-            commit_tx_inputs_previous_output: Default::default(),
+            inputs: Default::default(),
             reveal_tx_id: Txid::all_zeros(),
             ops: Default::default(),
             cached_output_resources: BTreeMap::new(),
@@ -71,11 +72,7 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
     }
 
     fn get_input(&self, input_index: u8) -> Result<OutPoint> {
-        if self.commit_tx_inputs_previous_output.len() <= input_index as usize {
-            bail!("Input index out of range")
-        }
-
-        Ok(self.commit_tx_inputs_previous_output[input_index as usize])
+        Ok(self.inputs[input_index as usize])
     }
 }
 

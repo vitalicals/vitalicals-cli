@@ -251,9 +251,16 @@ impl Context {
                     };
 
                     let outputs =
-                        self.run_tx_in_local(block_height, tx).await.context("run_tx_in_local")?;
-                    if let Some(mut outputs) = outputs {
-                        resource_pendings.append(&mut outputs);
+                        self.run_tx_in_local(block_height, tx).await.context("run_tx_in_local");
+
+                    match outputs {
+                        Ok(Some(mut outputs)) => {
+                            resource_pendings.append(&mut outputs);
+                        }
+                        Err(err) => {
+                            log::warn!("the pending tx 's vital script run failed by {}", err);
+                        }
+                        _ => {}
                     }
                 }
             }

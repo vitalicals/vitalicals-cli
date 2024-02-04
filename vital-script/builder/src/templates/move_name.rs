@@ -25,6 +25,7 @@ pub fn move_names_with_index(output_index_name: &[(u32, Name)]) -> Result<Vec<u8
 
     // input assert
     for (input_index, (_, name)) in output_index_name.iter().enumerate() {
+        let input_index = input_index + 1; // all inputs is from 1
         if input_index >= u8::MAX as usize {
             bail!("the input index too large");
         }
@@ -72,6 +73,8 @@ pub fn move_names(names: &[Name], start_output_index: Option<u32>) -> Result<Vec
 
     // input assert
     for (input_index, name) in names.iter().enumerate() {
+        let input_index = input_index + 1; // all inputs is from 1
+
         if input_index >= u8::MAX as usize {
             bail!("the input index too large");
         }
