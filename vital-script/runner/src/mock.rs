@@ -42,11 +42,7 @@ impl TxMock {
         };
         let txid = tx.txid();
 
-        Self {
-            reveal: tx,
-            reveal_txid: txid,
-            ops_bytes: Vec::new(),
-        }
+        Self { reveal: tx, reveal_txid: txid, ops_bytes: Vec::new() }
     }
 
     pub fn push_input(&mut self, input: OutPoint) {

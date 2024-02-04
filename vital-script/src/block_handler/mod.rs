@@ -39,7 +39,7 @@ impl<'a> BlockRunner<'a> {
         Self { block, height }
     }
 
-    pub fn run<Functions, Chain>(&self, env_interface: Functions) -> Result<BlockRunResponse>
+    pub fn run<Functions>(&self, env_interface: Functions) -> Result<BlockRunResponse>
     where
         Functions: EnvFunctions,
     {
