@@ -38,6 +38,9 @@ pub async fn move_vrc20(context: &mut Context, name: &String, amount: U256) -> R
             break;
         }
 
+        // the index is from1
+        let index = index + 1;
+
         if index >= u8::MAX as usize {
             bail!("the index index not supported >= {}", u8::MAX);
         }

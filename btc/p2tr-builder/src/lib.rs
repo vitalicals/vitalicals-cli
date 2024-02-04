@@ -13,7 +13,7 @@ use bdk::{
         key::TapTweak,
         psbt::{self, Input, PartiallySignedTransaction, Psbt, PsbtSighashType},
         secp256k1::{All, KeyPair, Secp256k1, SecretKey, XOnlyPublicKey},
-        sighash::{self, SighashCache, TapSighash, TapSighashType},
+        sighash::{self, TapSighash, TapSighashType},
         taproot::{self, LeafVersion, TapLeafHash, TaprootBuilder, TaprootSpendInfo},
         Address, OutPoint, ScriptBuf, Sequence, Transaction, TxIn, TxOut, Txid, Weight, Witness,
     },
@@ -220,13 +220,13 @@ impl<'a> P2trBuilder<'a> {
         )
         .context("update_psbt_taproot_input")?;
 
-        self.update_psbt_resource_inputs(&mut psbt, secp)
+        self.update_psbt_resource_inputs(&mut psbt)
             .context("update_psbt_resource_inputs")?;
 
         psbt.version = 1;
 
         // println!("psbt input {}", serde_json::to_string_pretty(&psbt.unsigned_tx.input).unwrap());
-        println!("psbt input update {}", serde_json::to_string_pretty(&psbt.inputs).unwrap());
+        // println!("psbt input update {}", serde_json::to_string_pretty(&psbt.inputs).unwrap());
 
         self.sign_psbt_inputs(&mut psbt, secp).context("sign_psbt_inputs")?;
 
@@ -373,40 +373,19 @@ impl<'a> P2trBuilder<'a> {
     }
 
     /// this will push taproot input from index 1 for vital script
-    fn update_psbt_resource_inputs(
-        &self,
-        psbt: &mut PartiallySignedTransaction,
-        secp: &Secp256k1<All>,
-    ) -> Result<()> {
-        let internal_key = self.internal_key;
-
+    fn update_psbt_resource_inputs(&self, psbt: &mut PartiallySignedTransaction) -> Result<()> {
         for input_index in 1..psbt.unsigned_tx.input.len() {
             let input = &psbt.unsigned_tx.input[input_index];
             let reveal_input = &self.reveal_inputs[input_index - 1];
 
             assert_eq!(input.previous_output, reveal_input.outpoint);
 
-            println!("update_psbt_resource_inputs {}", reveal_input.outpoint);
-
-            let mut origins = BTreeMap::new();
-            origins.insert(
-                internal_key,
-                (vec![], (self.master_xpriv.fingerprint(secp), self.derivation_path.clone())),
-            );
-
             let psbt_input = self
                 .wallet
                 .wallet
                 .get_psbt_input(reveal_input.clone(), None, false)
                 .context("get_psbt_input")?;
-            println!("psbt_input {}", serde_json::to_string_pretty(&psbt_input).unwrap());
-
-            let input = Input {
-                witness_utxo: { Some(reveal_input.txout.clone()) },
-                tap_key_origins: origins,
-                tap_internal_key: Some(internal_key),
-                ..Default::default()
-            };
+            // println!("psbt_input {}", serde_json::to_string_pretty(&psbt_input).unwrap());
 
             psbt.inputs.push(psbt_input);
         }

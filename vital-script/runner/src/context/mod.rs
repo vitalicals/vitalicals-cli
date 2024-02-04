@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use anyhow::{Context as AnyhowContext, Result};
 
-use bitcoin::{OutPoint, Transaction};
+use bitcoin::Transaction;
 use vital_script_ops::{instruction::Instruction, parser::Parser};
 pub use vital_script_primitives::traits::context::Context as ContextT;
 use vital_script_primitives::{
@@ -115,17 +115,12 @@ impl<Functions> Context<Functions>
 where
     Functions: EnvFunctions,
 {
-    pub fn new(
-        env_interface: Functions,
-        commit_tx_inputs_previous_output: Vec<OutPoint>,
-        reveal_tx: &Transaction,
-        block_height: u32,
-    ) -> Self {
+    pub fn new(env_interface: Functions, reveal_tx: &Transaction, block_height: u32) -> Self {
         let runner = RunnerContext::new();
         let input_resources = InputResourcesContext::new(CAP_SIZE);
         let env = EnvContext::new(
             env_interface,
-            commit_tx_inputs_previous_output,
+            reveal_tx.input.iter().map(|i| i.previous_output).collect::<Vec<_>>(),
             reveal_tx,
             block_height,
         );

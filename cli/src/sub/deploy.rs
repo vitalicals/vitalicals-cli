@@ -101,8 +101,8 @@ async fn deploy_vrc20(context: &mut Context, name: String, meta: VRC20MetaData) 
     context.append_reveal_input(&[input_name_utxo]);
 
     // build script.
-    // all begin with 0.
-    let input_index = 0_u32;
+    // all begin with 1, 0 is for script.
+    let input_index = 1_u32;
     let scripts_bytes =
         templates::deploy_vrc20(input_index, name, meta).context("build scripts failed")?;
 

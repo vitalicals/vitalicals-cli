@@ -161,12 +161,12 @@ mod tests {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
-                    index: 0,
+                    index: 1,
                     resource: Resource::Name(mint_name),
                 }),
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::Deploy(InstructionVRC20Deploy {
-                    name_input: 0,
+                    name_input: 1,
                     name: mint_name,
                     meta: VRC20MetaData {
                         decimals: 5,
@@ -241,7 +241,7 @@ mod tests {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
-                    index: 0,
+                    index: 1,
                     resource: vrc20_in_2.clone(),
                 }),
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -253,9 +253,9 @@ mod tests {
 
             // the minted vrc20s
             let mut tx_mock4 = TxMock::new();
+            tx_mock4.push_ops(ops_bytes);
             tx_mock4.push_input(context3.env().get_output(0));
             tx_mock4.push_output(2000);
-            tx_mock4.push_ops(ops_bytes);
 
             let mut context = ContextMock::new(tx_mock4, env_interface.clone());
             Runner::new().run(&mut context).expect("run failed");
@@ -315,7 +315,7 @@ mod tests {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
-                    index: 0,
+                    index: 0, // Note this tx will push input first into the tx
                     resource: Resource::Name(mint_name),
                 }),
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -395,7 +395,7 @@ mod tests {
             // 2. deploy a vrc20 by the name
             let ops_bytes = ScriptBuilderFromInstructions::build(vec![
                 Instruction::Input(InstructionInputAssert {
-                    index: 0,
+                    index: 1,
                     resource: vrc20_in_2.clone(),
                 }),
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
@@ -407,9 +407,9 @@ mod tests {
 
             // the minted vrc20s
             let mut tx_mock4 = TxMock::new();
-            tx_mock4.push_input(context3.env().get_output(0));
             tx_mock4.push_output(2000);
             tx_mock4.push_ops(ops_bytes);
+            tx_mock4.push_input(context3.env().get_output(0));
 
             let mut context = ContextMock::new(tx_mock4, env_interface.clone());
             Runner::new().run(&mut context).expect("run failed");

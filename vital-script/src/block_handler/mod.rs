@@ -4,8 +4,7 @@ use anyhow::{Context as AnyhowContext, Result};
 use bitcoin::{Block, Transaction, Txid};
 
 use vital_script_runner::{
-    check_is_vital_script, maybe_vital_commit_tx_with_input_resource,
-    traits::{ChainFunctions, EnvFunctions},
+    check_is_vital_script, maybe_vital_commit_tx_with_input_resource, traits::EnvFunctions,
     Context, Runner,
 };
 
@@ -40,14 +39,9 @@ impl<'a> BlockRunner<'a> {
         Self { block, height }
     }
 
-    pub fn run<Functions, Chain>(
-        &self,
-        env_interface: Functions,
-        chain_interface: Chain,
-    ) -> Result<BlockRunResponse>
+    pub fn run<Functions, Chain>(&self, env_interface: Functions) -> Result<BlockRunResponse>
     where
         Functions: EnvFunctions,
-        Chain: ChainFunctions,
     {
         let mut res = Vec::with_capacity(self.block.txdata.len());
 
@@ -60,11 +54,6 @@ impl<'a> BlockRunner<'a> {
                 .context("maybe_vital_commit_tx_with_input_resource")?
             {
                 log::info!(target: TARGET, "handle vital commit transaction {}", tx_id);
-                let outpoints =
-                    tx.input.iter().map(|input| input.previous_output).collect::<Vec<_>>();
-                chain_interface
-                    .set_commit_tx_inputs_previous_output(tx_id, outpoints)
-                    .context("set_commit_tx_inputs_previous_output")?;
             }
 
             if !check_is_vital_script(tx) {
@@ -77,23 +66,9 @@ impl<'a> BlockRunner<'a> {
             }
 
             let commit_txid = tx.input[0].previous_output.txid;
-            let commit_tx_inputs_previous_output = chain_interface
-                .get_commit_tx_inputs_previous_output(&commit_txid)
-                .with_context(|| alloc::format!("get commit_tx {}", commit_txid))?
-                .unwrap_or_default();
-
             log::debug!(target: TARGET, "process vital tx with commit txid {}", commit_txid);
 
-            chain_interface
-                .delete_commit_tx_inputs_previous_output(&commit_txid)
-                .with_context(|| alloc::format!("delete commit_tx {}", commit_txid))?;
-
-            let context = Context::new(
-                env_interface.clone(),
-                commit_tx_inputs_previous_output,
-                tx,
-                self.height,
-            );
+            let context = Context::new(env_interface.clone(), tx, self.height);
             if !context.is_valid() {
                 log::debug!(target: TARGET, "context is not valid");
                 continue;
