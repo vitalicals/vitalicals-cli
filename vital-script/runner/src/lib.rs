@@ -18,7 +18,7 @@ mod context;
 mod resource_cache;
 
 #[cfg(test)]
-mod mock;
+pub mod mock;
 
 pub use context::{
     script::{
@@ -129,23 +129,15 @@ mod tests {
 
         let env_interface = EnvMock::new();
 
-        let context1 = {
-            // 1. mint a name
-            let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+        let context1 = TestCtx::new()
+            .with_instructions(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::name(mint_name)),
             ])
-            .expect("build should ok");
-
-            let mut tx_mock1 = TxMock::new();
-            tx_mock1.push_ops(ops_bytes);
-            tx_mock1.push_output(1000);
-
-            let mut context = ContextMock::new(tx_mock1, env_interface.clone());
-            Runner::new().run(&mut context).expect("run failed");
-
-            context
-        };
+            .with_ops()
+            .with_output(1000)
+            .run(&env_interface)
+            .expect("mint name failed");
 
         let is_costed = context1
             .env()
@@ -157,9 +149,8 @@ mod tests {
         let res = env_interface.get_resources(&outpoint).expect("get resources failed");
         assert_eq!(res, Some(Resource::name(mint_name)));
 
-        let context2 = {
-            // 2. deploy a vrc20 by the name
-            let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+        let context2 = TestCtx::new()
+            .with_instructions(vec![
                 Instruction::Input(InstructionInputAssert {
                     index: 1,
                     resource: Resource::Name(mint_name),
@@ -177,20 +168,11 @@ mod tests {
                     },
                 }),
             ])
-            .expect("build should ok");
-
-            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
-
-            let mut tx_mock2 = TxMock::new();
-            tx_mock2.push_ops(ops_bytes);
-            tx_mock2.push_input(outpoint);
-            tx_mock2.push_output(2000);
-
-            let mut context = ContextMock::new(tx_mock2, env_interface.clone());
-            Runner::new().run(&mut context).expect("run failed");
-
-            context
-        };
+            .with_ops()
+            .with_input(outpoint)
+            .with_output(2000)
+            .run(&env_interface)
+            .expect("deploy vrc20 failed");
 
         let is_costed = context2
             .env()
@@ -212,34 +194,19 @@ mod tests {
         // 3. mint vrc20
         let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount.into()).expect("res");
 
-        let context3 = {
-            let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+        let context3 = TestCtx::new()
+            .with_instructions(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::vrc20(mint_name)),
             ])
-            .expect("build should ok");
-
-            log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
-
-            let mut tx_mock3 = TxMock::new();
-            tx_mock3.push_output(2000);
-            tx_mock3.push_ops(ops_bytes);
-
-            let mut context = ContextMock::new(tx_mock3, env_interface.clone());
-            Runner::new().run(&mut context).expect("run failed");
-
-            let outpoint = context.env().get_output(0);
-            let res = env_interface.get_resources(&outpoint).expect("get resources failed");
-
-            assert_eq!(res, Some(vrc20_in_2.clone()));
-
-            context
-        };
+            .with_output(2000)
+            .with_ops()
+            .run(&env_interface)
+            .expect("mint vrc20 failed");
 
         // 4. transfer vrc20
-        let context4 = {
-            // 2. deploy a vrc20 by the name
-            let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+        let context4 = TestCtx::new()
+            .with_instructions(vec![
                 Instruction::Input(InstructionInputAssert {
                     index: 1,
                     resource: vrc20_in_2.clone(),
@@ -247,21 +214,11 @@ mod tests {
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::move_to(0, vrc20_in_2),
             ])
-            .expect("build should ok");
-
-            log::info!("ops_bytes: 4 {:?}", hex::encode(&ops_bytes));
-
-            // the minted vrc20s
-            let mut tx_mock4 = TxMock::new();
-            tx_mock4.push_ops(ops_bytes);
-            tx_mock4.push_input(context3.env().get_output(0));
-            tx_mock4.push_output(2000);
-
-            let mut context = ContextMock::new(tx_mock4, env_interface.clone());
-            Runner::new().run(&mut context).expect("run failed");
-
-            context
-        };
+            .with_ops()
+            .with_input(context3.env().get_output(0))
+            .with_output(2000)
+            .run(&env_interface)
+            .expect("transfer vrc20 failed");
 
         let res = env_interface
             .get_resources(&context4.env().get_output(0))

@@ -7,13 +7,15 @@ use bitcoin::{
     absolute::LockTime, hash_types::Txid, transaction::Version, Amount, OutPoint, ScriptBuf,
     Transaction, TxIn, TxOut,
 };
-use vital_script_ops::{instruction::Instruction, parser::Parser};
+use vital_script_ops::{
+    builder::instruction::ScriptBuilderFromInstructions, instruction::Instruction, parser::Parser,
+};
 use vital_script_primitives::{
     resources::Resource,
     traits::{Context as ContextT, RunMode},
 };
 
-use crate::{traits::EnvFunctions, Context, TARGET};
+use crate::{traits::EnvFunctions, Context, Runner, TARGET};
 
 pub fn init_logger() {
     let _ = env_logger::Builder::from_default_env()
@@ -45,6 +47,11 @@ impl TxMock {
         Self { reveal: tx, reveal_txid: txid, ops_bytes: Vec::new() }
     }
 
+    pub fn with_input(mut self, input: OutPoint) -> Self {
+        self.push_input(input);
+        self
+    }
+
     pub fn push_input(&mut self, input: OutPoint) {
         let mut txin = TxIn::default();
         txin.previous_output = input;
@@ -53,6 +60,11 @@ impl TxMock {
 
         self.reveal.input.push(txin);
         self.reveal_txid = self.reveal.txid();
+    }
+
+    pub fn with_ops(mut self, ops_bytes: Vec<u8>) -> Self {
+        self.push_ops(ops_bytes);
+        self
     }
 
     pub fn push_ops(&mut self, ops_bytes: Vec<u8>) {
@@ -65,6 +77,11 @@ impl TxMock {
         self.reveal_txid = self.reveal.txid();
 
         self.ops_bytes.push((new_txin_index as u8, ops_bytes));
+    }
+
+    pub fn with_output(mut self, amount: u64) -> Self {
+        self.push_output(amount);
+        self
     }
 
     pub fn push_output(&mut self, amount: u64) {
@@ -200,5 +217,45 @@ impl ContextT for ContextMock {
     }
     fn post_check(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+pub struct TestCtx {
+    ops_bytes: Vec<Vec<u8>>,
+    tx: TxMock,
+}
+
+impl TestCtx {
+    pub fn new() -> Self {
+        Self { ops_bytes: Vec::new(), tx: TxMock::new() }
+    }
+
+    pub fn with_instructions(mut self, ins: Vec<Instruction>) -> Self {
+        let ops_bytes = ScriptBuilderFromInstructions::build(ins).expect("build should ok");
+
+        self.ops_bytes.push(ops_bytes);
+        self
+    }
+
+    pub fn with_input(mut self, input: OutPoint) -> Self {
+        self.tx.push_input(input);
+        self
+    }
+
+    pub fn with_ops(mut self) -> Self {
+        self.tx.push_ops(self.ops_bytes.first().expect("no ops in ctx").clone());
+        self
+    }
+
+    pub fn with_output(mut self, amount: u64) -> Self {
+        self.tx.push_output(amount);
+        self
+    }
+
+    pub fn run(&mut self, env_interface: &EnvMock) -> Result<ContextMock> {
+        let mut context = ContextMock::new(self.tx.clone(), env_interface.clone());
+        Runner::new().run(&mut context)?;
+
+        Ok(context)
     }
 }
