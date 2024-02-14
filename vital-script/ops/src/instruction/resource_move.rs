@@ -250,8 +250,6 @@ mod tests {
     }
 
     fn test_move_vrc20_impl(test_name: &str) -> Result<()> {
-        let test = Name::try_from(test_name).expect("name format");
-        let test_res = Resource::Name(test);
         let mint_amount = u128::MAX - 1;
 
         let env_interface = EnvMock::new();
@@ -262,10 +260,6 @@ mod tests {
         let outpoint01 = ctx.mint_vrc20(test_name);
         let outpoint02 = ctx.mint_vrc20(test_name);
         let outpoint03 = ctx.mint_vrc20(test_name);
-        let outpoint04 = ctx.mint_vrc20(test_name);
-        let outpoint05 = ctx.mint_vrc20(test_name);
-        let outpoint06 = ctx.mint_vrc20(test_name);
-        let outpoint07 = ctx.mint_vrc20(test_name);
 
         // move to 1
         let test_res1 = Resource::vrc20(test_name, 100.into()).expect("should vrc20");
@@ -411,12 +405,37 @@ mod tests {
             "the new should be some"
         );
 
+        // move one output 3 times by same vrc20 resource
+        let context4 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: charge_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1] }),
+                Instruction::move_to(1, Resource::vrc20(test_name, 30.into()).expect("vrc20")),
+                Instruction::move_to(1, Resource::vrc20(test_name, 30.into()).expect("vrc20")),
+                Instruction::move_to(1, Resource::vrc20(test_name, 30.into()).expect("vrc20")),
+            ])
+            .with_ops()
+            .with_input(outpoint32)
+            .with_output(3000)
+            .with_output(3000)
+            .run()
+            .expect("transfer name failed");
+
+        let outpoint41 = context4.env().get_output(1);
+        assert_eq!(
+            env_interface.get_resources(&outpoint41).expect("get resource"),
+            Some(charge_res2.clone()),
+            "the new should be some"
+        );
+
         Ok(())
     }
 
     fn test_move_all_vrc20_impl(test_name: &str) -> Result<()> {
         let test = Name::try_from(test_name).expect("name format");
-        let test_res = Resource::Name(test);
         let mint_amount = u128::MAX - 1;
 
         let env_interface = EnvMock::new();
@@ -427,10 +446,6 @@ mod tests {
         let outpoint01 = ctx.mint_vrc20(test_name);
         let outpoint02 = ctx.mint_vrc20(test_name);
         let outpoint03 = ctx.mint_vrc20(test_name);
-        let outpoint04 = ctx.mint_vrc20(test_name);
-        let outpoint05 = ctx.mint_vrc20(test_name);
-        let outpoint06 = ctx.mint_vrc20(test_name);
-        let outpoint07 = ctx.mint_vrc20(test_name);
 
         // move to 1
         let test_res1 = Resource::vrc20(test_name, 100.into()).expect("should vrc20");
@@ -526,6 +541,215 @@ mod tests {
         test_move_all_vrc20_impl("a1").expect("test move a1 should ok");
         test_move_all_vrc20_impl("abcde1234").expect("test move abcde1234 should ok");
         test_move_all_vrc20_impl("abcde@1234").expect("test move abcde@1234 should ok");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_into_output_two_times_will_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        ctx.mint_name("abcde");
+        ctx.mint_name("abe");
+
+        let outpoint01 = ctx.get_name_outpoint("abcde").expect("should exist");
+        let outpoint02 = ctx.get_name_outpoint("abe").expect("should exist");
+
+        let name_res1 = Resource::name(Name::must_from("abcde"));
+        let name_res2 = Resource::name(Name::must_from("abe"));
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: name_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: name_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_to(2, name_res1.clone()),
+                Instruction::move_to(2, name_res2.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "the resource type not support merge", "merge name diff type");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_vrc20_merged() -> Result<()> {
+        let test_name1 = "test1";
+        let test_name2 = "test2";
+
+        let mint_amount = 1000;
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.deploy_vrc20(test_name1, mint_amount);
+        ctx.deploy_vrc20(test_name2, mint_amount);
+
+        let outpoint01 = ctx.mint_vrc20(test_name1);
+        let outpoint02 = ctx.mint_vrc20(test_name2);
+        ctx.mint_name("abcde");
+
+        let outpoint03 = ctx.get_name_outpoint("abcde").expect("should exist");
+
+        let name_res = Resource::name(Name::must_from("abcde"));
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into()).expect("vrc20");
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into()).expect("vrc20");
+
+        let context1 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc20_res2.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert { index: 3, resource: name_res.clone() }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 100),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 200),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 300),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 400),
+                Instruction::move_vrc20_to(1, Name::must_from(test_name2), 500),
+                Instruction::move_vrc20_to(1, Name::must_from(test_name2), 500),
+                Instruction::move_to(2, name_res.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_input(outpoint03)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run()
+            .expect("transfer name failed");
+
+        let outpoint10 = context1.env().get_output(0);
+        let outpoint11 = context1.env().get_output(1);
+        let outpoint12 = context1.env().get_output(2);
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint10).expect("get resource"),
+            Some(vrc20_res1),
+            "the new should be some"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint11).expect("get resource"),
+            Some(vrc20_res2),
+            "the new should be some"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint12).expect("get resource"),
+            Some(name_res),
+            "the new should be some"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_vrc20_merged_diff_type_should_failed() -> Result<()> {
+        let test_name1 = "test1";
+        let test_name2 = "test2";
+
+        let mint_amount = 1000;
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.deploy_vrc20(test_name1, mint_amount);
+        ctx.deploy_vrc20(test_name2, mint_amount);
+
+        let outpoint01 = ctx.mint_vrc20(test_name1);
+        let outpoint02 = ctx.mint_vrc20(test_name2);
+        ctx.mint_name("abcde");
+
+        let outpoint03 = ctx.get_name_outpoint("abcde").expect("should exist");
+
+        let name_res = Resource::name(Name::must_from("abcde"));
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into()).expect("vrc20");
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into()).expect("vrc20");
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc20_res2.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert { index: 3, resource: name_res.clone() }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 100),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 200),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 300),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 400),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name2), 500),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name2), 500),
+                Instruction::move_to(2, name_res.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_input(outpoint03)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "the vrc20 not support merge by diff name", "merge vrc20 diff type");
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc20_res2.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert { index: 3, resource: name_res.clone() }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 100),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 200),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 300),
+                Instruction::move_vrc20_to(0, Name::must_from(test_name1), 400),
+                Instruction::move_vrc20_to(1, Name::must_from(test_name2), 500),
+                Instruction::move_vrc20_to(1, Name::must_from(test_name2), 500),
+                Instruction::move_to(1, name_res.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_input(outpoint03)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(
+            res,
+            "the resource type not support merge",
+            "merge vrc20 and name diff type",
+        );
 
         Ok(())
     }

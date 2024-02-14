@@ -147,20 +147,12 @@ impl Resource {
     pub fn merge(&mut self, other: &Resource) -> Result<()> {
         match (self, other) {
             (Self::VRC20(v), Self::VRC20(o)) => {
+                if v.name != o.name {
+                    bail!("the vrc20 not support merge by diff name")
+                }
+
                 v.amount += o.amount;
                 Ok(())
-            }
-            _ => {
-                bail!("the resource type not support merge")
-            }
-        }
-    }
-
-    pub fn merge_into(self, other: &Resource) -> Result<Self> {
-        match (self, other) {
-            (Self::VRC20(mut v), Self::VRC20(o)) => {
-                v.amount += o.amount;
-                Ok(Resource::VRC20(v))
             }
             _ => {
                 bail!("the resource type not support merge")
