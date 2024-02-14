@@ -80,7 +80,7 @@ impl Name {
     }
 
     pub fn must_from(name_str: &str) -> Self {
-        Self::try_from(name_str).expect(format!("the {} must be name format!", name_str).as_str())
+        Self::try_from(name_str).unwrap_or_else(|_| panic!("the {} must be name format!", name_str))
     }
 
     pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {

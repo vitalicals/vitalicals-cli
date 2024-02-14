@@ -44,15 +44,13 @@ impl InputResourcesContextT for InputResourcesContext {
         log::debug!(target: TARGET, "get_uncosted_vrc20 {:?}", name);
         for vrc20 in &self.inputs.vrc20s {
             log::debug!(target: TARGET, "vrc20 {:?}", vrc20);
-            if !vrc20.is_costed() {
-                if vrc20.name == name {
-                    if vrc20.amount.is_zero() {
-                        return None
-                    } else {
-                        let alive = vrc20.amount.saturating_sub(vrc20.costed);
+            if !vrc20.is_costed() && vrc20.name == name {
+                if vrc20.amount.is_zero() {
+                    return None
+                } else {
+                    let alive = vrc20.amount.saturating_sub(vrc20.costed);
 
-                        return Some(Resource::VRC20(VRC20::new(name, alive)));
-                    }
+                    return Some(Resource::VRC20(VRC20::new(name, alive)));
                 }
             }
         }
@@ -270,7 +268,7 @@ impl InputResources {
 
                 log::debug!(target: TARGET, "the input vrc20: {} {:?}", vrc20.name.to_string(), uncosted_amount);
 
-                let iter = (0..vrc20.inputs.len()).into_iter().rev();
+                let iter = (0..vrc20.inputs.len()).rev();
 
                 for input_index in iter {
                     let input = &vrc20.inputs[input_index];

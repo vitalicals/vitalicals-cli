@@ -445,12 +445,11 @@ impl<'a> P2trBuilder<'a> {
         let internal_key = self.internal_key;
 
         // SIGNER
-        for (_, (leaf_hashes, (_, path))) in &psbt.inputs[0].tap_key_origins.clone() {
+        for (leaf_hashes, (_, path)) in psbt.inputs[0].tap_key_origins.clone().values() {
             let secret_key = self.master_xpriv.derive_priv(secp, path)?.to_priv().inner;
 
             for lh in leaf_hashes {
-                let (hash, hash_ty) =
-                    Self::sighash(psbt, 0, Some(lh.clone())).context("sighash")?;
+                let (hash, hash_ty) = Self::sighash(psbt, 0, Some(*lh)).context("sighash")?;
 
                 sign_psbt_taproot(
                     &secret_key,

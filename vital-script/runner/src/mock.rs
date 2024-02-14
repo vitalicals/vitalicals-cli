@@ -26,7 +26,7 @@ use crate::{traits::EnvFunctions, Context, Runner, TARGET};
 pub fn assert_err_str<T>(res: Result<T>, str: &str, reason: &str) {
     assert_eq!(
         res.err()
-            .expect(format!("the res should be error by {}", reason).as_str())
+            .unwrap_or_else(|| panic!("the res should be error by {}", reason))
             .root_cause()
             .to_string(),
         str
@@ -39,6 +39,12 @@ pub struct TxMock {
     pub reveal_txid: Txid,
     pub seq: u32,
     ops_bytes: Vec<(u8, Vec<u8>)>,
+}
+
+impl Default for TxMock {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TxMock {
@@ -66,9 +72,8 @@ impl TxMock {
     }
 
     pub fn push_input(&mut self, input: OutPoint) {
-        let mut txin = TxIn::default();
-        txin.previous_output = input;
-        txin.sequence = Sequence(self.seq);
+        let txin =
+            TxIn { previous_output: input, sequence: Sequence(self.seq), ..Default::default() };
 
         // println!("push_input input by index: {:?}", txin);
 
@@ -82,8 +87,7 @@ impl TxMock {
     }
 
     pub fn push_ops(&mut self, ops_bytes: Vec<u8>) {
-        let mut txin = TxIn::default();
-        txin.sequence = Sequence(self.seq);
+        let txin = TxIn { sequence: Sequence(self.seq), ..Default::default() };
 
         let new_txin_index = self.reveal.input.len();
         assert!(new_txin_index < 0xff);
@@ -111,6 +115,12 @@ impl TxMock {
 pub struct EnvMock {
     pub resource_storage: Arc<Mutex<BTreeMap<OutPoint, Resource>>>,
     pub storage: Arc<Mutex<BTreeMap<Vec<u8>, Vec<u8>>>>,
+}
+
+impl Default for EnvMock {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EnvMock {
