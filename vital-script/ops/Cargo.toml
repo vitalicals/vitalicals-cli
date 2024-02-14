@@ -16,6 +16,10 @@ vital-script-primitives.workspace = true
 
 [dev-dependencies]
 hex.workspace = true
+env_logger.workspace = true
+
+vital-script-runner = { workspace = true, features = ["std"] }
+vital-script-ops = { workspace = true, features = ["std"] }
 
 [features]
 default = ["std"]

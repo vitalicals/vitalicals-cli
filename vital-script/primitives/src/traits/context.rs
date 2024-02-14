@@ -127,7 +127,7 @@ pub trait InputResourcesContext {
     fn all(&self) -> &[u8];
     fn uncosted(&self) -> Vec<(u8, Resource)>;
 
-    fn get_vrc20(&self, name: Tag) -> Option<Resource>;
+    fn get_uncosted_vrc20(&self, name: Tag) -> Option<Resource>;
 }
 
 pub trait Instruction {
@@ -204,14 +204,7 @@ pub trait Context {
 
         // 2. if a output had been sent a resource, need check if item can merged.
         //    if the resource cannot be merged, it will return an error.
-        let output_resource = self.env().get_output_resource(index);
-        let resource = match output_resource {
-            Some(res) => resource.merge_into(res),
-            None => Ok(resource),
-        }
-        .context("the output cannot merge to")?;
-
-        // 3. set the resource to output
+        //    set the resource to output, Note it will merge in `set_resource_to_output`
         self.env_mut().set_resource_to_output(index, resource.clone()).context("set")?;
 
         self.on_output(index, resource);

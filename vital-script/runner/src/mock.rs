@@ -5,31 +5,46 @@ use anyhow::{Context as AnyhowContext, Result};
 
 use bitcoin::{
     absolute::LockTime, hash_types::Txid, transaction::Version, Amount, OutPoint, ScriptBuf,
-    Transaction, TxIn, TxOut,
+    Sequence, Transaction, TxIn, TxOut,
 };
-use vital_script_ops::{instruction::Instruction, parser::Parser};
+use vital_script_ops::{
+    builder::instruction::ScriptBuilderFromInstructions,
+    instruction::{
+        assert_input::InstructionInputAssert, assert_output::InstructionOutputAssert,
+        resource_deploy::InstructionVRC20Deploy, Instruction,
+    },
+    parser::Parser,
+};
 use vital_script_primitives::{
-    resources::Resource,
-    traits::{Context as ContextT, RunMode},
+    resources::{Name, Resource, ResourceType},
+    traits::{Context as ContextT, EnvContext, RunMode},
+    types::vrc20::{VRC20MetaData, VRC20MintMeta},
 };
 
-use crate::{traits::EnvFunctions, Context, TARGET};
+use crate::{traits::EnvFunctions, Context, Runner, TARGET};
 
-pub fn init_logger() {
-    let _ = env_logger::Builder::from_default_env()
-        .format_module_path(true)
-        .format_level(true)
-        .filter_level(log::LevelFilter::Info)
-        .parse_filters(format!("{}=debug", crate::TARGET).as_str())
-        .parse_filters("vital::ops=debug")
-        .try_init();
+pub fn assert_err_str<T>(res: Result<T>, str: &str, reason: &str) {
+    assert_eq!(
+        res.err()
+            .unwrap_or_else(|| panic!("the res should be error by {}", reason))
+            .root_cause()
+            .to_string(),
+        str
+    );
 }
 
 #[derive(Debug, Clone)]
 pub struct TxMock {
     pub reveal: Transaction,
     pub reveal_txid: Txid,
+    pub seq: u32,
     ops_bytes: Vec<(u8, Vec<u8>)>,
+}
+
+impl Default for TxMock {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TxMock {
@@ -42,12 +57,23 @@ impl TxMock {
         };
         let txid = tx.txid();
 
-        Self { reveal: tx, reveal_txid: txid, ops_bytes: Vec::new() }
+        Self { reveal: tx, reveal_txid: txid, ops_bytes: Vec::new(), seq: 0 }
+    }
+
+    /// Add a ext count, just for make txid not eq.
+    pub fn with_ext(mut self, c: u32) -> Self {
+        self.seq = c;
+        self
+    }
+
+    pub fn with_input(mut self, input: OutPoint) -> Self {
+        self.push_input(input);
+        self
     }
 
     pub fn push_input(&mut self, input: OutPoint) {
-        let mut txin = TxIn::default();
-        txin.previous_output = input;
+        let txin =
+            TxIn { previous_output: input, sequence: Sequence(self.seq), ..Default::default() };
 
         // println!("push_input input by index: {:?}", txin);
 
@@ -55,8 +81,13 @@ impl TxMock {
         self.reveal_txid = self.reveal.txid();
     }
 
+    pub fn with_ops(mut self, ops_bytes: Vec<u8>) -> Self {
+        self.push_ops(ops_bytes);
+        self
+    }
+
     pub fn push_ops(&mut self, ops_bytes: Vec<u8>) {
-        let txin = TxIn::default();
+        let txin = TxIn { sequence: Sequence(self.seq), ..Default::default() };
 
         let new_txin_index = self.reveal.input.len();
         assert!(new_txin_index < 0xff);
@@ -65,6 +96,11 @@ impl TxMock {
         self.reveal_txid = self.reveal.txid();
 
         self.ops_bytes.push((new_txin_index as u8, ops_bytes));
+    }
+
+    pub fn with_output(mut self, amount: u64) -> Self {
+        self.push_output(amount);
+        self
     }
 
     pub fn push_output(&mut self, amount: u64) {
@@ -81,12 +117,30 @@ pub struct EnvMock {
     pub storage: Arc<Mutex<BTreeMap<Vec<u8>, Vec<u8>>>>,
 }
 
+impl Default for EnvMock {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnvMock {
     pub fn new() -> Self {
         Self {
             resource_storage: Arc::new(Mutex::new(BTreeMap::new())),
             storage: Arc::new(Mutex::new(BTreeMap::new())),
         }
+    }
+
+    pub fn get_outpoint(&self, resource: &Resource) -> Option<OutPoint> {
+        let storage = self.resource_storage.lock().expect("lock");
+
+        for (outpoint, res) in storage.iter() {
+            if resource == res {
+                return Some(*outpoint);
+            }
+        }
+
+        None
     }
 }
 
@@ -200,5 +254,152 @@ impl ContextT for ContextMock {
     }
     fn post_check(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+pub struct TestCtx {
+    ops_bytes: Vec<Vec<u8>>,
+    tx: TxMock,
+    env_interface: EnvMock,
+
+    /// A count auto increment for make txid not eq.
+    count: u32,
+}
+
+impl TestCtx {
+    pub fn new(env_interface: &EnvMock) -> Self {
+        Self {
+            ops_bytes: Vec::new(),
+            tx: TxMock::new(),
+            env_interface: env_interface.clone(),
+            count: 1,
+        }
+    }
+
+    pub fn with_instructions(mut self, ins: Vec<Instruction>) -> Self {
+        let ops_bytes = ScriptBuilderFromInstructions::build(ins).expect("build should ok");
+
+        self.ops_bytes.push(ops_bytes);
+        self
+    }
+
+    pub fn with_input(mut self, input: OutPoint) -> Self {
+        self.tx.push_input(input);
+        self
+    }
+
+    pub fn with_ops(mut self) -> Self {
+        let bytes = self.ops_bytes.first().expect("no ops in ctx").clone();
+        log::debug!(target: TARGET, "with ops bytes: {}", hex::encode(&bytes));
+        self.tx.push_ops(bytes);
+        self
+    }
+
+    pub fn with_output(mut self, amount: u64) -> Self {
+        self.tx.push_output(amount);
+        self
+    }
+
+    pub fn run(&mut self) -> Result<ContextMock> {
+        let mut context = ContextMock::new(self.tx.clone(), self.env_interface.clone());
+        Runner::new().run(&mut context)?;
+
+        Ok(context)
+    }
+
+    pub fn get_name_outpoint(&self, name: impl Into<String>) -> Option<OutPoint> {
+        self.env_interface
+            .get_outpoint(&Resource::Name(Name::try_from(name.into()).expect("name failed")))
+    }
+
+    pub fn mint_name(&mut self, name: impl Into<String>) {
+        let mint_name = Name::try_from(name.into()).expect("the name format not supported");
+
+        let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+            Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+            Instruction::mint(0, ResourceType::name(mint_name)),
+        ])
+        .expect("build ops_bytes should ok");
+
+        let mut tx_mock = TxMock::new().with_ext(self.count);
+        tx_mock.push_ops(ops_bytes);
+        tx_mock.push_output(1000);
+
+        self.count += 1;
+
+        let mut context = ContextMock::new(tx_mock, self.env_interface.clone());
+        Runner::new().run(&mut context).expect("run failed");
+    }
+
+    pub fn deploy_vrc20(&mut self, name: impl Into<String>, mint_amount: u128) {
+        let name = name.into();
+        self.mint_name(name.clone());
+
+        let mint_name = Name::try_from(name.clone()).unwrap();
+
+        // 2. deploy a vrc20 by the name
+        let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+            Instruction::Input(InstructionInputAssert {
+                index: 0, // Note this tx will push input first into the tx
+                resource: Resource::Name(mint_name),
+            }),
+            Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+            Instruction::Deploy(InstructionVRC20Deploy {
+                name_input: 0,
+                name: mint_name,
+                meta: VRC20MetaData {
+                    decimals: 5,
+                    nonce: 1000000,
+                    bworkc: 1000000,
+                    mint: VRC20MintMeta { mint_amount, mint_height: 0, max_mints: 100000000 },
+                    meta: None,
+                },
+            }),
+        ])
+        .expect("build should ok");
+
+        log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+
+        let mut tx_mock = TxMock::new().with_ext(self.count);
+        tx_mock.push_input(self.get_name_outpoint(name).expect("not found name outpoint"));
+        tx_mock.push_ops(ops_bytes);
+        tx_mock.push_output(2000);
+
+        self.count += 1;
+
+        let mut context = ContextMock::new(tx_mock, self.env_interface.clone());
+        Runner::new().run(&mut context).expect("run failed");
+    }
+
+    pub fn mint_vrc20(&mut self, name: impl Into<String>) -> OutPoint {
+        let mint_name = Name::try_from(name.into()).unwrap();
+
+        let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+            Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+            Instruction::mint(0, ResourceType::vrc20(mint_name)),
+        ])
+        .expect("build should ok");
+
+        log::info!("ops_bytes: {:?}", hex::encode(&ops_bytes));
+
+        let mut tx_mock3 = TxMock::new().with_ext(self.count);
+        tx_mock3.push_output(2000);
+        tx_mock3.push_ops(ops_bytes);
+
+        self.count += 1;
+
+        let mut context = ContextMock::new(tx_mock3, self.env_interface.clone());
+        Runner::new().run(&mut context).expect("run failed");
+
+        let outpoint = context.env().get_output(0);
+        let res = self
+            .env_interface
+            .get_resources(&outpoint)
+            .expect("get resources failed")
+            .expect("no found resource");
+
+        assert_eq!(res.resource_type(), ResourceType::vrc20(mint_name));
+
+        outpoint
     }
 }

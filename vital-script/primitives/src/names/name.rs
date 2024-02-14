@@ -79,6 +79,10 @@ impl Name {
         Self(v)
     }
 
+    pub fn must_from(name_str: &str) -> Self {
+        Self::try_from(name_str).unwrap_or_else(|_| panic!("the {} must be name format!", name_str))
+    }
+
     pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {
         if datas.remaining() < Self::SIZE {
             bail!("ShortName bytes not enough");
