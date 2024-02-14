@@ -23,6 +23,16 @@ use vital_script_primitives::{
 
 use crate::{traits::EnvFunctions, Context, Runner, TARGET};
 
+pub fn assert_err_str<T>(res: Result<T>, str: &str, reason: &str) {
+    assert_eq!(
+        res.err()
+            .expect(format!("the res should be error by {}", reason).as_str())
+            .root_cause()
+            .to_string(),
+        str
+    );
+}
+
 #[derive(Debug, Clone)]
 pub struct TxMock {
     pub reveal: Transaction,

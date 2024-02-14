@@ -10,7 +10,7 @@ use primitive_types::U256;
 use parity_scale_codec::{Decode, Encode};
 
 pub use crate::names::Name;
-use crate::names::ShortName;
+use crate::{names::ShortName, H256};
 
 pub mod vrc20;
 pub mod vrc721;
@@ -102,7 +102,6 @@ impl Default for Resource {
 }
 
 impl Resource {
-    #[cfg(feature = "std")]
     pub fn vrc20(name: impl Into<String>, amount: U256) -> Result<Self> {
         let name = Name::try_from(name.into())?;
 
@@ -114,6 +113,20 @@ impl Resource {
             Ok(v)
         } else {
             bail!("resource is not vrc20")
+        }
+    }
+
+    pub fn vrc721(name: impl Into<String>, hash: impl Into<H256>) -> Result<Self> {
+        let name = Name::try_from(name.into())?;
+
+        Ok(Self::VRC721(VRC721::new(name, hash.into())))
+    }
+
+    pub fn as_vrc721(&self) -> Result<&VRC721> {
+        if let Self::VRC721(v) = self {
+            Ok(v)
+        } else {
+            bail!("resource is not vrc721")
         }
     }
 

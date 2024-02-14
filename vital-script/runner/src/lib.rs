@@ -127,8 +127,6 @@ mod tests {
         Runner::new().run(&mut context).expect("run failed");
     }
 
-    // TODO: need move the tests
-
     #[test]
     fn test_mint_name_then_deploy_vrc20() {
         init_logger();
