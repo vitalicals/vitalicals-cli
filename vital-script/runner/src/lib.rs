@@ -17,7 +17,7 @@ pub mod traits;
 mod context;
 mod resource_cache;
 
-#[cfg(test)]
+#[cfg(feature = "std")]
 pub mod mock;
 
 pub use context::{
@@ -96,6 +96,16 @@ mod tests {
     use super::*;
     use crate::{mock::*, traits::EnvFunctions};
 
+    pub fn init_logger() {
+        let _ = env_logger::Builder::from_default_env()
+            .format_module_path(true)
+            .format_level(true)
+            .filter_level(log::LevelFilter::Info)
+            .parse_filters(format!("{}=debug", crate::TARGET).as_str())
+            .parse_filters("vital::ops=debug")
+            .try_init();
+    }
+
     #[test]
     fn test_simple_runner() {
         init_logger();
@@ -129,14 +139,14 @@ mod tests {
 
         let env_interface = EnvMock::new();
 
-        let context1 = TestCtx::new()
+        let context1 = TestCtx::new(&env_interface)
             .with_instructions(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::name(mint_name)),
             ])
             .with_ops()
             .with_output(1000)
-            .run(&env_interface)
+            .run()
             .expect("mint name failed");
 
         let is_costed = context1
@@ -149,7 +159,7 @@ mod tests {
         let res = env_interface.get_resources(&outpoint).expect("get resources failed");
         assert_eq!(res, Some(Resource::name(mint_name)));
 
-        let context2 = TestCtx::new()
+        let context2 = TestCtx::new(&env_interface)
             .with_instructions(vec![
                 Instruction::Input(InstructionInputAssert {
                     index: 1,
@@ -171,7 +181,7 @@ mod tests {
             .with_ops()
             .with_input(outpoint)
             .with_output(2000)
-            .run(&env_interface)
+            .run()
             .expect("deploy vrc20 failed");
 
         let is_costed = context2
@@ -194,18 +204,18 @@ mod tests {
         // 3. mint vrc20
         let vrc20_in_2 = Resource::vrc20(mint_name_str, mint_amount.into()).expect("res");
 
-        let context3 = TestCtx::new()
+        let context3 = TestCtx::new(&env_interface)
             .with_instructions(vec![
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
                 Instruction::mint(0, ResourceType::vrc20(mint_name)),
             ])
             .with_output(2000)
             .with_ops()
-            .run(&env_interface)
+            .run()
             .expect("mint vrc20 failed");
 
         // 4. transfer vrc20
-        let context4 = TestCtx::new()
+        let context4 = TestCtx::new(&env_interface)
             .with_instructions(vec![
                 Instruction::Input(InstructionInputAssert {
                     index: 1,
@@ -217,7 +227,7 @@ mod tests {
             .with_ops()
             .with_input(context3.env().get_output(0))
             .with_output(2000)
-            .run(&env_interface)
+            .run()
             .expect("transfer vrc20 failed");
 
         let res = env_interface

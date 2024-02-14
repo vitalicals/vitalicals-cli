@@ -127,7 +127,7 @@ pub trait InputResourcesContext {
     fn all(&self) -> &[u8];
     fn uncosted(&self) -> Vec<(u8, Resource)>;
 
-    fn get_vrc20(&self, name: Tag) -> Option<Resource>;
+    fn get_uncosted_vrc20(&self, name: Tag) -> Option<Resource>;
 }
 
 pub trait Instruction {

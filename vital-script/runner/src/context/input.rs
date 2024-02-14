@@ -40,13 +40,19 @@ impl InputResourcesContextT for InputResourcesContext {
         self.inputs.cost(resource)
     }
 
-    fn get_vrc20(&self, name: Tag) -> Option<Resource> {
-        for vrc20 in self.inputs.vrc20s.iter() {
-            if vrc20.name == name {
-                if vrc20.amount.is_zero() {
-                    return None
-                } else {
-                    return Some(Resource::VRC20(VRC20::new(name, vrc20.amount)));
+    fn get_uncosted_vrc20(&self, name: Tag) -> Option<Resource> {
+        log::debug!(target: TARGET, "get_uncosted_vrc20 {:?}", name);
+        for vrc20 in &self.inputs.vrc20s {
+            log::debug!(target: TARGET, "vrc20 {:?}", vrc20);
+            if !vrc20.is_costed() {
+                if vrc20.name == name {
+                    if vrc20.amount.is_zero() {
+                        return None
+                    } else {
+                        let alive = vrc20.amount.saturating_sub(vrc20.costed);
+
+                        return Some(Resource::VRC20(VRC20::new(name, alive)));
+                    }
                 }
             }
         }
@@ -70,13 +76,13 @@ pub struct NameInput {
     name: Name,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct VRC20Input {
     index: u8,
     amount: U256,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct VRC20Inputs {
     name: Tag,
     amount: U256,
@@ -167,12 +173,10 @@ impl InputResources {
             }
         }
 
-        self.vrc20s.push(VRC20Inputs {
-            name,
-            amount,
-            costed: U256::zero(),
-            inputs: Vec::with_capacity(VEC_CAP_SIZE),
-        })
+        let mut inputs = Vec::with_capacity(VEC_CAP_SIZE);
+        inputs.push(VRC20Input { index, amount });
+
+        self.vrc20s.push(VRC20Inputs { name, amount, costed: U256::zero(), inputs });
     }
 
     pub fn push_vrc721(&mut self, index: u8, name: Tag, hash: H256) {
@@ -244,7 +248,7 @@ impl InputResources {
             }
         }
 
-        bail!("not found res in inputs")
+        bail!("not found name {} res in inputs", resource)
     }
 
     /// Return the uncosted resource with the input index.
@@ -254,12 +258,20 @@ impl InputResources {
         let mut res = Vec::with_capacity(8);
 
         for vrc20 in self.vrc20s.iter() {
+            log::debug!(target: TARGET, "the input vrc20: {:?}", vrc20);
             if !vrc20.is_costed() {
                 // we calculate the uncosted amount, the cost is first-indexed first-cost,
                 // so we need from the lastest one.
                 let mut uncosted_amount = vrc20.amount.saturating_sub(vrc20.costed);
-                for input_index in vrc20.inputs.len() - 1..=0 {
+
+                log::debug!(target: TARGET, "the input vrc20: {} {:?}", vrc20.name.to_string(), uncosted_amount);
+
+                let iter = (0..vrc20.inputs.len()).into_iter().rev();
+
+                for input_index in iter {
                     let input = &vrc20.inputs[input_index];
+
+                    log::debug!(target: TARGET, "process input vrc20: {} {} {:?}", input_index, uncosted_amount, input.amount);
                     if uncosted_amount <= input.amount {
                         // in this input, is all
                         res.push((

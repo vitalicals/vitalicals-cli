@@ -22,6 +22,8 @@ env_logger = { workspace = true, default-features = false }
 btc-p2tr-builder.workspace = true
 btc-script-builder.workspace = true
 serde_json.workspace = true
+
+vital-script-ops = { workspace = true, features = ["std"] }
 vital-script-builder = { workspace = true, features = ["std"] }
 
 [features]
