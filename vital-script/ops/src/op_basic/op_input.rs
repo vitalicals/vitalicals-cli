@@ -214,9 +214,77 @@ impl From<InputVRC721Assert> for Instruction {
 mod tests {
     use vital_script_primitives::names::Name;
 
-    use crate::{builder::instruction::ScriptBuilderFromInstructions, parser::Parser};
-
     use super::*;
+    use crate::{
+        builder::instruction::ScriptBuilderFromInstructions,
+        op_basic::tests::check_ops_encode_and_decode, parser::Parser,
+    };
+
+    #[test]
+    fn test_input_ops_encode_and_decode() {
+        let short_name = ShortName::try_from("abc".to_string()).unwrap();
+        let name = Name::try_from("abcdef".to_string()).unwrap();
+
+        check_ops_encode_and_decode(InputAssertShortName { name: short_name, index: 1 });
+
+        check_ops_encode_and_decode(InputAssertName { name, index: 2 });
+
+        // FIXME: support long name
+        // check_ops_encode_and_decode(InputAssertLongName{
+        //     name: name.into(),
+        //    index: 3,
+        // });
+
+        check_ops_encode_and_decode(InputVRC20AssertSa32 {
+            amount: u32::MAX / 2 + 999,
+            name: short_name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC20AssertSa64 {
+            amount: u64::MAX / 2 + 999,
+            name: short_name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC20AssertSa128 {
+            amount: u128::MAX / 2 + 999,
+            name: short_name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC20AssertSa256 {
+            amount: U256::from(u128::MAX) + U256::from(999),
+            name: short_name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC20AssertA32 {
+            amount: u32::MAX / 2 + 999,
+            name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC20AssertA64 {
+            amount: u64::MAX / 2 + 999,
+            name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC20AssertA128 {
+            amount: u128::MAX / 2 + 999,
+            name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC20AssertA256 {
+            amount: U256::from(u128::MAX) + U256::from(999),
+            name,
+            index: 3,
+        });
+
+        check_ops_encode_and_decode(InputVRC721Assert { hash: H256::random(), name, index: 128 });
+    }
 
     #[test]
     fn test_ops_to_instruction() {

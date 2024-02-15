@@ -200,3 +200,92 @@ impl From<MoveVRC721> for Instruction {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use vital_script_primitives::names::Name;
+
+    use super::*;
+    use crate::op_basic::tests::check_ops_encode_and_decode;
+
+    #[test]
+    fn test_move_name_ops_encode_and_decode() {
+        let short_name = ShortName::try_from("abc".to_string()).unwrap();
+        let name = Name::try_from("abcdef".to_string()).unwrap();
+
+        check_ops_encode_and_decode(MoveShortName { name: short_name, output_index: 128 });
+
+        check_ops_encode_and_decode(MoveName { name, output_index: 128 });
+    }
+
+    #[test]
+    fn test_move_all_vrc20_ops_encode_and_decode() {
+        let short_name = ShortName::try_from("abc".to_string()).unwrap();
+        let name = Name::try_from("abcdef".to_string()).unwrap();
+
+        check_ops_encode_and_decode(MoveAllVRC20S { name: short_name, output_index: 128 });
+
+        check_ops_encode_and_decode(MoveAllVRC20 { name, output_index: 128 });
+    }
+
+    #[test]
+    fn test_move_vrc20_ops_encode_and_decode() {
+        let short_name = ShortName::try_from("abc".to_string()).unwrap();
+        let name = Name::try_from("abcdef".to_string()).unwrap();
+
+        check_ops_encode_and_decode(MoveVRC20Sa32 {
+            amount: u32::MAX / 2 + 999,
+            name: short_name,
+            output_index: 3,
+        });
+
+        check_ops_encode_and_decode(MoveVRC20Sa64 {
+            amount: u64::MAX / 2 + 999,
+            name: short_name,
+            output_index: 3,
+        });
+
+        check_ops_encode_and_decode(MoveVRC20Sa128 {
+            amount: u128::MAX / 2 + 999,
+            name: short_name,
+            output_index: 3,
+        });
+
+        check_ops_encode_and_decode(MoveVRC20Sa256 {
+            amount: U256::from(u128::MAX) + U256::from(999),
+            name: short_name,
+            output_index: 3,
+        });
+
+        check_ops_encode_and_decode(MoveVRC20A32 {
+            amount: u32::MAX / 2 + 999,
+            name,
+            output_index: 3,
+        });
+
+        check_ops_encode_and_decode(MoveVRC20A64 {
+            amount: u64::MAX / 2 + 999,
+            name,
+            output_index: 3,
+        });
+
+        check_ops_encode_and_decode(MoveVRC20A128 {
+            amount: u128::MAX / 2 + 999,
+            name,
+            output_index: 3,
+        });
+
+        check_ops_encode_and_decode(MoveVRC20A256 {
+            amount: U256::from(u128::MAX) + U256::from(999),
+            name,
+            output_index: 3,
+        });
+    }
+
+    #[test]
+    fn test_move_vrc721_ops_encode_and_decode() {
+        let name = Name::try_from("abcdef".to_string()).unwrap();
+
+        check_ops_encode_and_decode(MoveVRC721 { hash: H256::random(), name, output_index: 3 });
+    }
+}

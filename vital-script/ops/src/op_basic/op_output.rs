@@ -65,6 +65,8 @@ mod tests {
     use super::*;
     use alloc::vec;
 
+    use crate::op_basic::tests::check_ops_encode_and_decode;
+
     #[test]
     fn test_u8_to_pos() {
         assert!(u8_to_pos(0, 0).is_empty());
@@ -89,5 +91,33 @@ mod tests {
         assert_eq!(u8_to_pos(0xf0, 1), vec![12, 13, 14, 15]);
         assert_eq!(u8_to_pos(0x0f, 1), vec![8, 9, 10, 11]);
         assert_eq!(u8_to_pos(0xff, 1), vec![8, 9, 10, 11, 12, 13, 14, 15]);
+    }
+
+    #[test]
+    fn test_move_name_ops_encode_and_decode() {
+        check_ops_encode_and_decode(OutputIndexAssert { index: 0 });
+        check_ops_encode_and_decode(OutputIndexAssert { index: 1 });
+        check_ops_encode_and_decode(OutputIndexAssert { index: 31 });
+        check_ops_encode_and_decode(OutputIndexAssert { index: 16 });
+
+        check_ops_encode_and_decode(OutputIndexFlag16Assert {
+            index_flag: [0b00000001, 0b10000000],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag16Assert {
+            index_flag: [0b00111100, 0b10101010],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag16Assert {
+            index_flag: [0b11111111, 0b11111111],
+        });
+
+        check_ops_encode_and_decode(OutputIndexFlag32Assert {
+            index_flag: [0b00000001, 0b00000000, 0b00000000, 0b10000000],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag32Assert {
+            index_flag: [0b00111100, 0b10101010, 0b10101010, 0b10101010],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag32Assert {
+            index_flag: [0b11111111, 0b11111111, 0b11111111, 0b11111111],
+        });
     }
 }
