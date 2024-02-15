@@ -24,13 +24,14 @@ use vital_script_primitives::{
 use crate::{traits::EnvFunctions, Context, Runner, TARGET};
 
 pub fn assert_err_str<T>(res: Result<T>, str: &str, reason: &str) {
-    assert_eq!(
-        res.err()
-            .unwrap_or_else(|| panic!("the res should be error by {}", reason))
-            .root_cause()
-            .to_string(),
-        str
-    );
+    let res = res
+        .err()
+        .unwrap_or_else(|| panic!("the res should be error by {}", reason))
+        .root_cause()
+        .to_string();
+    if res != str {
+        panic!("the err not expected for {}:\n expected: {}\n      got: {}", reason, str, res)
+    }
 }
 
 #[derive(Debug, Clone)]
