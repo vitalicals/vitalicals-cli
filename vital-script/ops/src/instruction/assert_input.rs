@@ -99,3 +99,86 @@ impl InstructionInputAssert {
         Ok(bytes)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+
+    use vital_script_primitives::resources::{Name, Resource};
+    use vital_script_runner::mock::*;
+
+    use vital_script_ops::instruction::{assert_input::InstructionInputAssert, Instruction};
+
+    #[test]
+    fn test_input_assert_not_match_should_failed() -> Result<()> {
+        let test_name1 = "test1";
+        let test_name2 = "test2";
+
+        let mint_amount = 1000;
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.deploy_vrc20(test_name1, mint_amount);
+        ctx.deploy_vrc20(test_name2, mint_amount);
+        ctx.mint_name("abcde");
+
+        let outpoint01 = ctx.mint_vrc20(test_name1);
+        let outpoint03 = ctx.get_name_outpoint("abcde").expect("should exist");
+
+        let name_res = Resource::name(Name::must_from("abcde"));
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into()).expect("vrc20");
+
+        let name_res_not_match = Resource::name(Name::must_from("abcd"));
+        let vrc20_res1_not_match = Resource::vrc20(test_name1, 999.into()).expect("vrc20");
+
+        // 1. different vrc20 by name
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: vrc20_res2.clone(),
+            })])
+            .with_ops()
+            .with_input(outpoint01)
+            .run();
+
+        assert_err_str(res, "the resource not expected", "input not match 1");
+
+        // 2. different vrc20 by amount
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: vrc20_res1_not_match.clone(),
+            })])
+            .with_ops()
+            .with_input(outpoint01)
+            .run();
+
+        assert_err_str(res, "the resource not expected", "input not match 2");
+
+        // 3. different res type
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: name_res.clone(),
+            })])
+            .with_ops()
+            .with_input(outpoint01)
+            .run();
+
+        assert_err_str(res, "the resource not expected", "input not match 3");
+
+        // 4. different name
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![Instruction::Input(InstructionInputAssert {
+                index: 1,
+                resource: name_res_not_match.clone(),
+            })])
+            .with_ops()
+            .with_input(outpoint03)
+            .run();
+
+        assert_err_str(res, "the resource not expected", "input not match 3");
+
+        Ok(())
+    }
+}
