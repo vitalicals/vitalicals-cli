@@ -72,7 +72,12 @@ impl<Functions: EnvFunctions> EnvContext<Functions> {
     }
 
     fn get_input(&self, input_index: u8) -> Result<OutPoint> {
-        Ok(self.inputs[input_index as usize])
+        let res = self
+            .inputs
+            .get(input_index as usize)
+            .ok_or_else(|| anyhow!("not found input"))?;
+
+        Ok(*res)
     }
 }
 

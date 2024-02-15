@@ -332,8 +332,21 @@ impl TestCtx {
     }
 
     pub fn deploy_vrc20(&mut self, name: impl Into<String>, mint_amount: u128) {
+        self.deploy_vrc20_with_max(name, mint_amount, 500)
+    }
+
+    pub fn deploy_vrc20_with_max(
+        &mut self,
+        name: impl Into<String>,
+        mint_amount: u128,
+        max_count: u64,
+    ) {
         let name = name.into();
-        self.mint_name(name.clone());
+
+        // if not mint name, just mint it.
+        if self.get_name_outpoint(name.clone()).is_none() {
+            self.mint_name(name.clone());
+        }
 
         let mint_name = Name::try_from(name.clone()).unwrap();
 
@@ -351,7 +364,7 @@ impl TestCtx {
                     decimals: 5,
                     nonce: 1000000,
                     bworkc: 1000000,
-                    mint: VRC20MintMeta { mint_amount, mint_height: 0, max_mints: 100000000 },
+                    mint: VRC20MintMeta { mint_amount, mint_height: 0, max_mints: max_count },
                     meta: None,
                 },
             }),
