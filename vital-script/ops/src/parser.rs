@@ -130,7 +130,8 @@ impl Parser {
         let res = decode_operands!(
             // OutputIndexFlag64Assert,
             DeployVRC20S,
-            DeployVRC20
+            DeployVRC20,
+            BurnResource
         );
 
         Ok(res)

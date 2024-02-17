@@ -4,8 +4,10 @@ use alloc::vec::Vec;
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
+mod op_burn;
 mod op_deploy;
 
+pub use op_burn::*;
 pub use op_deploy::*;
 
 use crate::{instruction::Instruction, utils::Reader};

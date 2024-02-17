@@ -57,8 +57,6 @@ pub enum BasicOp {
     DMintShortVRC20,       // = 0x2e,
     DMintVRC20,            // = 0x2f,
     DMintVRC721,           // = 0x30,
-
-                           // TODO: Burn
 }
 
 impl BasicOp {
@@ -121,6 +119,7 @@ pub enum ExtensionOp {
     OutputIndexFlag64Assert = 0x8001,
     DeployVRC20S = 0x8002,
     DeployVRC20 = 0x8003,
+    BurnResource = 0x8004,
 }
 
 impl ExtensionOp {
@@ -129,6 +128,7 @@ impl ExtensionOp {
             0x8001 => Ok(Self::OutputIndexFlag64Assert),
             0x8002 => Ok(Self::DeployVRC20S),
             0x8003 => Ok(Self::DeployVRC20),
+            0x8004 => Ok(Self::BurnResource),
 
             _ => bail!("not supported op {}", v),
         }

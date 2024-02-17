@@ -32,6 +32,7 @@ pub enum Instruction {
     Deploy(resource_deploy::InstructionVRC20Deploy),
     Move(resource_move::InstructionResourceMove),
     MoveAll(resource_move::InstructionResourceMoveAll),
+    Burn(resource_burn::InstructionResourceBurn),
 }
 
 impl core::fmt::Display for Instruction {
@@ -43,6 +44,7 @@ impl core::fmt::Display for Instruction {
             Self::Deploy(i) => i.fmt(f),
             Self::Move(i) => i.fmt(f),
             Self::MoveAll(i) => i.fmt(f),
+            Self::Burn(i) => i.fmt(f),
         }
     }
 }
@@ -56,6 +58,7 @@ impl InstructionT for Instruction {
             Self::Deploy(i) => i.exec(context),
             Self::Move(i) => i.exec(context),
             Self::MoveAll(i) => i.exec(context),
+            Self::Burn(i) => i.exec(context),
         }
     }
 
@@ -67,6 +70,7 @@ impl InstructionT for Instruction {
             Self::Deploy(i) => i.into_ops_bytes(),
             Self::Move(i) => i.into_ops_bytes(),
             Self::MoveAll(i) => i.into_ops_bytes(),
+            Self::Burn(i) => i.into_ops_bytes(),
         }
     }
 }
