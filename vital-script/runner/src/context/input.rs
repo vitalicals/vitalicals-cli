@@ -28,7 +28,7 @@ impl InputResourcesContextT for InputResourcesContext {
         match resource {
             Resource::Name(name) => self.inputs.push_name(input_index, name),
             Resource::VRC20(v) => self.inputs.push_vrc20(input_index, v.name, v.amount),
-            Resource::VRC721(v) => self.inputs.push_vrc721(input_index, v.name, v.hash),
+            Resource::VRC721(v) => self.inputs.push_vrc721(input_index, Tag::default(), v.hash),
         }
 
         self.inputs_indexs.push(input_index);
@@ -195,7 +195,7 @@ impl InputResources {
 
     pub fn cost_vrc721(&mut self, resource: resources::VRC721) -> Result<()> {
         for v in self.vrc721s.iter_mut() {
-            if v.name == resource.name {
+            if v.name.is_empty() {
                 return v.cost(resource.hash);
             }
         }
@@ -254,10 +254,7 @@ impl InputResources {
             if !vrc721.is_costed() {
                 for input in vrc721.inputs.iter() {
                     if !input.costed {
-                        res.push((
-                            input.index,
-                            Resource::VRC721(VRC721::new(vrc721.name, input.hash)),
-                        ))
+                        res.push((input.index, Resource::VRC721(VRC721::new(input.hash))))
                     }
                 }
             }

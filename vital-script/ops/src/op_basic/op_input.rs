@@ -197,7 +197,6 @@ impl From<InputVRC20AssertA256> for Instruction {
 #[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct InputVRC721Assert {
     pub hash: H256,
-    pub name: Name,
     pub index: u8,
 }
 
@@ -205,7 +204,7 @@ impl From<InputVRC721Assert> for Instruction {
     fn from(value: InputVRC721Assert) -> Self {
         Instruction::Input(InstructionInputAssert {
             index: value.index,
-            resource: Resource::VRC721(VRC721::new(value.name, value.hash)),
+            resource: Resource::VRC721(VRC721::new(value.hash)),
         })
     }
 }

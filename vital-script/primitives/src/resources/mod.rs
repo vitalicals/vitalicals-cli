@@ -69,7 +69,7 @@ impl Resource {
         let (class, name) = match self {
             Self::Name(n) => (ResourceClass::Name, *n),
             Self::VRC20(v) => (ResourceClass::VRC20, v.name),
-            Self::VRC721(v) => (ResourceClass::VRC721, v.name),
+            Self::VRC721(_) => (ResourceClass::VRC721, Tag::default()),
         };
 
         ResourceType { class, name }
