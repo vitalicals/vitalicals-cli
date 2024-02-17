@@ -172,15 +172,13 @@ mod tests {
 
     #[test]
     fn test_mint_two_times_in_a_tx_will_failed() {
-        const ERROR_STR: &str = "each tx can only have one mint";
-
         let res = test_mints_in_one_tx_res(&[
             Name::must_from("test1").into(),
             Name::must_from("test2").into(),
         ]);
         assert_eq!(
             res.err().expect("should failed by mint two times").root_cause().to_string(),
-            ERROR_STR
+            "each tx can only have one mint"
         );
 
         let res = test_mints_in_one_tx_res(&[
@@ -189,7 +187,7 @@ mod tests {
         ]);
         assert_eq!(
             res.err().expect("should failed by mint two times").root_cause().to_string(),
-            ERROR_STR
+            "each tx can only have one mint"
         );
 
         let res = test_mints_in_one_tx_res(&[
@@ -199,7 +197,7 @@ mod tests {
         ]);
         assert_eq!(
             res.err().expect("should failed by mint two times").root_cause().to_string(),
-            ERROR_STR
+            "each tx can only have one mint"
         );
     }
 }

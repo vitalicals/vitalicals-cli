@@ -95,7 +95,7 @@ pub trait EnvContext {
             status_data.mint_count += 1;
             self.set_vrc20_metadata(name, status_data).context("set")?;
         } else {
-            bail!("the vrc20 had created");
+            bail!("the vrc20 had not created");
         }
 
         Ok(())

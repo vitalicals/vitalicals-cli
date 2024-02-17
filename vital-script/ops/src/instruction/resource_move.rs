@@ -236,6 +236,36 @@ mod tests {
             "the new should be some"
         );
 
+        test_move_name_had_costed_failed_impl(test_name)?;
+
+        Ok(())
+    }
+
+    fn test_move_name_had_costed_failed_impl(test_name: &str) -> Result<()> {
+        let test = Name::try_from(test_name).expect("name format");
+        let test_res = Resource::Name(test);
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.mint_name(test_name);
+
+        let outpoint1 = ctx.get_name_outpoint(test_name).expect("should mint");
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert { index: 1, resource: test_res.clone() }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1] }),
+                Instruction::move_to(0, test_res.clone()),
+                Instruction::move_to(1, test_res.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint1)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "had already costed", format!("name {} costed", test_name).as_str());
+
         Ok(())
     }
 
