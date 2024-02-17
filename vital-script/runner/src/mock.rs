@@ -24,13 +24,14 @@ use vital_script_primitives::{
 use crate::{traits::EnvFunctions, Context, Runner, TARGET};
 
 pub fn assert_err_str<T>(res: Result<T>, str: &str, reason: &str) {
-    assert_eq!(
-        res.err()
-            .unwrap_or_else(|| panic!("the res should be error by {}", reason))
-            .root_cause()
-            .to_string(),
-        str
-    );
+    let res = res
+        .err()
+        .unwrap_or_else(|| panic!("the res should be error by {}", reason))
+        .root_cause()
+        .to_string();
+    if res != str {
+        panic!("the err not expected for {}:\n expected: {}\n      got: {}", reason, str, res)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -258,7 +259,7 @@ impl ContextT for ContextMock {
 }
 
 pub struct TestCtx {
-    ops_bytes: Vec<Vec<u8>>,
+    pub ops_bytes: Vec<Vec<u8>>,
     tx: TxMock,
     env_interface: EnvMock,
 
@@ -291,6 +292,14 @@ impl TestCtx {
     pub fn with_ops(mut self) -> Self {
         let bytes = self.ops_bytes.first().expect("no ops in ctx").clone();
         log::debug!(target: TARGET, "with ops bytes: {}", hex::encode(&bytes));
+        self.tx.push_ops(bytes);
+        self
+    }
+
+    pub fn with_ops_bytes(mut self, ops_bytes: &[u8]) -> Self {
+        let bytes = ops_bytes.to_vec();
+        log::debug!(target: TARGET, "with ops bytes: {}", hex::encode(&bytes));
+        self.ops_bytes = vec![bytes.clone()];
         self.tx.push_ops(bytes);
         self
     }
@@ -332,8 +341,21 @@ impl TestCtx {
     }
 
     pub fn deploy_vrc20(&mut self, name: impl Into<String>, mint_amount: u128) {
+        self.deploy_vrc20_with_max(name, mint_amount, 500)
+    }
+
+    pub fn deploy_vrc20_with_max(
+        &mut self,
+        name: impl Into<String>,
+        mint_amount: u128,
+        max_count: u64,
+    ) {
         let name = name.into();
-        self.mint_name(name.clone());
+
+        // if not mint name, just mint it.
+        if self.get_name_outpoint(name.clone()).is_none() {
+            self.mint_name(name.clone());
+        }
 
         let mint_name = Name::try_from(name.clone()).unwrap();
 
@@ -351,7 +373,7 @@ impl TestCtx {
                     decimals: 5,
                     nonce: 1000000,
                     bworkc: 1000000,
-                    mint: VRC20MintMeta { mint_amount, mint_height: 0, max_mints: 100000000 },
+                    mint: VRC20MintMeta { mint_amount, mint_height: 0, max_mints: max_count },
                     meta: None,
                 },
             }),

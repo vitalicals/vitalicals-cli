@@ -67,6 +67,11 @@ impl Instruction for InstructionResourceMint {
         let resource = self.make_mint_resource(context)?;
         match &resource {
             Resource::Name(n) => {
+                // TODO: need check this in pre-check
+                if !n.is_valid() {
+                    bail!("Invalid name resource format");
+                }
+
                 // for name, we need flag it
                 context.env_mut().new_name(*n).context("new name failed")?;
             }
@@ -119,5 +124,256 @@ impl Instruction for InstructionResourceMint {
             }
         };
         Ok(bytes)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::{anyhow, Result};
+
+    use vital_script_primitives::{
+        resources::{Name, Resource},
+        traits::{Context, EnvContext},
+    };
+    use vital_script_runner::{mock::*, traits::EnvFunctions};
+
+    use vital_script_ops::instruction::{assert_output::InstructionOutputAssert, Instruction};
+
+    #[test]
+    fn test_mint_short_name_invalid_will_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+
+        // mint abc :  0a00 27 0420c000 00
+        // mint abcde: 0a00 27 0420c414 00
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00270420c00000").unwrap())
+            .with_output(1000)
+            .run()
+            .expect("mint `abc` should ok");
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00270420c41400").unwrap())
+            .with_output(2000)
+            .run()
+            .expect("mint `abcde` should ok");
+
+        // use a new env for test.
+        let env_interface = EnvMock::new();
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a0027f420c00000").unwrap()) // note this f4 not a value
+            .with_output(1000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "1");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00270420c4ff00").unwrap()) // note this f4 not a value
+            .with_output(2000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "2");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mint_name_invalid_will_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+
+        // mint abc@de : 0a00280420e5105000000600
+        // 0a00
+        // op  name            output
+        // 28 0420e51050000006   00
+
+        // mint abc@de1122 : 0a00280420e510571c75da00
+        // 0a00
+        // op  name            output
+        // 28 0420e510571c75da   00
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280420e5105000000600").unwrap())
+            .with_output(3000)
+            .run()
+            .expect("mint `abc@de` should ok");
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280420e510571c75da00").unwrap())
+            .with_output(4000)
+            .run()
+            .expect("mint `abc@de1122` should ok");
+
+        // use a new env for test.
+        let env_interface = EnvMock::new();
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280ff0e5105000000600").unwrap())
+            .with_output(1000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "1");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280ff0e510571c75da00").unwrap())
+            .with_output(2000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "2");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a002804200510571c75da00").unwrap())
+            .with_output(3000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "3");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280420e510571c75d900").unwrap()) // length 0xa -> 0x9
+            .with_output(4000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "4");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280ff0e5105000000700").unwrap()) // length 0x6 -> 0x7
+            .with_output(5000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "5");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mint_name_two_times_will_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        ctx.mint_name("abcde");
+        let name1 = Name::must_from("abcde");
+        let name_res1 = Resource::name(name1);
+
+        // 1. the `abcde` had mint, so this will failed
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, name_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_output(1000)
+            .run();
+
+        assert_err_str(res, "the name had created", "mint names two times will failed");
+
+        // deploy a vrc will cost the name
+        ctx.deploy_vrc20("abcde", 10000);
+
+        // 2. event the name had costed, also cannot mint
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, name_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_output(1000)
+            .run();
+
+        assert_err_str(res, "the name had created", "mint names two times will failed");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mint_vrc20_no_deployed_should_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        let vrc20_res1 = Resource::vrc20("abcde", 1000.into())?;
+
+        // 1. the `abcde` not deployed
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, vrc20_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_output(1000)
+            .run();
+
+        assert_err_str(
+            res,
+            "not found vrc20 metadata, may not deployed",
+            "the `abcde` not deployed",
+        );
+
+        ctx.deploy_vrc20("abe", 1000);
+
+        // 2. had a `abe`, but not `abcde`
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, vrc20_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_output(1000)
+            .run();
+
+        assert_err_str(
+            res,
+            "not found vrc20 metadata, may not deployed",
+            "the `abcde` not deployed",
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mint_vrc20_max_count() -> Result<()> {
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        let vrc20_res1 = Resource::vrc20("abcde", 1000.into())?;
+        let vrc20_res2 = Resource::vrc20("abe", 1000.into())?;
+
+        ctx.deploy_vrc20_with_max("abcde", 1000, 100);
+        ctx.deploy_vrc20_with_max("abe", 1000, 100);
+
+        for i in 0..100 {
+            let ctx = TestCtx::new(&env_interface)
+                .with_instructions(vec![
+                    Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                    Instruction::mint(0, vrc20_res1.resource_type()),
+                ])
+                .with_ops()
+                .with_output((i + 1) * 1000) // make id diff
+                .run()?;
+
+            let out = ctx.env().get_output(0);
+            assert_eq!(
+                env_interface.get_resources(&out)?.ok_or(anyhow!("should found in {}", i))?,
+                vrc20_res1
+            );
+        }
+
+        // more than max count should failed
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, vrc20_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_output(9999)
+            .run();
+
+        assert_err_str(res, "mint count had reached max", "the `abcde` not deployed");
+
+        // other will ok
+        let ctx = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, vrc20_res2.resource_type()),
+            ])
+            .with_ops()
+            .with_output(33333) // make id diff
+            .run()?;
+
+        let out = ctx.env().get_output(0);
+        assert_eq!(env_interface.get_resources(&out)?.ok_or(anyhow!("should found"))?, vrc20_res2);
+
+        Ok(())
     }
 }

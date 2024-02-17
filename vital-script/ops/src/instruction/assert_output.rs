@@ -74,6 +74,7 @@ impl Instruction for InstructionOutputAssert {
 #[cfg(test)]
 mod tests {
     use crate::opcodes::BasicOp;
+    use vital_script_runner::mock::*;
 
     use super::*;
 
@@ -93,6 +94,9 @@ mod tests {
         for i in 0..=u8::MAX {
             output_index_assert_ops_bytes(i);
         }
+
+        let should_failed = InstructionOutputAssert { indexs: Vec::new() }.into_ops_bytes();
+        assert_err_str(should_failed, "no index for output", "empty outputs should failed");
 
         Ok(())
     }

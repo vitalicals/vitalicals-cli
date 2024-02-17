@@ -35,3 +35,27 @@ pub trait BasicOpcode: BasicOpcodeBase + parity_scale_codec::Codec {
 }
 
 impl<T> BasicOpcode for T where T: BasicOpcodeBase + parity_scale_codec::Codec {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vital_script_primitives::traits::Instruction as InstructionT;
+
+    pub fn check_ops_encode_and_decode<T: BasicOpcode>(op: T)
+    where
+        Instruction: From<T>,
+    {
+        let op_encoded = op.encode_op();
+
+        let i = Instruction::from(op);
+        let bytes = i.into_ops_bytes().expect("the into should ok");
+
+        assert_eq!(op_encoded, bytes, "the encode by ins and ops need eq");
+        assert_eq!(bytes[0], T::ID, "the id should be eq");
+
+        let mut bytes = Bytes::from(bytes[1..].to_vec());
+        let ops_decode = T::decode_operand(&mut bytes).expect("should ok");
+
+        assert_eq!(op_encoded[1..].to_vec(), ops_decode.encode(), "op should be eq");
+    }
+}

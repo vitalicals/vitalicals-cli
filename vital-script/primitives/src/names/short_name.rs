@@ -2,7 +2,6 @@
 
 use alloc::string::{String, ToString};
 use anyhow::{bail, Result};
-use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
 
 use crate::names::*;
@@ -67,18 +66,6 @@ impl ShortName {
         Self(v)
     }
 
-    pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {
-        if datas.remaining() < Self::SIZE {
-            bail!("ShortName bytes not enough");
-        }
-
-        let mut v = [0_u8; Self::SIZE];
-
-        datas.copy_to_slice(&mut v);
-
-        Ok(Self::new(v))
-    }
-
     pub fn is_valid(&self) -> bool {
         // The u8[3] ls x is 00
         if self.0[3] & 0x03 != 0 {
@@ -114,15 +101,6 @@ impl ShortName {
         }
 
         self.set_nocheck(len, c)
-    }
-
-    pub fn set(&mut self, i: usize, c: char) -> Result<()> {
-        let len = self.len();
-        if i > len || i >= SHORT_NAME_LEN_MAX {
-            bail!("index invalid");
-        }
-
-        self.set_nocheck(i, c)
     }
 
     fn set_value_nocheck(&mut self, i: usize, v: u8) -> Result<()> {
@@ -281,7 +259,10 @@ impl TryFrom<String> for ShortName {
 
 #[cfg(test)]
 mod tests {
-    use crate::{names::char2u8, resources::Name};
+    use crate::{
+        names::{char2u8, SHORT_NAME_LEN_MAX},
+        resources::Name,
+    };
 
     use super::ShortName;
 
@@ -433,5 +414,27 @@ mod tests {
         let datas_de: Obj = serde_json::from_str(datas_str.as_str()).unwrap();
 
         assert_eq!(datas, datas_de);
+    }
+
+    #[test]
+    fn test_short_name_push() {
+        let mut name = ShortName::default();
+
+        assert!(name.is_empty(), "the default name should be empty");
+        assert!(name.is_valid(), "the default name should be valid");
+
+        let name_chars = vec!['0', '@', '.', '_', 'a'];
+
+        for i in 0..SHORT_NAME_LEN_MAX {
+            assert!(name.push(name_chars[i]).is_ok());
+            assert_eq!(name.len(), i + 1);
+        }
+
+        assert_eq!(name.to_string(), "0@._a");
+
+        assert_eq!(
+            name.push('0').err().expect("too long should failed").root_cause().to_string(),
+            "index invalid"
+        );
     }
 }

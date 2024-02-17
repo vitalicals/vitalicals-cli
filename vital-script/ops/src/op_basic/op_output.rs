@@ -64,6 +64,13 @@ impl From<OutputIndexFlag32Assert> for Instruction {
 mod tests {
     use super::*;
     use alloc::vec;
+    use anyhow::Result;
+
+    use vital_script_ops::instruction::Instruction;
+    use vital_script_primitives::resources::{Name, Resource};
+    use vital_script_runner::mock::*;
+
+    use crate::op_basic::tests::check_ops_encode_and_decode;
 
     #[test]
     fn test_u8_to_pos() {
@@ -89,5 +96,53 @@ mod tests {
         assert_eq!(u8_to_pos(0xf0, 1), vec![12, 13, 14, 15]);
         assert_eq!(u8_to_pos(0x0f, 1), vec![8, 9, 10, 11]);
         assert_eq!(u8_to_pos(0xff, 1), vec![8, 9, 10, 11, 12, 13, 14, 15]);
+    }
+
+    #[test]
+    fn test_move_name_ops_encode_and_decode() {
+        check_ops_encode_and_decode(OutputIndexAssert { index: 0 });
+        check_ops_encode_and_decode(OutputIndexAssert { index: 1 });
+        check_ops_encode_and_decode(OutputIndexAssert { index: 31 });
+        check_ops_encode_and_decode(OutputIndexAssert { index: 16 });
+
+        check_ops_encode_and_decode(OutputIndexFlag16Assert {
+            index_flag: [0b00000001, 0b10000000],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag16Assert {
+            index_flag: [0b00111100, 0b10101010],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag16Assert {
+            index_flag: [0b11111111, 0b11111111],
+        });
+
+        check_ops_encode_and_decode(OutputIndexFlag32Assert {
+            index_flag: [0b00000001, 0b00000000, 0b00000000, 0b10000000],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag32Assert {
+            index_flag: [0b00111100, 0b10101010, 0b10101010, 0b10101010],
+        });
+        check_ops_encode_and_decode(OutputIndexFlag32Assert {
+            index_flag: [0b11111111, 0b11111111, 0b11111111, 0b11111111],
+        });
+    }
+
+    #[test]
+    fn test_no_output_assert_should_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+        let ctx = TestCtx::new(&env_interface);
+
+        let name1 = Name::must_from("abcde");
+        let name_res1 = Resource::name(name1);
+
+        // 1. the `abcde` had mint, so this will failed
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![Instruction::mint(0, name_res1.resource_type())])
+            .with_ops()
+            .with_output(1000)
+            .run();
+
+        assert_err_str(res, "the output is not asserted", "1");
+
+        Ok(())
     }
 }

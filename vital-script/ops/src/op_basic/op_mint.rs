@@ -72,3 +72,27 @@ impl From<MintVRC721> for Instruction {
         Instruction::mint(value.index, ResourceType::vrc721(value.name))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use vital_script_primitives::names::Name;
+
+    use super::*;
+    use crate::op_basic::tests::check_ops_encode_and_decode;
+
+    #[test]
+    fn test_mint_ops_encode_and_decode() {
+        let short_name = ShortName::try_from("abc".to_string()).unwrap();
+        let name = Name::try_from("abcdef".to_string()).unwrap();
+
+        check_ops_encode_and_decode(MintShortName { name: short_name, index: 128 });
+
+        check_ops_encode_and_decode(MintName { name, index: 128 });
+
+        check_ops_encode_and_decode(MintShortVRC20 { name: short_name, index: 128 });
+
+        check_ops_encode_and_decode(MintVRC20 { name, index: 128 });
+
+        check_ops_encode_and_decode(MintVRC721 { name, index: 128 });
+    }
+}

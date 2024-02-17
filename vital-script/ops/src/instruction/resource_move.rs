@@ -149,6 +149,7 @@ mod tests {
         resource_move::InstructionResourceMoveAll, Instruction,
     };
 
+    #[allow(dead_code)]
     pub fn init_logger() {
         let _ = env_logger::Builder::from_default_env()
             .format_module_path(true)
@@ -234,6 +235,36 @@ mod tests {
             Some(test_res.clone()),
             "the new should be some"
         );
+
+        test_move_name_had_costed_failed_impl(test_name)?;
+
+        Ok(())
+    }
+
+    fn test_move_name_had_costed_failed_impl(test_name: &str) -> Result<()> {
+        let test = Name::try_from(test_name).expect("name format");
+        let test_res = Resource::Name(test);
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.mint_name(test_name);
+
+        let outpoint1 = ctx.get_name_outpoint(test_name).expect("should mint");
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert { index: 1, resource: test_res.clone() }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1] }),
+                Instruction::move_to(0, test_res.clone()),
+                Instruction::move_to(1, test_res.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint1)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "had already costed", format!("name {} costed", test_name).as_str());
 
         Ok(())
     }
@@ -413,9 +444,9 @@ mod tests {
                     resource: charge_res2.clone(),
                 }),
                 Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1] }),
-                Instruction::move_to(1, Resource::vrc20(test_name, 30.into()).expect("vrc20")),
-                Instruction::move_to(1, Resource::vrc20(test_name, 30.into()).expect("vrc20")),
-                Instruction::move_to(1, Resource::vrc20(test_name, 30.into()).expect("vrc20")),
+                Instruction::move_to(1, Resource::vrc20(test_name, 30.into())?),
+                Instruction::move_to(1, Resource::vrc20(test_name, 30.into())?),
+                Instruction::move_to(1, Resource::vrc20(test_name, 30.into())?),
             ])
             .with_ops()
             .with_input(outpoint32)
@@ -528,7 +559,7 @@ mod tests {
 
     #[test]
     fn test_move_vrc20() -> Result<()> {
-        init_logger();
+        // init_logger();
 
         test_move_vrc20_impl("abcde").expect("test move abcde should ok");
         test_move_vrc20_impl("a").expect("test move a should ok");
@@ -605,8 +636,8 @@ mod tests {
         let outpoint03 = ctx.get_name_outpoint("abcde").expect("should exist");
 
         let name_res = Resource::name(Name::must_from("abcde"));
-        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into()).expect("vrc20");
-        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into()).expect("vrc20");
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into())?;
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into())?;
 
         let context1 = TestCtx::new(&env_interface)
             .with_instructions(vec![
@@ -664,6 +695,108 @@ mod tests {
     }
 
     #[test]
+    fn test_move_vrc20_merged_by_move_all() -> Result<()> {
+        let test_name1 = "test1";
+        let test_name2 = "test2";
+
+        let test1 = Name::must_from(test_name1);
+        let test2 = Name::must_from(test_name2);
+
+        let mint_amount = 1000;
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.deploy_vrc20(test_name1, mint_amount);
+        ctx.deploy_vrc20(test_name2, mint_amount);
+
+        let outpoint01 = ctx.mint_vrc20(test_name1);
+        let outpoint02 = ctx.mint_vrc20(test_name1);
+        let outpoint03 = ctx.mint_vrc20(test_name1);
+        let outpoint04 = ctx.mint_vrc20(test_name1);
+        let outpoint05 = ctx.mint_vrc20(test_name2);
+        let outpoint06 = ctx.mint_vrc20(test_name2);
+
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into())?;
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into())?;
+
+        let context1 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 3,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 4,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 5,
+                    resource: vrc20_res2.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 6,
+                    resource: vrc20_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_vrc20_to(0, test1, 100),
+                Instruction::move_vrc20_to(1, test1, 100),
+                Instruction::move_vrc20_to(2, test2, 100),
+                Instruction::MoveAll(InstructionResourceMoveAll::new(
+                    1,
+                    vrc20_res1.resource_type(),
+                )),
+                Instruction::MoveAll(InstructionResourceMoveAll::new(
+                    2,
+                    vrc20_res2.resource_type(),
+                )),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_input(outpoint03)
+            .with_input(outpoint04)
+            .with_input(outpoint05)
+            .with_input(outpoint06)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run()
+            .expect("transfer name failed");
+
+        let outpoint10 = context1.env().get_output(0);
+        let outpoint11 = context1.env().get_output(1);
+        let outpoint12 = context1.env().get_output(2);
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint10).expect("get resource"),
+            Some(Resource::vrc20("test1", 100.into())?),
+            "the new should be some"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint11).expect("get resource"),
+            Some(Resource::vrc20("test1", 3900.into())?),
+            "the new should be some"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint12).expect("get resource"),
+            Some(Resource::vrc20("test2", 2000.into())?),
+            "the new should be some"
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_move_vrc20_merged_diff_type_should_failed() -> Result<()> {
         let test_name1 = "test1";
         let test_name2 = "test2";
@@ -682,8 +815,8 @@ mod tests {
         let outpoint03 = ctx.get_name_outpoint("abcde").expect("should exist");
 
         let name_res = Resource::name(Name::must_from("abcde"));
-        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into()).expect("vrc20");
-        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into()).expect("vrc20");
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into())?;
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into())?;
 
         let res = TestCtx::new(&env_interface)
             .with_instructions(vec![
@@ -749,6 +882,308 @@ mod tests {
             res,
             "the resource type not support merge",
             "merge vrc20 and name diff type",
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_vrc20_move_all_should_cost_all() -> Result<()> {
+        let test_name1 = "test1";
+        let test1 = Name::must_from(test_name1);
+        let mint_amount = 1000;
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.deploy_vrc20(test_name1, mint_amount);
+
+        let outpoint01 = ctx.mint_vrc20(test_name1);
+        let outpoint02 = ctx.mint_vrc20(test_name1);
+        let outpoint03 = ctx.mint_vrc20(test_name1);
+        let outpoint04 = ctx.mint_vrc20(test_name1);
+
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into())?;
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 3,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 4,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_vrc20_to(0, test1, 100),
+                Instruction::move_vrc20_to(1, test1, 100),
+                Instruction::MoveAll(InstructionResourceMoveAll::new(
+                    1,
+                    vrc20_res1.resource_type(),
+                )),
+                Instruction::move_vrc20_to(2, test1, 100), // this will failed
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_input(outpoint03)
+            .with_input(outpoint04)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "not enough inputs", "will move all, then all move will failed");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_no_input_enough_should_failed() -> Result<()> {
+        let test_name1 = "test1";
+        let test_name2 = "test2";
+
+        let test1 = Name::must_from(test_name1);
+
+        let mint_amount = 1000;
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.deploy_vrc20(test_name1, mint_amount);
+        ctx.deploy_vrc20(test_name2, mint_amount);
+
+        let outpoint01 = ctx.mint_vrc20(test_name1);
+        let outpoint02 = ctx.mint_vrc20(test_name1);
+        let outpoint03 = ctx.mint_vrc20(test_name1);
+        let outpoint05 = ctx.mint_vrc20(test_name2);
+
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into())?;
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into())?;
+
+        // no input, will failed, even had a valid input
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::move_vrc20_to(0, test1, 100),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(
+            res,
+            "not found res in inputs",
+            "no input, will failed, even had a valid input",
+        );
+
+        // had a not match input, should failed
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::move_vrc20_to(0, test1, 100),
+            ])
+            .with_ops()
+            .with_input(outpoint05)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(
+            res,
+            "not found res in inputs",
+            "no input, will failed, even had a valid input",
+        );
+
+        // had input, but move too much in one move ins
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::move_vrc20_to(0, test1, 1001),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "not enough inputs", "no input, will failed, even had a valid input");
+
+        // had input, but move too much in many move ins
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1] }),
+                Instruction::move_vrc20_to(0, test1, 300),
+                Instruction::move_vrc20_to(1, test1, 701),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "not enough inputs", "no input, will failed, even had a valid input");
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1] }),
+                Instruction::move_vrc20_to(0, test1, 1000),
+                Instruction::move_vrc20_to(1, test1, 1),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "not enough inputs", "no input, will failed, even had a valid input");
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 3,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1] }),
+                Instruction::move_vrc20_to(0, test1, 3000),
+                Instruction::move_vrc20_to(1, test1, 1),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_input(outpoint03)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "not enough inputs", "no input, will failed, even had a valid input");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_move_all_with_no_enough_input_should_failed() -> Result<()> {
+        let test_name1 = "test1";
+        let test_name2 = "test2";
+
+        let test1 = Name::must_from(test_name1);
+
+        let mint_amount = 1000;
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+        ctx.deploy_vrc20(test_name1, mint_amount);
+        ctx.deploy_vrc20(test_name2, mint_amount);
+
+        let outpoint01 = ctx.mint_vrc20(test_name1);
+        let outpoint02 = ctx.mint_vrc20(test_name1);
+        let outpoint05 = ctx.mint_vrc20(test_name2);
+
+        let vrc20_res1 = Resource::vrc20(test_name1, mint_amount.into())?;
+        let vrc20_res2 = Resource::vrc20(test_name2, mint_amount.into())?;
+
+        // no input, will failed, even had a valid input
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::MoveAll(InstructionResourceMoveAll::new(
+                    0,
+                    vrc20_res1.resource_type(),
+                )),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(
+            res,
+            "not found vrc20 resource by name",
+            "no input, will failed, even had a valid input",
+        );
+
+        // had a not match input, should failed
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::MoveAll(InstructionResourceMoveAll::new(
+                    0,
+                    vrc20_res1.resource_type(),
+                )),
+            ])
+            .with_ops()
+            .with_input(outpoint05)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(
+            res,
+            "not found vrc20 resource by name",
+            "no input, will failed, even had a valid input",
+        );
+
+        // had input, but move too much in one move ins
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc20_res1.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::move_vrc20_to(0, test1, 2000),
+                Instruction::MoveAll(InstructionResourceMoveAll::new(
+                    0,
+                    vrc20_res1.resource_type(),
+                )),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(
+            res,
+            "not found vrc20 resource by name",
+            "no input, will failed, even had a valid input",
         );
 
         Ok(())
