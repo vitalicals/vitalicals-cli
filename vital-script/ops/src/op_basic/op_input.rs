@@ -197,7 +197,6 @@ impl From<InputVRC20AssertA256> for Instruction {
 #[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct InputVRC721Assert {
     pub hash: H256,
-    pub name: Name,
     pub index: u8,
 }
 
@@ -205,7 +204,7 @@ impl From<InputVRC721Assert> for Instruction {
     fn from(value: InputVRC721Assert) -> Self {
         Instruction::Input(InstructionInputAssert {
             index: value.index,
-            resource: Resource::VRC721(VRC721::new(value.name, value.hash)),
+            resource: Resource::VRC721(VRC721::new(value.hash)),
         })
     }
 }
@@ -283,7 +282,7 @@ mod tests {
             index: 3,
         });
 
-        check_ops_encode_and_decode(InputVRC721Assert { hash: H256::random(), name, index: 128 });
+        check_ops_encode_and_decode(InputVRC721Assert { hash: H256::random(), index: 128 });
     }
 
     #[test]
@@ -306,10 +305,10 @@ mod tests {
         );
 
         assert_eq!(
-            Instruction::from(InputVRC721Assert { hash, name, index: 1 }),
+            Instruction::from(InputVRC721Assert { hash, index: 1 }),
             Instruction::Input(InstructionInputAssert {
                 index: 1,
-                resource: Resource::VRC721(VRC721 { name, hash })
+                resource: Resource::VRC721(VRC721 { hash })
             })
         )
     }
@@ -359,10 +358,7 @@ mod tests {
             }),
             Instruction::Input(InstructionInputAssert {
                 index: 10,
-                resource: Resource::VRC721(VRC721 {
-                    name: "aaaaaa".to_string().try_into().unwrap(),
-                    hash: H256::random(),
-                }),
+                resource: Resource::VRC721(VRC721 { hash: H256::random() }),
             }),
         ];
 

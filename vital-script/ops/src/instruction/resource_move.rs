@@ -64,8 +64,7 @@ impl Instruction for InstructionResourceMove {
                 .into_move_vrc20_opcode_bytes(self.output_index)
                 .context("use Vrc20ResourceOperand into opcode bytes")?,
             Resource::VRC721(vrc721) => {
-                MoveVRC721 { name: vrc721.name, hash: vrc721.hash, output_index: self.output_index }
-                    .encode_op()
+                MoveVRC721 { hash: vrc721.hash, output_index: self.output_index }.encode_op()
             }
         };
 

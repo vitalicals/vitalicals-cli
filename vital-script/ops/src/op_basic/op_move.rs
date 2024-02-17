@@ -187,7 +187,6 @@ impl From<MoveVRC20A256> for Instruction {
 /// Move VRC721
 #[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct MoveVRC721 {
-    pub name: Name,
     pub hash: H256,
     pub output_index: u8,
 }
@@ -196,7 +195,7 @@ impl From<MoveVRC721> for Instruction {
     fn from(value: MoveVRC721) -> Self {
         Instruction::Move(InstructionResourceMove::new(
             value.output_index,
-            Resource::VRC721(VRC721::new(value.name, value.hash)),
+            Resource::VRC721(VRC721::new(value.hash)),
         ))
     }
 }
@@ -284,8 +283,6 @@ mod tests {
 
     #[test]
     fn test_move_vrc721_ops_encode_and_decode() {
-        let name = Name::try_from("abcdef".to_string()).unwrap();
-
-        check_ops_encode_and_decode(MoveVRC721 { hash: H256::random(), name, output_index: 3 });
+        check_ops_encode_and_decode(MoveVRC721 { hash: H256::random(), output_index: 3 });
     }
 }

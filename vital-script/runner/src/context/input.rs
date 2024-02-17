@@ -28,7 +28,7 @@ impl InputResourcesContextT for InputResourcesContext {
         match resource {
             Resource::Name(name) => self.inputs.push_name(input_index, name),
             Resource::VRC20(v) => self.inputs.push_vrc20(input_index, v.name, v.amount),
-            Resource::VRC721(v) => self.inputs.push_vrc721(input_index, v.name, v.hash),
+            Resource::VRC721(v) => self.inputs.push_vrc721(input_index, Tag::default(), v.hash),
         }
 
         self.inputs_indexs.push(input_index);
@@ -111,12 +111,13 @@ pub struct VRC721Input {
     hash: H256,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct VRC721Inputs {
-    name: Tag,
     inputs: Vec<VRC721Input>,
 }
 
+#[allow(dead_code)]
 impl VRC721Inputs {
     pub fn cost(&mut self, hash: H256) -> Result<()> {
         for i in self.inputs.iter_mut() {
@@ -142,7 +143,7 @@ impl VRC721Inputs {
 pub struct InputResources {
     names: Vec<NameInput>,
     vrc20s: Vec<VRC20Inputs>,
-    vrc721s: Vec<VRC721Inputs>,
+    vrc721s: Vec<VRC721Input>,
 }
 
 impl InputResources {
@@ -180,26 +181,14 @@ impl InputResources {
     pub fn push_vrc721(&mut self, index: u8, name: Tag, hash: H256) {
         log::debug!(target: TARGET, "push input vrc721: {} {} {}", index, name, hash);
 
-        let new = VRC721Input { index, costed: false, hash };
-
-        for vrc721s in self.vrc721s.iter_mut() {
-            if vrc721s.name == name {
-                vrc721s.inputs.push(new);
-                return;
-            }
-        }
-
-        let mut inputs = Vec::with_capacity(VEC_CAP_SIZE);
-        inputs.push(new);
-
-        self.vrc721s.push(VRC721Inputs { name, inputs })
+        self.vrc721s.push(VRC721Input { index, costed: false, hash });
     }
 
     /// If all input resources had been costed.
     #[allow(dead_code)]
     pub fn is_costed(&self) -> bool {
         self.vrc20s.iter().all(|v| v.is_costed())
-            && self.vrc721s.iter().all(|v| v.is_costed())
+            && self.vrc721s.iter().all(|v| v.costed)
             && self.names.iter().all(|v| v.costed)
     }
 
@@ -228,8 +217,13 @@ impl InputResources {
         log::debug!(target: TARGET, "cost_vrc721: {}", resource);
 
         for v in self.vrc721s.iter_mut() {
-            if v.name == resource.name {
-                return v.cost(resource.hash);
+            if v.hash == resource.hash {
+                if !v.costed {
+                    v.costed = true;
+                    return Ok(())
+                } else {
+                    bail!("had already costed");
+                }
             }
         }
 
@@ -294,15 +288,8 @@ impl InputResources {
         }
 
         for vrc721 in self.vrc721s.iter() {
-            if !vrc721.is_costed() {
-                for input in vrc721.inputs.iter() {
-                    if !input.costed {
-                        res.push((
-                            input.index,
-                            Resource::VRC721(VRC721::new(vrc721.name, input.hash)),
-                        ))
-                    }
-                }
+            if !vrc721.costed {
+                res.push((vrc721.index, Resource::VRC721(VRC721::new(vrc721.hash))))
             }
         }
 
@@ -328,7 +315,7 @@ mod tests {
         let resources = vec![
             Name::must_from("abc").into(),
             Resource::vrc20("abc", 10000.into()).expect("vrc20"),
-            Resource::vrc721("abc", H256::random()).expect("vrc721"),
+            Resource::vrc721(H256::random()),
         ];
 
         assert!(ctx.push(0, resources[0].clone()).is_ok(), "the push name should ok");
@@ -529,10 +516,10 @@ mod tests {
         let mut ctx = InputResourcesContext::new(8);
 
         let resources = vec![
-            Resource::vrc721("abc", H256::random()).expect("vrc721"),
-            Resource::vrc721("abc", H256::random()).expect("vrc721"),
-            Resource::vrc721("abc", H256::random()).expect("vrc721"),
-            Resource::vrc721("abcdefgh", H256::random()).expect("vrc721"),
+            Resource::vrc721(H256::random()),
+            Resource::vrc721(H256::random()),
+            Resource::vrc721(H256::random()),
+            Resource::vrc721(H256::random()),
         ];
 
         for (i, r) in resources.iter().enumerate() {
@@ -540,23 +527,14 @@ mod tests {
         }
 
         assert_err_str(
-            ctx.cost(
-                &Resource::vrc721("abcd", resources[0].as_vrc721().expect("721").hash)
-                    .expect("vrc20"),
-            ),
+            ctx.cost(&Resource::vrc721(H256::zero())),
             "not found res in inputs",
             "cost no pushed",
         );
 
-        assert_err_str(
-            ctx.cost(&Resource::vrc721("abc", H256::zero()).expect("vrc20")),
-            "not enough inputs",
-            "cost no pushed at some name",
-        );
-
         {
             assert!(ctx.cost(&resources[0]).is_ok());
-            assert!(ctx.inputs.vrc721s[0].inputs[0].costed);
+            assert!(ctx.inputs.vrc721s[0].costed);
 
             let mut uncosted = ctx.uncosted();
             uncosted.sort();

@@ -116,10 +116,8 @@ impl Resource {
         }
     }
 
-    pub fn vrc721(name: impl Into<String>, hash: impl Into<H256>) -> Result<Self> {
-        let name = Name::try_from(name.into())?;
-
-        Ok(Self::VRC721(VRC721::new(name, hash.into())))
+    pub fn vrc721(hash: impl Into<H256>) -> Self {
+        Self::VRC721(VRC721::new(hash.into()))
     }
 
     pub fn as_vrc721(&self) -> Result<&VRC721> {
@@ -138,7 +136,7 @@ impl Resource {
         let (class, name) = match self {
             Self::Name(n) => (ResourceClass::Name, *n),
             Self::VRC20(v) => (ResourceClass::VRC20, v.name),
-            Self::VRC721(v) => (ResourceClass::VRC721, v.name),
+            Self::VRC721(_) => (ResourceClass::VRC721, Tag::default()),
         };
 
         ResourceType { class, name }
