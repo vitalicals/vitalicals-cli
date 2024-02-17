@@ -259,7 +259,7 @@ impl ContextT for ContextMock {
 }
 
 pub struct TestCtx {
-    ops_bytes: Vec<Vec<u8>>,
+    pub ops_bytes: Vec<Vec<u8>>,
     tx: TxMock,
     env_interface: EnvMock,
 
@@ -292,6 +292,14 @@ impl TestCtx {
     pub fn with_ops(mut self) -> Self {
         let bytes = self.ops_bytes.first().expect("no ops in ctx").clone();
         log::debug!(target: TARGET, "with ops bytes: {}", hex::encode(&bytes));
+        self.tx.push_ops(bytes);
+        self
+    }
+
+    pub fn with_ops_bytes(mut self, ops_bytes: &[u8]) -> Self {
+        let bytes = ops_bytes.to_vec();
+        log::debug!(target: TARGET, "with ops bytes: {}", hex::encode(&bytes));
+        self.ops_bytes = vec![bytes.clone()];
         self.tx.push_ops(bytes);
         self
     }

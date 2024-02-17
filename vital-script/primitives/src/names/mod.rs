@@ -100,3 +100,20 @@ impl NameOrShort {
         Ok(res)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_u8_to_char_invalid_value() {
+        assert_eq!(
+            u8_to_char(43).err().expect("should err").root_cause().to_string(),
+            "Unsupported value"
+        );
+        assert_eq!(
+            u8_to_char(0).err().expect("should err").root_cause().to_string(),
+            "Unsupported value"
+        );
+    }
+}

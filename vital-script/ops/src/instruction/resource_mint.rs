@@ -67,6 +67,11 @@ impl Instruction for InstructionResourceMint {
         let resource = self.make_mint_resource(context)?;
         match &resource {
             Resource::Name(n) => {
+                // TODO: need check this in pre-check
+                if !n.is_valid() {
+                    bail!("Invalid name resource format");
+                }
+
                 // for name, we need flag it
                 context.env_mut().new_name(*n).context("new name failed")?;
             }
@@ -133,6 +138,105 @@ mod tests {
     use vital_script_runner::{mock::*, traits::EnvFunctions};
 
     use vital_script_ops::instruction::{assert_output::InstructionOutputAssert, Instruction};
+
+    #[test]
+    fn test_mint_short_name_invalid_will_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+
+        // mint abc :  0a00 27 0420c000 00
+        // mint abcde: 0a00 27 0420c414 00
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00270420c00000").unwrap())
+            .with_output(1000)
+            .run()
+            .expect("mint `abc` should ok");
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00270420c41400").unwrap())
+            .with_output(2000)
+            .run()
+            .expect("mint `abcde` should ok");
+
+        // use a new env for test.
+        let env_interface = EnvMock::new();
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a0027f420c00000").unwrap()) // note this f4 not a value
+            .with_output(1000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "1");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00270420c4ff00").unwrap()) // note this f4 not a value
+            .with_output(2000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "2");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mint_name_invalid_will_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+
+        // mint abc@de : 0a00280420e5105000000600
+        // 0a00
+        // op  name            output
+        // 28 0420e51050000006   00
+
+        // mint abc@de1122 : 0a00280420e510571c75da00
+        // 0a00
+        // op  name            output
+        // 28 0420e510571c75da   00
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280420e5105000000600").unwrap())
+            .with_output(3000)
+            .run()
+            .expect("mint `abc@de` should ok");
+
+        TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280420e510571c75da00").unwrap())
+            .with_output(4000)
+            .run()
+            .expect("mint `abc@de1122` should ok");
+
+        // use a new env for test.
+        let env_interface = EnvMock::new();
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280ff0e5105000000600").unwrap())
+            .with_output(1000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "1");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280ff0e510571c75da00").unwrap())
+            .with_output(2000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "2");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a002804200510571c75da00").unwrap())
+            .with_output(3000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "3");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280420e510571c75d900").unwrap()) // length 0xa -> 0x9
+            .with_output(4000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "4");
+
+        let res = TestCtx::new(&env_interface)
+            .with_ops_bytes(&hex::decode("0a00280ff0e5105000000700").unwrap()) // length 0x6 -> 0x7
+            .with_output(5000)
+            .run();
+        assert_err_str(res, "Invalid name resource format", "5");
+
+        Ok(())
+    }
 
     #[test]
     fn test_mint_name_two_times_will_failed() -> Result<()> {

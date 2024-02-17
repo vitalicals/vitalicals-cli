@@ -2,7 +2,6 @@
 
 use alloc::string::String;
 use anyhow::{bail, Result};
-use bytes::{Buf, Bytes};
 use parity_scale_codec::{Decode, Encode};
 
 use crate::names::*;
@@ -83,18 +82,6 @@ impl Name {
         Self::try_from(name_str).unwrap_or_else(|_| panic!("the {} must be name format!", name_str))
     }
 
-    pub fn from_bytes(datas: &mut Bytes) -> Result<Self> {
-        if datas.remaining() < Self::SIZE {
-            bail!("ShortName bytes not enough");
-        }
-
-        let mut v = [0_u8; Self::SIZE];
-
-        datas.copy_to_slice(&mut v);
-
-        Ok(Self::new(v))
-    }
-
     pub fn is_valid(&self) -> bool {
         let length = self.len();
 
@@ -103,6 +90,7 @@ impl Name {
             return false;
         }
 
+        // check all values is valid
         for i in 0..length {
             let v = self.index_value(i);
             if v == 0 || v > VALUE_MAX {
@@ -110,6 +98,7 @@ impl Name {
             }
         }
 
+        // check useless values is all zero.
         if length < NAME_LEN_MAX {
             for i in length..NAME_LEN_MAX {
                 let v = self.index_value(i);
@@ -133,19 +122,6 @@ impl Name {
         self.set_nocheck(len, c)?;
 
         Ok(())
-    }
-
-    pub fn set(&mut self, i: usize, c: char) -> Result<()> {
-        let len = self.len();
-        if i > len || i >= NAME_LEN_MAX {
-            bail!("index invalid");
-        }
-
-        if i == len {
-            self.set_len_nocheck(i + 1);
-        }
-
-        self.set_nocheck(i, c)
     }
 
     #[inline]
@@ -340,7 +316,7 @@ impl From<ShortName> for Name {
 
 #[cfg(test)]
 mod tests {
-    use crate::names::{char2u8, ShortName};
+    use crate::names::{char2u8, ShortName, NAME_LEN_MAX};
 
     use super::Name;
 
@@ -469,5 +445,27 @@ mod tests {
         let datas_de: Obj = serde_json::from_str(datas_str.as_str()).unwrap();
 
         assert_eq!(datas, datas_de);
+    }
+
+    #[test]
+    fn test_name_push() {
+        let mut name = Name::default();
+
+        assert!(name.is_empty(), "the default name should be empty");
+        assert!(name.is_valid(), "the default name should be valid");
+
+        let name_chars = vec!['0', '1', 't', 'x', 'y', '@', '.', '_', 'a', 'b'];
+
+        for i in 0..NAME_LEN_MAX {
+            assert!(name.push(name_chars[i]).is_ok());
+            assert_eq!(name.len(), i + 1);
+        }
+
+        assert_eq!(name.to_string(), "01txy@._ab");
+
+        assert_eq!(
+            name.push('0').err().expect("too long should failed").root_cause().to_string(),
+            "index invalid"
+        );
     }
 }
