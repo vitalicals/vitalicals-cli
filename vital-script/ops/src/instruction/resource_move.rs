@@ -64,8 +64,7 @@ impl Instruction for InstructionResourceMove {
                 .into_move_vrc20_opcode_bytes(self.output_index)
                 .context("use Vrc20ResourceOperand into opcode bytes")?,
             Resource::VRC721(vrc721) => {
-                MoveVRC721 { name: vrc721.name, hash: vrc721.hash, output_index: self.output_index }
-                    .encode_op()
+                MoveVRC721 { hash: vrc721.hash, output_index: self.output_index }.encode_op()
             }
         };
 
@@ -95,9 +94,14 @@ impl core::fmt::Display for InstructionResourceMoveAll {
 
 impl Instruction for InstructionResourceMoveAll {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
+        let vrc20_name = self
+            .resource_type
+            .get_tag()
+            .ok_or_else(|| anyhow!("not found vrc20 resource name"))?;
+
         let resource = context
             .input_resource()
-            .get_uncosted_vrc20(self.resource_type.name)
+            .get_uncosted_vrc20(*vrc20_name)
             .ok_or_else(|| anyhow!("not found vrc20 resource by name"))?;
 
         context.input_resource_mut().cost(&resource).context("cost resource failed")?;
@@ -110,26 +114,25 @@ impl Instruction for InstructionResourceMoveAll {
     }
 
     fn into_ops_bytes(self) -> Result<Vec<u8>> {
-        if !self.resource_type.is_vrc20() {
-            bail!("only vrc20 resource type support move all");
+        if let ResourceType::VRC20 { name } = self.resource_type {
+            let raw = match name.len() {
+                n if n <= SHORT_NAME_LEN_MAX => MoveAllVRC20S {
+                    name: name.try_into().context("the name is not short")?,
+                    output_index: self.output_index,
+                }
+                .encode_op(),
+                n if n <= NAME_LEN_MAX => {
+                    MoveAllVRC20 { name, output_index: self.output_index }.encode_op()
+                }
+                _ => {
+                    bail!("not support long name")
+                }
+            };
+
+            Ok(raw)
+        } else {
+            bail!("only vrc20 resource type support move all")
         }
-
-        let raw = match self.resource_type.name.len() {
-            n if n <= SHORT_NAME_LEN_MAX => MoveAllVRC20S {
-                name: self.resource_type.name.try_into().context("the name is not short")?,
-                output_index: self.output_index,
-            }
-            .encode_op(),
-            n if n <= NAME_LEN_MAX => {
-                MoveAllVRC20 { name: self.resource_type.name, output_index: self.output_index }
-                    .encode_op()
-            }
-            _ => {
-                bail!("not support long name")
-            }
-        };
-
-        Ok(raw)
     }
 }
 
@@ -140,7 +143,7 @@ mod tests {
     use vital_script_primitives::{
         resources::{Name, Resource},
         traits::{Context, EnvContext},
-        U256,
+        H256, U256,
     };
     use vital_script_runner::{mock::*, traits::EnvFunctions};
 
@@ -1185,6 +1188,109 @@ mod tests {
             "not found vrc20 resource by name",
             "no input, will failed, even had a valid input",
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_vrc721_should_work() -> Result<()> {
+        let hash1 = H256::random();
+        let hash2 = H256::random();
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        let outpoint01 = ctx.mint_vrc721(hash1);
+        let outpoint02 = ctx.mint_vrc721(hash2);
+
+        let vrc721_res1 = Resource::vrc721(hash1);
+        let vrc721_res2 = Resource::vrc721(hash2);
+
+        let context1 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc721_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc721_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_to(1, vrc721_res1.clone()),
+                Instruction::move_to(2, vrc721_res2.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run()
+            .expect("transfer name failed");
+
+        let outpoint10 = context1.env().get_output(0);
+        let outpoint11 = context1.env().get_output(1);
+        let outpoint12 = context1.env().get_output(2);
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint10).expect("get resource"),
+            None,
+            "the new should be none"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint11).expect("get resource"),
+            Some(vrc721_res1.clone()),
+            "the new should be some"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint12).expect("get resource"),
+            Some(vrc721_res2.clone()),
+            "the new should be some"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_vrc721_merge_should_failed() -> Result<()> {
+        let hash1 = H256::random();
+        let hash2 = H256::random();
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        let outpoint01 = ctx.mint_vrc721(hash1);
+        let outpoint02 = ctx.mint_vrc721(hash2);
+
+        let vrc721_res1 = Resource::vrc721(hash1);
+        let vrc721_res2 = Resource::vrc721(hash2);
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc721_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc721_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_to(1, vrc721_res1.clone()),
+                Instruction::move_to(1, vrc721_res2.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "the resource type not support merge", "merge vrc721 diff type");
 
         Ok(())
     }

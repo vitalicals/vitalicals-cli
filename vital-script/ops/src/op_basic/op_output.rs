@@ -129,7 +129,6 @@ mod tests {
     #[test]
     fn test_no_output_assert_should_failed() -> Result<()> {
         let env_interface = EnvMock::new();
-        let ctx = TestCtx::new(&env_interface);
 
         let name1 = Name::must_from("abcde");
         let name_res1 = Resource::name(name1);

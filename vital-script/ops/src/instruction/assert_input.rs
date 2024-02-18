@@ -90,7 +90,7 @@ impl InstructionInputAssert {
     }
 
     fn into_input_vrc721(v: VRC721, index: u8) -> Result<Vec<u8>> {
-        let op = InputVRC721Assert { hash: v.hash, name: v.name, index };
+        let op = InputVRC721Assert { hash: v.hash, index };
 
         let mut bytes = Vec::with_capacity(512);
         bytes.push(<InputVRC721Assert as BasicOpcodeBase>::ID);
