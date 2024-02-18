@@ -50,9 +50,7 @@ impl InstructionResourceMint {
 
                 Resource::VRC20(VRC20 { name, amount: U256::from(amount) })
             }
-            ResourceType::VRC721 { hash } => {
-                todo!()
-            }
+            ResourceType::VRC721 { hash } => Resource::vrc721(hash),
         })
     }
 }
@@ -71,6 +69,10 @@ impl Instruction for InstructionResourceMint {
                     bail!("Invalid name resource format");
                 }
 
+                if n.is_empty() {
+                    bail!("Invalid name by empty");
+                }
+
                 // for name, we need flag it
                 context.env_mut().new_name(*n).context("new name failed")?;
             }
@@ -81,8 +83,13 @@ impl Instruction for InstructionResourceMint {
                     .increase_vrc20_mint_count(v.name)
                     .context("increase mint count failed")?;
             }
-            Resource::VRC721(_v) => {
-                todo!();
+            Resource::VRC721(v) => {
+                // for vrc721, need check if the h256 had mint
+                if context.env().vrc721_had_mint(v.hash)? {
+                    bail!("vrc721 had mint");
+                } else {
+                    context.env_mut().mint_vrc721(v.hash).context("mint 721")?;
+                }
             }
         }
 
@@ -131,6 +138,7 @@ mod tests {
     use vital_script_primitives::{
         resources::{Name, Resource},
         traits::{Context, EnvContext},
+        H256,
     };
     use vital_script_runner::{mock::*, traits::EnvFunctions};
 
@@ -370,6 +378,121 @@ mod tests {
 
         let out = ctx.env().get_output(0);
         assert_eq!(env_interface.get_resources(&out)?.ok_or(anyhow!("should found"))?, vrc20_res2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn mint_vrc721_should_work() -> Result<()> {
+        let env_interface = EnvMock::new();
+
+        let hash1 = H256::random();
+        let hash2 = H256::random();
+
+        let vrc721_res1 = Resource::vrc721(hash1);
+        let vrc721_res2 = Resource::vrc721(hash2);
+
+        let context1 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, vrc721_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_output(2000)
+            .run()?;
+
+        let outpoint10 = context1.env().get_output(0);
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint10).expect("get resource"),
+            Some(vrc721_res1),
+            "the new should be some"
+        );
+
+        let context2 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 10] }),
+                Instruction::mint(10, vrc721_res2.resource_type()),
+            ])
+            .with_ops()
+            .with_outputs(11, 2000)
+            .run()?;
+
+        let outpoint210 = context2.env().get_output(10);
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint210).expect("get resource"),
+            Some(vrc721_res2),
+            "the new should be some"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn mint_vrc721_two_times_should_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+
+        let hash1 = H256::random();
+
+        let vrc721_res1 = Resource::vrc721(hash1);
+
+        let context1 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+                Instruction::mint(0, vrc721_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_output(2000)
+            .run()?;
+
+        let outpoint10 = context1.env().get_output(0);
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint10).expect("get resource"),
+            Some(vrc721_res1.clone()),
+            "the new should be some"
+        );
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 10] }),
+                Instruction::mint(10, vrc721_res1.resource_type()),
+            ])
+            .with_ops()
+            .with_outputs(11, 2000)
+            .run();
+
+        assert_err_str(res, "vrc721 had mint", "mint_vrc721_two_times_should_failed");
+
+        Ok(())
+    }
+
+    #[test]
+    fn mint_vrc721_two_times_in_one_tx_should_failed() -> Result<()> {
+        let env_interface = EnvMock::new();
+
+        let hash1 = H256::random();
+        let hash2 = H256::random();
+
+        let vrc721_res1 = Resource::vrc721(hash1);
+        let vrc721_res2 = Resource::vrc721(hash2);
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 10] }),
+                Instruction::mint(0, vrc721_res1.resource_type()),
+                Instruction::mint(10, vrc721_res2.resource_type()),
+            ])
+            .with_ops()
+            .with_outputs(11, 2000)
+            .run();
+
+        assert_err_str(
+            res,
+            "each tx can only have one mint",
+            "mint_vrc721_two_times_should_failed",
+        );
 
         Ok(())
     }

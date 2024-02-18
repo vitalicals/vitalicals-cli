@@ -309,6 +309,14 @@ impl TestCtx {
         self
     }
 
+    pub fn with_outputs(mut self, count: usize, amount: u64) -> Self {
+        for _ in 0..count {
+            self.tx.push_output(amount);
+        }
+
+        self
+    }
+
     pub fn run(&mut self) -> Result<ContextMock> {
         let mut context = ContextMock::new(self.tx.clone(), self.env_interface.clone());
         Runner::new().run(&mut context)?;

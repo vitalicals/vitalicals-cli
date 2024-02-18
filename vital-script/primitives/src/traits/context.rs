@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use anyhow::{bail, Context as AnyhowContext, Result};
 use bitcoin::{OutPoint, Txid};
 use parity_scale_codec::{Decode, Encode};
+use primitive_types::H256;
 
 use crate::{
     resources::{Resource, Tag},
@@ -108,6 +109,9 @@ pub trait EnvContext {
     fn set_vrc20_metadata(&mut self, name: Tag, meta: VRC20StatusData) -> Result<()> {
         self.set_metadata(name, MetaDataType::VRC20, meta)
     }
+
+    fn mint_vrc721(&mut self, hash: H256) -> Result<()>;
+    fn vrc721_had_mint(&self, hash: H256) -> Result<bool>;
 
     fn set_metadata<T: Encode>(&mut self, name: Tag, typ: MetaDataType, meta: T) -> Result<()>;
     fn get_metadata<T: Decode>(&self, name: Tag, typ: MetaDataType) -> Result<Option<T>>;
