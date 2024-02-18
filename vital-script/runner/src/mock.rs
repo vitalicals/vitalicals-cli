@@ -19,6 +19,7 @@ use vital_script_primitives::{
     resources::{Name, Resource, ResourceType},
     traits::{Context as ContextT, EnvContext, RunMode},
     types::vrc20::{VRC20MetaData, VRC20MintMeta},
+    H256,
 };
 
 use crate::{traits::EnvFunctions, Context, Runner, TARGET};
@@ -429,6 +430,34 @@ impl TestCtx {
             .expect("no found resource");
 
         assert_eq!(res.resource_type(), ResourceType::vrc20(mint_name));
+
+        outpoint
+    }
+
+    pub fn mint_vrc721(&mut self, hash: H256) -> OutPoint {
+        let ops_bytes = ScriptBuilderFromInstructions::build(vec![
+            Instruction::Output(InstructionOutputAssert { indexs: vec![0] }),
+            Instruction::mint(0, ResourceType::vrc721(hash)),
+        ])
+        .expect("build ops_bytes should ok");
+
+        let mut tx_mock = TxMock::new().with_ext(self.count);
+        tx_mock.push_ops(ops_bytes);
+        tx_mock.push_output(1000);
+
+        self.count += 1;
+
+        let mut context = ContextMock::new(tx_mock, self.env_interface.clone());
+        Runner::new().run(&mut context).expect("run failed");
+
+        let outpoint = context.env().get_output(0);
+        let res = self
+            .env_interface
+            .get_resources(&outpoint)
+            .expect("get resources failed")
+            .expect("no found resource");
+
+        assert_eq!(res.resource_type(), ResourceType::vrc721(hash));
 
         outpoint
     }

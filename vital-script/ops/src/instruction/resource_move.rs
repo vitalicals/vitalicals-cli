@@ -143,7 +143,7 @@ mod tests {
     use vital_script_primitives::{
         resources::{Name, Resource},
         traits::{Context, EnvContext},
-        U256,
+        H256, U256,
     };
     use vital_script_runner::{mock::*, traits::EnvFunctions};
 
@@ -1188,6 +1188,109 @@ mod tests {
             "not found vrc20 resource by name",
             "no input, will failed, even had a valid input",
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_vrc721_should_work() -> Result<()> {
+        let hash1 = H256::random();
+        let hash2 = H256::random();
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        let outpoint01 = ctx.mint_vrc721(hash1);
+        let outpoint02 = ctx.mint_vrc721(hash2);
+
+        let vrc721_res1 = Resource::vrc721(hash1);
+        let vrc721_res2 = Resource::vrc721(hash2);
+
+        let context1 = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc721_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc721_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_to(1, vrc721_res1.clone()),
+                Instruction::move_to(2, vrc721_res2.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run()
+            .expect("transfer name failed");
+
+        let outpoint10 = context1.env().get_output(0);
+        let outpoint11 = context1.env().get_output(1);
+        let outpoint12 = context1.env().get_output(2);
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint10).expect("get resource"),
+            None,
+            "the new should be none"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint11).expect("get resource"),
+            Some(vrc721_res1.clone()),
+            "the new should be some"
+        );
+
+        assert_eq!(
+            env_interface.get_resources(&outpoint12).expect("get resource"),
+            Some(vrc721_res2.clone()),
+            "the new should be some"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_vrc721_merge_should_failed() -> Result<()> {
+        let hash1 = H256::random();
+        let hash2 = H256::random();
+
+        let env_interface = EnvMock::new();
+        let mut ctx = TestCtx::new(&env_interface);
+
+        let outpoint01 = ctx.mint_vrc721(hash1);
+        let outpoint02 = ctx.mint_vrc721(hash2);
+
+        let vrc721_res1 = Resource::vrc721(hash1);
+        let vrc721_res2 = Resource::vrc721(hash2);
+
+        let res = TestCtx::new(&env_interface)
+            .with_instructions(vec![
+                Instruction::Input(InstructionInputAssert {
+                    index: 1,
+                    resource: vrc721_res1.clone(),
+                }),
+                Instruction::Input(InstructionInputAssert {
+                    index: 2,
+                    resource: vrc721_res2.clone(),
+                }),
+                Instruction::Output(InstructionOutputAssert { indexs: vec![0, 1, 2] }),
+                Instruction::move_to(1, vrc721_res1.clone()),
+                Instruction::move_to(1, vrc721_res2.clone()),
+            ])
+            .with_ops()
+            .with_input(outpoint01)
+            .with_input(outpoint02)
+            .with_output(2000)
+            .with_output(2000)
+            .with_output(2000)
+            .run();
+
+        assert_err_str(res, "the resource type not support merge", "merge vrc721 diff type");
 
         Ok(())
     }
