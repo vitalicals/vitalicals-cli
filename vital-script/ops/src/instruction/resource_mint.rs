@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 use anyhow::{anyhow, bail, Context as AnyhowContext, Result};
 use vital_script_primitives::{
     names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
-    resources::{Resource, ResourceClass, ResourceType, VRC20},
+    resources::{Resource, ResourceType, VRC20},
     traits::*,
     U256,
 };
@@ -31,10 +31,9 @@ impl InstructionResourceMint {
     }
 
     fn make_mint_resource(&self, context: &mut impl Context) -> Result<Resource> {
-        match self.resource_type.class {
-            ResourceClass::Name => Ok(Resource::name(self.resource_type.name)),
-            ResourceClass::VRC20 => {
-                let name = self.resource_type.name;
+        Ok(match self.resource_type.clone() {
+            ResourceType::Name { name } => Resource::name(name),
+            ResourceType::VRC20 { name } => {
                 let status_data = context
                     .env()
                     .get_vrc20_metadata(name)
@@ -49,12 +48,12 @@ impl InstructionResourceMint {
                     bail!("mint count had reached max");
                 }
 
-                Ok(Resource::VRC20(VRC20 { name, amount: U256::from(amount) }))
+                Resource::VRC20(VRC20 { name, amount: U256::from(amount) })
             }
-            ResourceClass::VRC721 => {
+            ResourceType::VRC721 { hash } => {
                 todo!()
             }
-        }
+        })
     }
 }
 
@@ -93,36 +92,34 @@ impl Instruction for InstructionResourceMint {
     }
 
     fn into_ops_bytes(self) -> Result<Vec<u8>> {
-        let bytes = {
-            let l = self.resource_type.name.len();
-            if l <= SHORT_NAME_LEN_MAX {
-                let name = self.resource_type.name.try_into().expect("the name should be short");
-                let index = self.output_index;
-
-                match self.resource_type.class {
-                    ResourceClass::Name => MintShortName { name, index }.encode_op(),
-                    ResourceClass::VRC20 => MintShortVRC20 { name, index }.encode_op(),
-                    ResourceClass::VRC721 => {
-                        // The VRC721 just support name, TODO: add mint vrc721 short
-                        MintVRC721 { name: self.resource_type.name, index }.encode_op()
-                    }
+        let bytes = match self.resource_type {
+            ResourceType::Name { name } => {
+                let l = name.len();
+                if l <= SHORT_NAME_LEN_MAX {
+                    let name = name.try_into().expect("the name should be short");
+                    MintShortName { name, index: self.output_index }.encode_op()
+                } else if l <= NAME_LEN_MAX {
+                    MintName { name, index: self.output_index }.encode_op()
+                } else {
+                    bail!("not support long name")
                 }
-            } else if l <= NAME_LEN_MAX {
-                let name = self.resource_type.name;
-                let index = self.output_index;
-
-                match self.resource_type.class {
-                    ResourceClass::Name => MintName { name, index }.encode_op(),
-                    ResourceClass::VRC20 => MintVRC20 { name, index }.encode_op(),
-                    ResourceClass::VRC721 => {
-                        // The VRC721 just support name, TODO: add mint vrc721 short
-                        MintVRC721 { name, index }.encode_op()
-                    }
+            }
+            ResourceType::VRC20 { name } => {
+                let l = name.len();
+                if l <= SHORT_NAME_LEN_MAX {
+                    let name = name.try_into().expect("the name should be short");
+                    MintShortVRC20 { name, index: self.output_index }.encode_op()
+                } else if l <= NAME_LEN_MAX {
+                    MintVRC20 { name, index: self.output_index }.encode_op()
+                } else {
+                    bail!("not support long name")
                 }
-            } else {
-                bail!("not support long name")
+            }
+            ResourceType::VRC721 { hash } => {
+                MintVRC721 { hash, index: self.output_index }.encode_op()
             }
         };
+
         Ok(bytes)
     }
 }

@@ -4,6 +4,7 @@ use vital_script_derive::BasicOpcode;
 use vital_script_primitives::{
     names::{Name, ShortName},
     resources::ResourceType,
+    H256,
 };
 
 use crate::instruction::Instruction;
@@ -63,13 +64,13 @@ impl From<MintVRC20> for Instruction {
 /// Mint name
 #[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct MintVRC721 {
-    pub name: Name,
+    pub hash: H256,
     pub index: u8,
 }
 
 impl From<MintVRC721> for Instruction {
     fn from(value: MintVRC721) -> Self {
-        Instruction::mint(value.index, ResourceType::vrc721(value.name))
+        Instruction::mint(value.index, ResourceType::vrc721(value.hash))
     }
 }
 
@@ -93,6 +94,6 @@ mod tests {
 
         check_ops_encode_and_decode(MintVRC20 { name, index: 128 });
 
-        check_ops_encode_and_decode(MintVRC721 { name, index: 128 });
+        check_ops_encode_and_decode(MintVRC721 { hash: H256::random(), index: 128 });
     }
 }

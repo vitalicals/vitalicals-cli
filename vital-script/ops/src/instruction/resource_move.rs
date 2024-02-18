@@ -94,9 +94,14 @@ impl core::fmt::Display for InstructionResourceMoveAll {
 
 impl Instruction for InstructionResourceMoveAll {
     fn exec(&self, context: &mut impl Context) -> Result<()> {
+        let vrc20_name = self
+            .resource_type
+            .get_tag()
+            .ok_or_else(|| anyhow!("not found vrc20 resource name"))?;
+
         let resource = context
             .input_resource()
-            .get_uncosted_vrc20(self.resource_type.name)
+            .get_uncosted_vrc20(*vrc20_name)
             .ok_or_else(|| anyhow!("not found vrc20 resource by name"))?;
 
         context.input_resource_mut().cost(&resource).context("cost resource failed")?;
@@ -109,26 +114,25 @@ impl Instruction for InstructionResourceMoveAll {
     }
 
     fn into_ops_bytes(self) -> Result<Vec<u8>> {
-        if !self.resource_type.is_vrc20() {
-            bail!("only vrc20 resource type support move all");
+        if let ResourceType::VRC20 { name } = self.resource_type {
+            let raw = match name.len() {
+                n if n <= SHORT_NAME_LEN_MAX => MoveAllVRC20S {
+                    name: name.try_into().context("the name is not short")?,
+                    output_index: self.output_index,
+                }
+                .encode_op(),
+                n if n <= NAME_LEN_MAX => {
+                    MoveAllVRC20 { name, output_index: self.output_index }.encode_op()
+                }
+                _ => {
+                    bail!("not support long name")
+                }
+            };
+
+            Ok(raw)
+        } else {
+            bail!("only vrc20 resource type support move all")
         }
-
-        let raw = match self.resource_type.name.len() {
-            n if n <= SHORT_NAME_LEN_MAX => MoveAllVRC20S {
-                name: self.resource_type.name.try_into().context("the name is not short")?,
-                output_index: self.output_index,
-            }
-            .encode_op(),
-            n if n <= NAME_LEN_MAX => {
-                MoveAllVRC20 { name: self.resource_type.name, output_index: self.output_index }
-                    .encode_op()
-            }
-            _ => {
-                bail!("not support long name")
-            }
-        };
-
-        Ok(raw)
     }
 }
 

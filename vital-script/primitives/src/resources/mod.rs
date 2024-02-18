@@ -31,22 +31,23 @@ pub enum ResourceClass {
 
 #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct ResourceType {
-    pub class: ResourceClass,
-    pub name: Tag,
+pub enum ResourceType {
+    Name { name: Tag },
+    VRC20 { name: Tag },
+    VRC721 { hash: H256 },
 }
 
 impl fmt::Display for ResourceType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.class {
-            ResourceClass::Name => {
-                write!(f, "name({})", self.name)
+        match self {
+            ResourceType::Name { name } => {
+                write!(f, "name({})", name)
             }
-            ResourceClass::VRC20 => {
-                write!(f, "vrc20({})", self.name)
+            ResourceType::VRC20 { name } => {
+                write!(f, "vrc20({})", name)
             }
-            ResourceClass::VRC721 => {
-                write!(f, "vrc721({})", self.name)
+            ResourceType::VRC721 { hash } => {
+                write!(f, "vrc721({})", hash)
             }
         }
     }
@@ -54,19 +55,27 @@ impl fmt::Display for ResourceType {
 
 impl ResourceType {
     pub fn name(n: impl Into<Tag>) -> Self {
-        Self { class: ResourceClass::Name, name: n.into() }
+        Self::Name { name: n.into() }
     }
 
     pub fn vrc20(n: impl Into<Tag>) -> Self {
-        Self { class: ResourceClass::VRC20, name: n.into() }
+        Self::VRC20 { name: n.into() }
     }
 
-    pub fn vrc721(n: impl Into<Tag>) -> Self {
-        Self { class: ResourceClass::VRC721, name: n.into() }
+    pub fn vrc721(hash: impl Into<H256>) -> Self {
+        Self::VRC721 { hash: hash.into() }
     }
 
     pub fn is_vrc20(&self) -> bool {
-        self.class == ResourceClass::VRC20
+        matches!(self, Self::VRC20 { name: _ })
+    }
+
+    pub fn get_tag(&self) -> Option<&Tag> {
+        match self {
+            ResourceType::Name { name } => Some(name),
+            ResourceType::VRC20 { name } => Some(name),
+            ResourceType::VRC721 { hash: _ } => None,
+        }
     }
 }
 
@@ -133,13 +142,11 @@ impl Resource {
     }
 
     pub fn resource_type(&self) -> ResourceType {
-        let (class, name) = match self {
-            Self::Name(n) => (ResourceClass::Name, *n),
-            Self::VRC20(v) => (ResourceClass::VRC20, v.name),
-            Self::VRC721(_) => (ResourceClass::VRC721, Tag::default()),
-        };
-
-        ResourceType { class, name }
+        match self {
+            Self::Name(n) => ResourceType::Name { name: *n },
+            Self::VRC20(v) => ResourceType::VRC20 { name: v.name },
+            Self::VRC721(v) => ResourceType::VRC721 { hash: v.hash },
+        }
     }
 
     pub fn merge(&mut self, other: &Resource) -> Result<()> {
