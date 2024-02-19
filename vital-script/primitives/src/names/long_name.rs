@@ -1,4 +1,4 @@
-//! The name type
+//! The long name type
 
 use alloc::string::String;
 use anyhow::{bail, Result};
@@ -6,24 +6,30 @@ use parity_scale_codec::{Decode, Encode};
 
 use crate::names::*;
 
-pub const NAME_LEN_MAX: usize = 10;
-pub const NAME_BYTES_LEN: usize = 8;
+pub const LONG_NAME_LEN_MAX: usize = 42;
+pub const LONG_NAME_BYTES_LEN: usize = 256;
 
-/// The Short Name impl by a u64
+/// The Long Name impl by a U256
 ///
-/// a char need 6 bits, the len max is 10, and can use 4bit (max is 15) as length.
+/// a char need 6 bits, the len max is 42, so the char count is 252, and a 4bits in tail.
 /// |      u8     |     u8      |     u8      |     u8       |      u8     |     u8      |     u8      |       u8    |
-/// | 000000 - 00 | 0000 - 0000 | 00 - 000000 | 000000 - 00  | 0000 - 0000 | 00 - 000000 | 000000 - 00 | 0000 - 0000 |
-/// |   0    |    1      |     2     |    3   |   4    |    5       |     6     |   7    |   8    |    9      |  len |
+/// | 000000 - 00 | 0000 - 0000 | 00 - 000000 | 000000 - 00  | 0000 - 0000 | 00 - 000000 | 000000 - 00 | 0000 - 0000 |   .....
+/// |   0    |    1      |     2     |    3   |   4    |    5       |     6     |   7    |   8    |    9      |       10 |
 ///
 /// The len just for 0 - 3
-#[derive(Default, Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Clone, Copy)]
 #[derive(Encode, Decode)]
 #[cfg_attr(feature = "scale-info", derive(scale_info::TypeInfo))]
-pub struct Name(pub [u8; NAME_BYTES_LEN]);
+pub struct LongName(pub [u8; LONG_NAME_BYTES_LEN]);
+
+impl Default for LongName {
+    fn default() -> Self {
+        Self([0_u8; LONG_NAME_BYTES_LEN])
+    }
+}
 
 #[cfg(feature = "serde")]
-impl serde::Serialize for Name {
+impl serde::Serialize for LongName {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -33,7 +39,7 @@ impl serde::Serialize for Name {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for Name {
+impl<'de> serde::Deserialize<'de> for LongName {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -41,7 +47,7 @@ impl<'de> serde::Deserialize<'de> for Name {
         struct NameVisitor;
 
         impl<'de> serde::de::Visitor<'de> for NameVisitor {
-            type Value = Name;
+            type Value = LongName;
 
             fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
                 formatter.write_str("vital name resource")
@@ -51,7 +57,7 @@ impl<'de> serde::Deserialize<'de> for Name {
             where
                 E: serde::de::Error,
             {
-                Name::try_from(v).map_err(|err| E::custom(format!("name format error {}", err)))
+                LongName::try_from(v).map_err(|err| E::custom(format!("name format error {}", err)))
             }
         }
 
@@ -59,7 +65,7 @@ impl<'de> serde::Deserialize<'de> for Name {
     }
 }
 
-impl core::fmt::Display for Name {
+impl core::fmt::Display for LongName {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let len = self.len();
 
@@ -71,10 +77,10 @@ impl core::fmt::Display for Name {
     }
 }
 
-impl Name {
-    pub const SIZE: usize = NAME_BYTES_LEN;
+impl LongName {
+    pub const SIZE: usize = LONG_NAME_BYTES_LEN;
 
-    pub fn new(v: [u8; NAME_BYTES_LEN]) -> Self {
+    pub fn new(v: [u8; LONG_NAME_BYTES_LEN]) -> Self {
         Self(v)
     }
 
@@ -83,12 +89,13 @@ impl Name {
     }
 
     pub fn is_valid(&self) -> bool {
+        // FIXME: check 4 bits 
         let length = self.len();
 
         // check if the length is valid
-        if length != self.count() {
-            return false;
-        }
+        // if length != self.count() {
+        //    return false;
+        // }
 
         // check all values is valid
         for i in 0..length {
@@ -99,8 +106,8 @@ impl Name {
         }
 
         // check useless values is all zero.
-        if length < NAME_LEN_MAX {
-            for i in length..NAME_LEN_MAX {
+        if length < LONG_NAME_LEN_MAX {
+            for i in length..LONG_NAME_LEN_MAX {
                 let v = self.index_value(i);
                 if v != 0 {
                     return false;
@@ -114,7 +121,7 @@ impl Name {
     pub fn push(&mut self, c: char) -> Result<()> {
         let len = self.len();
 
-        if len >= NAME_LEN_MAX {
+        if len >= LONG_NAME_LEN_MAX {
             bail!("index invalid");
         }
 
@@ -126,8 +133,8 @@ impl Name {
 
     #[inline]
     fn set_len_nocheck(&mut self, len: usize) {
-        self.0[NAME_BYTES_LEN - 1] &= 0xf0;
-        self.0[NAME_BYTES_LEN - 1] |= len as u8
+        self.0[LONG_NAME_BYTES_LEN - 1] &= 0xf0;
+        self.0[LONG_NAME_BYTES_LEN - 1] |= len as u8
     }
 
     #[inline]
@@ -187,7 +194,7 @@ impl Name {
 
     #[inline]
     pub fn len(&self) -> usize {
-        (self.0[NAME_BYTES_LEN - 1] & 0x0f) as usize
+        self.count()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -196,18 +203,18 @@ impl Name {
 
     #[inline]
     fn count(&self) -> usize {
-        for i in 0..NAME_LEN_MAX {
+        for i in 0..LONG_NAME_LEN_MAX {
             if self.index_value(i) == 0 {
                 return i;
             }
         }
 
-        NAME_LEN_MAX
+        LONG_NAME_LEN_MAX
     }
 
     #[inline]
     pub fn index_value(&self, index: usize) -> u8 {
-        if index >= NAME_LEN_MAX {
+        if index >= LONG_NAME_LEN_MAX {
             return INVALID_VALUE;
         }
 
@@ -240,15 +247,15 @@ impl Name {
     }
 }
 
-impl TryFrom<&str> for Name {
+impl TryFrom<&str> for LongName {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> core::result::Result<Self, Self::Error> {
-        if value.len() > NAME_LEN_MAX {
+        if value.len() > LONG_NAME_LEN_MAX {
             bail!("the string len too large");
         }
 
-        let mut res = Name::default();
+        let mut res = LongName::default();
 
         if value.is_empty() {
             return Ok(res);
@@ -266,15 +273,15 @@ impl TryFrom<&str> for Name {
     }
 }
 
-impl TryFrom<String> for Name {
+impl TryFrom<String> for LongName {
     type Error = anyhow::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        if value.len() > NAME_LEN_MAX {
+        if value.len() > LONG_NAME_LEN_MAX {
             bail!("the string len too large");
         }
 
-        let mut res = Name::default();
+        let mut res = LongName::default();
 
         if value.is_empty() {
             return Ok(res);
@@ -292,9 +299,9 @@ impl TryFrom<String> for Name {
     }
 }
 
-impl From<ShortName> for Name {
+impl From<ShortName> for LongName {
     fn from(value: ShortName) -> Self {
-        let mut res = Name::default();
+        let mut res = LongName::default();
         let mut l = 0;
 
         for i in 0..SHORT_NAME_LEN_MAX {
@@ -316,12 +323,10 @@ impl From<ShortName> for Name {
 
 #[cfg(test)]
 mod tests {
-    use crate::names::{char2u8, ShortName, NAME_LEN_MAX};
+    use crate::names::{char2u8, ShortName, LONG_NAME_LEN_MAX, LongName};
 
-    use super::Name;
-
-    fn test_name_new_by(name: &str) {
-        let n = Name::try_from(name.to_string()).expect(format!("try from {}", name).as_str());
+    fn test_long_name_new_by(name: &str) {
+        let n = LongName::try_from(name.to_string()).expect(format!("try from {}", name).as_str());
 
         println!(
             "name {:5} {:02x}-{:02x}-{:02x}-{:02x}-{:02x}-{:02x}-{:02x}-{:02x}",
@@ -339,100 +344,100 @@ mod tests {
     }
 
     #[test]
-    fn test_name_new() {
-        test_name_new_by("");
-        test_name_new_by("a");
-        test_name_new_by("b");
-        test_name_new_by("z");
-        test_name_new_by("1");
-        test_name_new_by("2");
+    fn test_long_name_new() {
+        test_long_name_new_by("");
+        test_long_name_new_by("a");
+        test_long_name_new_by("b");
+        test_long_name_new_by("z");
+        test_long_name_new_by("1");
+        test_long_name_new_by("2");
 
-        test_name_new_by("abc");
-        test_name_new_by("aaa");
-        test_name_new_by("xxx");
-        test_name_new_by("123");
+        test_long_name_new_by("abc");
+        test_long_name_new_by("aaa");
+        test_long_name_new_by("xxx");
+        test_long_name_new_by("123");
 
-        test_name_new_by("123--");
-        test_name_new_by("123**");
-        test_name_new_by("123aa");
+        test_long_name_new_by("123--");
+        test_long_name_new_by("123**");
+        test_long_name_new_by("123aa");
 
-        test_name_new_by("a");
-        test_name_new_by("aa");
-        test_name_new_by("aaa");
-        test_name_new_by("aaaa");
-        test_name_new_by("aaaaa");
-        test_name_new_by("aaaaaa");
-        test_name_new_by("aaaaaaa");
-        test_name_new_by("aaaaaaaa");
-        test_name_new_by("aaaaaaaaa");
-        test_name_new_by("aaaaaaaaaa");
+        test_long_name_new_by("a");
+        test_long_name_new_by("aa");
+        test_long_name_new_by("aaa");
+        test_long_name_new_by("aaaa");
+        test_long_name_new_by("aaaaa");
+        test_long_name_new_by("aaaaaa");
+        test_long_name_new_by("aaaaaaa");
+        test_long_name_new_by("aaaaaaaa");
+        test_long_name_new_by("aaaaaaaaa");
+        test_long_name_new_by("aaaaaaaaaa");
 
-        test_name_new_by("abcdefghij");
-        test_name_new_by("klmnopqrst");
-        test_name_new_by("uvwxyz0123");
-        test_name_new_by("4567890@-_");
-        test_name_new_by("*!.");
+        test_long_name_new_by("abcdefghij");
+        test_long_name_new_by("klmnopqrst");
+        test_long_name_new_by("uvwxyz0123");
+        test_long_name_new_by("4567890@-_");
+        test_long_name_new_by("*!.");
 
-        test_name_new_by("*");
-        test_name_new_by("**");
-        test_name_new_by("***");
-        test_name_new_by("****");
-        test_name_new_by("*****");
-        test_name_new_by("******");
-        test_name_new_by("*******");
-        test_name_new_by("********");
-        test_name_new_by("*********");
-        test_name_new_by("**********");
+        test_long_name_new_by("*");
+        test_long_name_new_by("**");
+        test_long_name_new_by("***");
+        test_long_name_new_by("****");
+        test_long_name_new_by("*****");
+        test_long_name_new_by("******");
+        test_long_name_new_by("*******");
+        test_long_name_new_by("********");
+        test_long_name_new_by("*********");
+        test_long_name_new_by("**********");
     }
 
     #[test]
-    fn test_name_new_failed() {
-        assert!(Name::try_from(" ".to_string()).is_err());
-        assert!(Name::try_from("a a".to_string()).is_err());
-        assert!(Name::try_from("(".to_string()).is_err());
-        assert!(Name::try_from("aaaaaaaaaaa".to_string()).is_err());
-        assert!(Name::try_from("aaaaaaaaaaaaaaaaaaaa".to_string()).is_err());
+    fn test_long_name_new_failed() {
+        assert!(LongName::try_from(" ".to_string()).is_err());
+        assert!(LongName::try_from("a a".to_string()).is_err());
+        assert!(LongName::try_from("(".to_string()).is_err());
+        assert!(LongName::try_from("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_string()).is_err());
+        assert!(LongName::try_from("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa111".to_string()).is_err());
     }
 
     #[test]
-    fn test_name_from_short_name() {
-        assert_eq!(Name::from(ShortName::try_from("".to_string()).unwrap()).to_string(), "");
-        assert_eq!(Name::from(ShortName::try_from("a".to_string()).unwrap()).to_string(), "a");
-        assert_eq!(Name::from(ShortName::try_from("b".to_string()).unwrap()).to_string(), "b");
-        assert_eq!(Name::from(ShortName::try_from("22".to_string()).unwrap()).to_string(), "22");
-        assert_eq!(Name::from(ShortName::try_from("222".to_string()).unwrap()).to_string(), "222");
-        assert_eq!(Name::from(ShortName::try_from("333".to_string()).unwrap()).to_string(), "333");
+    fn test_long_name_from_short_name() {
+        assert_eq!(LongName::from(ShortName::try_from("".to_string()).unwrap()).to_string(), "");
+        assert_eq!(LongName::from(ShortName::try_from("a".to_string()).unwrap()).to_string(), "a");
+        assert_eq!(LongName::from(ShortName::try_from("b".to_string()).unwrap()).to_string(), "b");
+        assert_eq!(LongName::from(ShortName::try_from("22".to_string()).unwrap()).to_string(), "22");
+        assert_eq!(LongName::from(ShortName::try_from("222".to_string()).unwrap()).to_string(), "222");
+        assert_eq!(LongName::from(ShortName::try_from("333".to_string()).unwrap()).to_string(), "333");
         assert_eq!(
-            Name::from(ShortName::try_from("....".to_string()).unwrap()).to_string(),
+            LongName::from(ShortName::try_from("....".to_string()).unwrap()).to_string(),
             "...."
         );
         assert_eq!(
-            Name::from(ShortName::try_from("@@@@@".to_string()).unwrap()).to_string(),
+            LongName::from(ShortName::try_from("@@@@@".to_string()).unwrap()).to_string(),
             "@@@@@"
         );
         assert_eq!(
-            Name::from(ShortName::try_from("abced".to_string()).unwrap()).to_string(),
+            LongName::from(ShortName::try_from("abced".to_string()).unwrap()).to_string(),
             "abced"
         );
         assert_eq!(
-            Name::from(ShortName::try_from("erc20".to_string()).unwrap()).to_string(),
+            LongName::from(ShortName::try_from("erc20".to_string()).unwrap()).to_string(),
             "erc20"
         );
     }
 
     #[cfg(feature = "serde")]
     #[test]
-    fn test_serde_for_name() {
+    fn test_serde_for_long_name() {
         use serde::{Deserialize, Serialize};
 
-        let name = Name::try_from("abcedfg").unwrap();
+        let name = LongName::try_from("0123456789@._-!*abcdefghijklmnopqrstuvwxyz").unwrap();
 
         #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
         struct Obj {
-            n: Name,
+            n: LongName,
         }
 
-        let datas: Obj = serde_json::from_str("{\"n\": \"abcedfg\"}").unwrap();
+        let datas: Obj = serde_json::from_str("{\"n\": \"0123456789@._-!*abcdefghijklmnopqrstuvwxyz\"}").unwrap();
 
         println!("name : {:?}", datas);
         println!("name : {:?}", datas.n.to_string());
@@ -448,20 +453,24 @@ mod tests {
     }
 
     #[test]
-    fn test_name_push() {
-        let mut name = Name::default();
+    fn test_long_name_push() {
+        let mut name = LongName::default();
 
         assert!(name.is_empty(), "the default name should be empty");
         assert!(name.is_valid(), "the default name should be valid");
 
-        let name_chars = vec!['0', '1', 't', 'x', 'y', '@', '.', '_', 'a', 'b'];
+        let name_chars = vec![
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '@', '.', '_', '-', '!', '*', 'a',
+            'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r',
+            's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        ];
 
-        for i in 0..NAME_LEN_MAX {
+        for i in 0..LONG_NAME_LEN_MAX {
             assert!(name.push(name_chars[i]).is_ok());
             assert_eq!(name.len(), i + 1);
         }
 
-        assert_eq!(name.to_string(), "01txy@._ab");
+        assert_eq!(name.to_string(), "0123456789@._-!*abcdefghijklmnopqrstuvwxyz");
 
         assert_eq!(
             name.push('0').err().expect("too long should failed").root_cause().to_string(),

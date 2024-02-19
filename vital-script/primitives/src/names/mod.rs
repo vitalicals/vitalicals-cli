@@ -5,9 +5,11 @@
 //! a-z : 1 ~ 26
 //! 0-9 : 27 ~ 36
 
+mod long_name;
 mod name;
 mod short_name;
 
+pub use long_name::*;
 pub use name::*;
 pub use short_name::*;
 
