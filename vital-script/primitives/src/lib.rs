@@ -6,6 +6,7 @@
 
 extern crate alloc;
 
+pub mod consts;
 pub mod names;
 pub mod resources;
 pub mod traits;

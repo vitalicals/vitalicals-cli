@@ -3,6 +3,7 @@
 use alloc::vec::Vec;
 use anyhow::{bail, Context as AnyhowContext, Result};
 use vital_script_primitives::{
+    consts::MAX_INPUT_INDEX,
     names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
     resources::{Resource, Tag},
     traits::*,
@@ -25,6 +26,22 @@ impl core::fmt::Display for InstructionVRC20Deploy {
 }
 
 impl Instruction for InstructionVRC20Deploy {
+    fn pre_check(&self) -> Result<()> {
+        if self.name_input > MAX_INPUT_INDEX {
+            bail!("name input too large")
+        }
+
+        if !self.name.is_valid() {
+            bail!("Invalid name format");
+        }
+
+        if self.name.is_empty() {
+            bail!("Invalid name by empty");
+        }
+
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // cost the name, check if the vrc20 had deployed.
         let metadata = context.env().get_vrc20_metadata(self.name).context("get vrc20 metadata")?;

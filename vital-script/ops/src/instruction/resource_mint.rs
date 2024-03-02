@@ -56,6 +56,32 @@ impl InstructionResourceMint {
 }
 
 impl Instruction for InstructionResourceMint {
+    fn pre_check(&self) -> Result<()> {
+        match &self.resource_type {
+            ResourceType::Name { name } => {
+                if !name.is_valid() {
+                    bail!("Invalid name resource format");
+                }
+
+                if name.is_empty() {
+                    bail!("Invalid name by empty");
+                }
+            }
+            ResourceType::VRC20 { name } => {
+                if name.is_empty() {
+                    bail!("Invalid vrc20 name by empty");
+                }
+            }
+            ResourceType::VRC721 { hash } => {
+                if hash.is_zero() {
+                    bail!("Invalid hash by zero");
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // println!("InstructionResourceMint");
 
@@ -64,15 +90,6 @@ impl Instruction for InstructionResourceMint {
         let resource = self.make_mint_resource(context)?;
         match &resource {
             Resource::Name(n) => {
-                // TODO: need check this in pre-check
-                if !n.is_valid() {
-                    bail!("Invalid name resource format");
-                }
-
-                if n.is_empty() {
-                    bail!("Invalid name by empty");
-                }
-
                 // for name, we need flag it
                 context.env_mut().new_name(*n).context("new name failed")?;
             }

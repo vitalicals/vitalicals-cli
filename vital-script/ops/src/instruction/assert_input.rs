@@ -4,6 +4,7 @@ use alloc::vec::Vec;
 use anyhow::{bail, Context as AnyhowContext, Result};
 use parity_scale_codec::Encode;
 use vital_script_primitives::{
+    consts::*,
     names::{NAME_LEN_MAX, SHORT_NAME_LEN_MAX},
     resources::{Resource, Tag, VRC20, VRC721},
     traits::*,
@@ -28,6 +29,14 @@ impl core::fmt::Display for InstructionInputAssert {
 }
 
 impl Instruction for InstructionInputAssert {
+    fn pre_check(&self) -> Result<()> {
+        if self.index > MAX_INPUT_INDEX {
+            bail!("index too large")
+        }
+
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // 1. ensure if current input index is not asserted.
         context.runner_mut().try_assert_input(self.index)?;

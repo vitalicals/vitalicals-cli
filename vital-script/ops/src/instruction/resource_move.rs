@@ -32,6 +32,10 @@ impl core::fmt::Display for InstructionResourceMove {
 }
 
 impl Instruction for InstructionResourceMove {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         context
             .input_resource_mut()
@@ -93,6 +97,10 @@ impl core::fmt::Display for InstructionResourceMoveAll {
 }
 
 impl Instruction for InstructionResourceMoveAll {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         let vrc20_name = self
             .resource_type
