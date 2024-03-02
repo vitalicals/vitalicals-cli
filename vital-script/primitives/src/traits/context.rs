@@ -135,9 +135,7 @@ pub trait InputResourcesContext {
 }
 
 pub trait Instruction {
-    fn pre_check(&self) -> Result<()> {
-        Ok(())
-    }
+    fn pre_check(&self) -> Result<()>;
 
     fn exec(&self, context: &mut impl Context) -> Result<()>;
 

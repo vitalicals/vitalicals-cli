@@ -28,6 +28,10 @@ impl core::fmt::Display for InstructionInputAssert {
 }
 
 impl Instruction for InstructionInputAssert {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // 1. ensure if current input index is not asserted.
         context.runner_mut().try_assert_input(self.index)?;

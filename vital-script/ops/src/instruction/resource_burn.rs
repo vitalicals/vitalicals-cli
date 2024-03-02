@@ -18,6 +18,10 @@ impl core::fmt::Display for InstructionResourceBurn {
 }
 
 impl Instruction for InstructionResourceBurn {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         context
             .input_resource_mut()

@@ -50,6 +50,18 @@ impl core::fmt::Display for Instruction {
 }
 
 impl InstructionT for Instruction {
+    fn pre_check(&self) -> Result<()> {
+        match self {
+            Self::Input(i) => i.pre_check(),
+            Self::Output(i) => i.pre_check(),
+            Self::Mint(i) => i.pre_check(),
+            Self::Deploy(i) => i.pre_check(),
+            Self::Move(i) => i.pre_check(),
+            Self::MoveAll(i) => i.pre_check(),
+            Self::Burn(i) => i.pre_check(),
+        }
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         match self {
             Self::Input(i) => i.exec(context),

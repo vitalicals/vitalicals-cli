@@ -56,6 +56,10 @@ impl InstructionResourceMint {
 }
 
 impl Instruction for InstructionResourceMint {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // println!("InstructionResourceMint");
 

@@ -25,6 +25,10 @@ impl core::fmt::Display for InstructionVRC20Deploy {
 }
 
 impl Instruction for InstructionVRC20Deploy {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         // cost the name, check if the vrc20 had deployed.
         let metadata = context.env().get_vrc20_metadata(self.name).context("get vrc20 metadata")?;

@@ -20,6 +20,10 @@ impl core::fmt::Display for InstructionOutputAssert {
 }
 
 impl Instruction for InstructionOutputAssert {
+    fn pre_check(&self) -> Result<()> {
+        Ok(())
+    }
+
     fn exec(&self, context: &mut impl Context) -> Result<()> {
         for index in self.indexs.iter() {
             // 1. ensure if current output index is not asserted.
