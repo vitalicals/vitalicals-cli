@@ -44,7 +44,7 @@ impl From<InputAssertName> for Instruction {
 /// Input Long Name Res Assert
 #[derive(Debug, BasicOpcode, Encode, Decode)]
 pub struct InputAssertLongName {
-    pub name: Tag, // FIXME: add long name
+    pub name: Tag, // TODO: add long name
     pub index: u8,
 }
 
@@ -228,7 +228,7 @@ mod tests {
 
         check_ops_encode_and_decode(InputAssertName { name, index: 2 });
 
-        // FIXME: support long name
+        // TODO: support long name
         // check_ops_encode_and_decode(InputAssertLongName{
         //     name: name.into(),
         //    index: 3,

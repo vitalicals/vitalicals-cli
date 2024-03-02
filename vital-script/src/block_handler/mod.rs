@@ -3,6 +3,7 @@ use anyhow::{Context as AnyhowContext, Result};
 
 use bitcoin::{Block, Transaction, Txid};
 
+use vital_script_primitives::traits::Context as ContextT;
 use vital_script_runner::{
     check_is_vital_script, maybe_vital_commit_tx_with_input_resource, traits::EnvFunctions,
     Context, Runner,
@@ -69,8 +70,8 @@ impl<'a> BlockRunner<'a> {
             log::debug!(target: TARGET, "process vital tx with commit txid {}", commit_txid);
 
             let context = Context::new(env_interface.clone(), tx, self.height);
-            if !context.is_valid() {
-                log::debug!(target: TARGET, "context is not valid");
+            if let Err(err) = context.pre_check() {
+                log::debug!(target: TARGET, "context is not valid by {}", err);
                 continue;
             }
 

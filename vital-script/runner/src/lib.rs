@@ -51,15 +51,6 @@ impl<Context: ContextT<Instruction = Instruction>> Runner<Context> {
         let instructions = context.get_instructions().context("get instructions")?;
         log::debug!(target: TARGET, "run instructions len {}", instructions.len());
 
-        // 1. run pre check
-        context.pre_check().context("pre check")?;
-
-        for (index, instruction) in instructions.iter().enumerate() {
-            instruction
-                .pre_check()
-                .with_context(|| alloc::format!("instruction {}", index))?;
-        }
-
         // 2. run opcodes, cost input resources, call env traits.
         for (index, instruction) in instructions.iter().enumerate() {
             log::debug!(target: TARGET, "run instruction {} : {}", index, instruction);
