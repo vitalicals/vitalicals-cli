@@ -93,10 +93,6 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
         &self.reveal_tx_id
     }
 
-    fn is_valid(&self) -> bool {
-        true
-    }
-
     fn get_ops(&self) -> &[(u8, Vec<u8>)] {
         &self.ops
     }

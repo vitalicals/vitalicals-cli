@@ -89,7 +89,16 @@ where
     }
 
     fn pre_check(&self) -> Result<()> {
-        // TODO: pre check
+        use vital_script_primitives::traits::Instruction;
+
+        let instructions = self.get_instructions().context("get instructions")?;
+
+        for (index, instruction) in instructions.iter().enumerate() {
+            instruction
+                .pre_check()
+                .with_context(|| alloc::format!("instruction {}", index))?;
+        }
+
         Ok(())
     }
 
@@ -134,9 +143,5 @@ where
         let env = EnvContext::new_for_sim(env_interface, reveal_tx, block_height);
 
         Self { env, input_resources, runner, mode: RunMode::Simulator, outputs: Vec::new() }
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.env.is_valid()
     }
 }

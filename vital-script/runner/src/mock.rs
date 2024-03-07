@@ -251,9 +251,22 @@ impl ContextT for ContextMock {
 
         Ok(ins.concat())
     }
+
     fn pre_check(&self) -> Result<()> {
+        // TODO: just use context 's impl, not copy
+        use vital_script_primitives::traits::Instruction;
+
+        let instructions = self.get_instructions().context("get instructions")?;
+
+        for (index, instruction) in instructions.iter().enumerate() {
+            instruction
+                .pre_check()
+                .with_context(|| alloc::format!("instruction {}", index))?;
+        }
+
         Ok(())
     }
+
     fn post_check(&self) -> Result<()> {
         Ok(())
     }
@@ -320,6 +333,9 @@ impl TestCtx {
 
     pub fn run(&mut self) -> Result<ContextMock> {
         let mut context = ContextMock::new(self.tx.clone(), self.env_interface.clone());
+
+        context.pre_check().context("context pre check")?;
+
         Runner::new().run(&mut context)?;
 
         Ok(context)
