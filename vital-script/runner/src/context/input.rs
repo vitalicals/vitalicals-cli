@@ -260,7 +260,7 @@ impl InputResources {
                 // so we need from the lastest one.
                 let mut uncosted_amount = vrc20.amount.saturating_sub(vrc20.costed);
 
-                log::debug!(target: TARGET, "the input vrc20: {} {:?}", vrc20.name.to_string(), uncosted_amount);
+                log::debug!(target: TARGET, "the input vrc20: {} {:?}", vrc20.name, uncosted_amount);
 
                 let iter = (0..vrc20.inputs.len()).rev();
 

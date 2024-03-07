@@ -17,7 +17,7 @@ struct Cli {
     command: SubCommands,
 
     /// if show debug log
-    #[arg(short, long, default_value = "false")]
+    #[arg(long, default_value = "false")]
     pub debug: bool,
 
     /// Sets the network.
