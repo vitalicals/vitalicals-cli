@@ -1,10 +1,10 @@
 //! The resources types
 
+use alloc::string::String;
 use core::fmt;
 
 use anyhow::{bail, Result};
 
-#[cfg(feature = "std")]
 use primitive_types::U256;
 
 use parity_scale_codec::{Decode, Encode};
