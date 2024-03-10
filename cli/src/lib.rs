@@ -30,11 +30,11 @@ struct Cli {
     pub network: String,
 
     /// The url for electrum.
-    #[arg(short = 'e', long = "endpoint")]
+    #[arg(short = 'e', long = "endpoint", default_value = "127.0.0.1:50002")]
     pub endpoint: String,
 
     /// The endpoint for indexer
-    #[arg(short = 'i', long = "indexer")]
+    #[arg(short = 'i', long = "indexer", default_value = "http://localhost:9944")]
     pub indexer: String,
 
     /// Sets the wallet data directory.
@@ -61,6 +61,14 @@ struct Cli {
     /// If need forced sync
     #[arg(long, default_value = "false")]
     no_sync: bool,
+
+    /// The name of wallet for vital resources
+    #[arg(long)]
+    wallet: Option<String>,
+
+    /// The name of wallet for fee
+    #[arg(long)]
+    fee_wallet: Option<String>,
 }
 
 impl Cli {
@@ -101,6 +109,12 @@ enum SubCommands {
     /// Wallet cmds
     #[command(subcommand)]
     Utils(utils::UtilsSubCommands),
+
+    /// Version
+    Version {
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 pub async fn run() -> Result<()> {
@@ -127,5 +141,61 @@ pub async fn run() -> Result<()> {
         SubCommands::Move(cmd) => cmd.run(&cli).await,
         SubCommands::Wallet(cmd) => cmd.run(&cli).await,
         SubCommands::Utils(cmd) => cmd.run(&cli).await,
+        SubCommands::Version { json } => print_version(*json),
     }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct VersionInfo {
+    build_timestamp: String,
+    cargo_debug: String,
+    git_describe: String,
+    git_branch: String,
+    git_commit_message: String,
+    git_commit_timestamp: String,
+    git_sha: String,
+    git_dirty: String,
+    rustc_channel: String,
+    rustc_semver: String,
+    rustc_host_triple: String,
+}
+
+impl Default for VersionInfo {
+    fn default() -> Self {
+        Self {
+            build_timestamp: env!("VERGEN_BUILD_TIMESTAMP").to_string(),
+            cargo_debug: env!("VERGEN_CARGO_DEBUG").to_string(),
+            git_describe: env!("VERGEN_GIT_DESCRIBE").to_string(),
+            git_branch: env!("VERGEN_GIT_BRANCH").to_string(),
+            git_commit_message: env!("VERGEN_GIT_COMMIT_MESSAGE").to_string(),
+            git_commit_timestamp: env!("VERGEN_GIT_COMMIT_TIMESTAMP").to_string(),
+            git_sha: env!("VERGEN_GIT_SHA").to_string(),
+            git_dirty: env!("VERGEN_GIT_DIRTY").to_string(),
+            rustc_channel: env!("VERGEN_RUSTC_CHANNEL").to_string(),
+            rustc_semver: env!("VERGEN_RUSTC_SEMVER").to_string(),
+            rustc_host_triple: env!("VERGEN_RUSTC_HOST_TRIPLE").to_string(),
+        }
+    }
+}
+
+impl VersionInfo {
+    fn print(&self) {
+        if self.git_dirty == "true" {
+            println!("{}-dirty", self.git_describe);
+        } else {
+            println!("{}", self.git_describe);
+        }
+    }
+}
+
+fn print_version(json: bool) -> Result<()> {
+    let info = VersionInfo::default();
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&info).expect("the json should be ok"));
+    } else {
+        info.print();
+    }
+
+    Ok(())
 }

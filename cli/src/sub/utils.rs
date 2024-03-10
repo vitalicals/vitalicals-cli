@@ -20,6 +20,7 @@ use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
 use btc_script_builder::InscriptionScriptBuilder;
+use wallet::consts::DEFAULT_WALLET_NAME;
 
 use crate::Cli;
 
@@ -82,8 +83,14 @@ fn send_to_address(
     fee_rate: &Option<f32>,
     replaceable: bool,
 ) -> Result<()> {
-    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir, true)
-        .context("load wallet failed")?;
+    let wallet = wallet::Wallet::load(
+        network,
+        cli.endpoint.clone(),
+        &cli.datadir,
+        cli.wallet.as_ref().unwrap_or(&DEFAULT_WALLET_NAME.to_string()),
+        true,
+    )
+    .context("load wallet failed")?;
     let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
@@ -163,8 +170,14 @@ fn inscribe_to_address_impl(
     _replaceable: bool,
     datas: &str,
 ) -> Result<()> {
-    let wallet = wallet::Wallet::load(network, cli.endpoint.clone(), &cli.datadir, true)
-        .context("load wallet failed")?;
+    let wallet = wallet::Wallet::load(
+        network,
+        cli.endpoint.clone(),
+        &cli.datadir,
+        DEFAULT_WALLET_NAME,
+        true,
+    )
+    .context("load wallet failed")?;
     let bdk_wallet = &wallet.wallet;
     let bdk_blockchain = &wallet.blockchain;
 
