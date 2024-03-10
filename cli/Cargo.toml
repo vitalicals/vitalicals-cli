@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 version.workspace = true
 
+build = "build.rs"
+
 [dependencies]
 anyhow = { workspace = true, features = ["default"] }
 bdk.workspace = true
@@ -33,3 +35,7 @@ std = [
     "vital-script-primitives/std",
     "vital-script-builder/std",
 ]
+
+[build-dependencies]
+anyhow = { workspace = true, features = ["default"] }
+vergen = { workspace = true }
