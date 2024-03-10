@@ -14,9 +14,11 @@ use crate::{names::ShortName, H256};
 
 pub mod vrc20;
 pub mod vrc721;
+pub mod vrc721_named;
 
 pub use vrc20::*;
 pub use vrc721::*;
+pub use vrc721_named::*;
 
 pub type Tag = Name;
 
@@ -27,6 +29,7 @@ pub enum ResourceClass {
     Name = 0x01,
     VRC20 = 0x02,
     VRC721 = 0x03,
+    NVRC721 = 0x04,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
@@ -35,6 +38,7 @@ pub enum ResourceType {
     Name { name: Tag },
     VRC20 { name: Tag },
     VRC721 { hash: H256 },
+    NVRC721 { name: Tag },
 }
 
 impl fmt::Display for ResourceType {
@@ -48,6 +52,9 @@ impl fmt::Display for ResourceType {
             }
             ResourceType::VRC721 { hash } => {
                 write!(f, "vrc721({})", hash)
+            }
+            ResourceType::NVRC721 { name } => {
+                write!(f, "named-vrc721({})", name)
             }
         }
     }
@@ -75,6 +82,7 @@ impl ResourceType {
             ResourceType::Name { name } => Some(name),
             ResourceType::VRC20 { name } => Some(name),
             ResourceType::VRC721 { hash: _ } => None,
+            ResourceType::NVRC721 { name } => Some(name),
         }
     }
 }
@@ -86,6 +94,7 @@ pub enum Resource {
     Name(Name),
     VRC20(VRC20),
     VRC721(VRC721),
+    NVRC721(NVRC721),
 }
 
 impl fmt::Display for Resource {
@@ -99,6 +108,9 @@ impl fmt::Display for Resource {
             }
             Self::VRC721(v) => {
                 write!(f, "vrc721({})", v)
+            }
+            Self::NVRC721(v) => {
+                write!(f, "named_vrc721({})", v)
             }
         }
     }
@@ -137,6 +149,20 @@ impl Resource {
         }
     }
 
+    pub fn named_vrc721(name: impl Into<String>, hash: impl Into<H256>) -> Result<Self> {
+        let name = Name::try_from(name.into())?;
+
+        Ok(Self::NVRC721(NVRC721::new(name, hash.into())))
+    }
+
+    pub fn as_named_vrc721(&self) -> Result<&NVRC721> {
+        if let Self::NVRC721(v) = self {
+            Ok(v)
+        } else {
+            bail!("resource is not vrc721")
+        }
+    }
+
     pub fn name(name: impl Into<Tag>) -> Self {
         Self::Name(name.into())
     }
@@ -146,6 +172,7 @@ impl Resource {
             Self::Name(n) => ResourceType::Name { name: *n },
             Self::VRC20(v) => ResourceType::VRC20 { name: v.name },
             Self::VRC721(v) => ResourceType::VRC721 { hash: v.hash },
+            Self::NVRC721(v) => ResourceType::NVRC721 { name: v.name },
         }
     }
 
@@ -187,5 +214,11 @@ impl From<VRC20> for Resource {
 impl From<VRC721> for Resource {
     fn from(value: VRC721) -> Self {
         Self::VRC721(value)
+    }
+}
+
+impl From<NVRC721> for Resource {
+    fn from(value: NVRC721) -> Self {
+        Self::NVRC721(value)
     }
 }
