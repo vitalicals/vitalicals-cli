@@ -25,6 +25,7 @@ use crate::{database::*, file::WalletFile};
 
 /// Wallet
 pub struct Wallet {
+    pub name: String,
     pub xprv: String,
     pub xpriv: ExtendedPrivKey,
     pub wallet: BdkWallet<AnyDatabase>,
@@ -34,18 +35,20 @@ pub struct Wallet {
 
 impl Wallet {
     pub fn create_from_wallet(
+        name: &str,
         xprv: String,
         wallet: BdkWallet<AnyDatabase>,
         blockchain: AnyBlockchain,
     ) -> Result<Self> {
         let xpriv = ExtendedPrivKey::from_str(xprv.as_str()).context("ExtendedPrivKey from str")?;
-        Ok(Self { xprv, xpriv, wallet, blockchain, synced: false })
+        Ok(Self { name: name.to_string(), xprv, xpriv, wallet, blockchain, synced: false })
     }
 
     pub fn create(
         network: Network,
         endpoint: String,
         path: &std::path::PathBuf,
+        name: &str,
         forced_sync: bool,
     ) -> Result<Wallet> {
         // Generate fresh mnemonic
@@ -55,18 +58,19 @@ impl Wallet {
         // Convert mnemonic to string
         let mnemonic_words = mnemonic.to_string();
 
-        Self::create_by_mnemonic(network, endpoint, path, mnemonic_words, forced_sync)
+        Self::create_by_mnemonic(network, endpoint, path, name, mnemonic_words, forced_sync)
     }
 
     pub fn create_by_mnemonic(
         network: Network,
         endpoint: String,
         root: &std::path::PathBuf,
+        name: &str,
         mnemonic_words: String,
         forced_sync: bool,
     ) -> Result<Self> {
         // clean database datas.
-        rm_database(network, root)?;
+        rm_database(network, root, name)?;
 
         // Parse a mnemonic
         let mnemonic = Mnemonic::parse(&mnemonic_words)?;
@@ -79,6 +83,7 @@ impl Wallet {
             network,
             endpoint,
             root,
+            name,
             Bip86(xprv, KeychainKind::External),
             Some(Bip86(xprv, KeychainKind::Internal)),
             forced_sync,
@@ -92,7 +97,7 @@ impl Wallet {
             wallet.get_descriptor_for_keychain(KeychainKind::Internal).to_string()
         );
 
-        let mut res = Self::create_from_wallet(xprv.to_string(), wallet, blockchain)?;
+        let mut res = Self::create_from_wallet(name, xprv.to_string(), wallet, blockchain)?;
         res.save(root)?;
 
         res.synced = synced;
@@ -103,40 +108,50 @@ impl Wallet {
     pub fn save(&self, root: &Path) -> Result<()> {
         let to_file = WalletFile::from_wallet(self);
 
-        to_file.save(root)
+        to_file.save(root, &self.name)
     }
 
     pub fn load(
         network: Network,
         endpoint: String,
         root: &std::path::PathBuf,
+        name: &str,
         forced_sync: bool,
     ) -> Result<Self> {
-        let from_file = WalletFile::load(root, network).context("load file failed")?;
+        let from_file = WalletFile::load(root, name, network).context("load file failed")?;
         let xpriv = bip32::ExtendedPrivKey::from_str(from_file.xpriv.as_str()).unwrap();
 
         let (wallet, blockchain, synced) = Self::load_wallet(
             network,
             endpoint,
             root,
+            name,
             Bip86(xpriv, KeychainKind::External),
             Some(Bip86(xpriv, KeychainKind::Internal)),
             forced_sync,
         )
         .context("load wallet")?;
 
-        Ok(Self { xpriv, xprv: from_file.xpriv, wallet, blockchain, synced })
+        Ok(Self {
+            name: name.to_string(),
+            xpriv,
+            xprv: from_file.xpriv,
+            wallet,
+            blockchain,
+            synced,
+        })
     }
 
     fn load_wallet<E: IntoWalletDescriptor>(
         network: Network,
         endpoint: String,
         root: &std::path::PathBuf,
+        name: &str,
         descriptor: E,
         change_descriptor: Option<E>,
         forced_sync: bool,
     ) -> Result<(BdkWallet<AnyDatabase>, AnyBlockchain, bool)> {
-        let database = open_database(network, root).context("open_database")?;
+        let database = open_database(network, root, name).context("open_database")?;
         let blockchain = new_electrum_blockchain(endpoint).context("new_electrum_blockchain")?;
 
         let sync_time = database

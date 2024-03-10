@@ -61,6 +61,14 @@ struct Cli {
     /// If need forced sync
     #[arg(long, default_value = "false")]
     no_sync: bool,
+
+    /// The name of wallet for vital resources
+    #[arg(long, default_value = "default")]
+    wallet: String,
+
+    /// The name of wallet for fee
+    #[arg(long, default_value = "fee")]
+    fee_wallet: String,
 }
 
 impl Cli {
