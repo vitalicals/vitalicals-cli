@@ -54,7 +54,7 @@ fn prepare_wallet_db_dir(network: &str, wallet_name: &str, root: &PathBuf) -> Re
 
     if !db_dir.exists() {
         log::info!("Creating database directory {}", db_dir.as_path().display());
-        std::fs::create_dir(&db_dir).context("create dir")?;
+        std::fs::create_dir_all(&db_dir).context("create dir")?;
     }
 
     Ok(db_dir)
@@ -68,7 +68,7 @@ fn prepare_wallet_dir(network: &str, wallet_name: &str, root: &PathBuf) -> Resul
 
     if !dir.exists() {
         log::info!("Creating wallet directory {}", dir.as_path().display());
-        std::fs::create_dir(&dir).context("create dir")?;
+        std::fs::create_dir_all(&dir).context("create dir")?;
     }
 
     Ok(dir)

@@ -24,7 +24,7 @@ struct Cli {
     #[arg(
         short = 'n',
         long = "network",
-        default_value = "testnet",
+        default_value = "bitcoin",
         value_parser = ["bitcoin", "testnet", "signet", "regtest"],
     )]
     pub network: String,
