@@ -63,12 +63,12 @@ struct Cli {
     no_sync: bool,
 
     /// The name of wallet for vital resources
-    #[arg(long, default_value = "default")]
-    wallet: String,
+    #[arg(long)]
+    wallet: Option<String>,
 
     /// The name of wallet for fee
-    #[arg(long, default_value = "fee")]
-    fee_wallet: String,
+    #[arg(long)]
+    fee_wallet: Option<String>,
 }
 
 impl Cli {

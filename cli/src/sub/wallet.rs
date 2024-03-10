@@ -68,7 +68,7 @@ fn create_wallet(cli: &Cli, wallet_name: &Option<String>) -> Result<()> {
     Ok(())
 }
 
-fn import_mnemonic(cli: &Cli, wallet_name: &String, mnemonic: String) -> Result<()> {
+fn import_mnemonic(cli: &Cli, wallet_name: &str, mnemonic: String) -> Result<()> {
     let network = cli.network();
 
     Wallet::create_by_mnemonic(
@@ -87,7 +87,7 @@ fn balance(cli: &Cli, wallet_name: &Option<String>) -> Result<()> {
     let network = cli.network();
 
     // TODO: support get balance for all wallet
-    let wallet_name = wallet_name.clone().unwrap_or("default".to_string());
+    let wallet_name = wallet_name.clone().unwrap_or(DEFAULT_WALLET_NAME.to_string());
 
     let wallet = Wallet::load(network, cli.endpoint.clone(), &cli.datadir, &wallet_name, true)
         .context("load wallet failed")?;
