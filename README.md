@@ -4,7 +4,7 @@ a client cli for vitalicals
 ## 1. Create a btc wallet
 
 ```bash
-./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet create
+./target/release/vitalicals-cli -n  regtest -e 10.1.1.84:50002 wallet create
 mnemonic: garbage notice other combine frost tornado nominee mechanic jacket match hammer virtual
 recv desc (pub key): "tr([0670c99a/86'/1'/0']tpubDDZps2fBuMesuiuXc6GfBXzFWXrFkPV8uAQ7zruqviUUtqsZrRgNY8nHM4pwUh2N7ycLniV1ny5fetHWvgzuUJjVj6pQahXVumyNNsfKZya/0/*)#0390358l"
 chng desc (pub key): "tr([0670c99a/86'/1'/0']tpubDDZps2fBuMesuiuXc6GfBXzFWXrFkPV8uAQ7zruqviUUtqsZrRgNY8nHM4pwUh2N7ycLniV1ny5fetHWvgzuUJjVj6pQahXVumyNNsfKZya/1/*)#79qwvph8"
@@ -15,7 +15,7 @@ it will create a new mnemonic, and storage wallet file in ./.vitalicals-cli
 also can import a mnemonic, but you need make sure it is safety
 
 ```bash
- ./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet import 'garbage notice other combine frost tornado nominee mechanic jacket match hammer virtual'
+ ./target/release/vitalicals-cli -n  regtest -e 10.1.1.84:50002 wallet import 'garbage notice other combine frost tornado nominee mechanic jacket match hammer virtual'
 mnemonic: garbage notice other combine frost tornado nominee mechanic jacket match hammer virtual
 recv desc (pub key): "tr([0670c99a/86'/1'/0']tpubDDZps2fBuMesuiuXc6GfBXzFWXrFkPV8uAQ7zruqviUUtqsZrRgNY8nHM4pwUh2N7ycLniV1ny5fetHWvgzuUJjVj6pQahXVumyNNsfKZya/0/*)#0390358l"
 chng desc (pub key): "tr([0670c99a/86'/1'/0']tpubDDZps2fBuMesuiuXc6GfBXzFWXrFkPV8uAQ7zruqviUUtqsZrRgNY8nHM4pwUh2N7ycLniV1ny5fetHWvgzuUJjVj6pQahXVumyNNsfKZya/1/*)#79qwvph8"
@@ -24,14 +24,14 @@ chng desc (pub key): "tr([0670c99a/86'/1'/0']tpubDDZps2fBuMesuiuXc6GfBXzFWXrFkPV
 you should give this address some btc, first, we can got the address by wallet:
 
 ```bash
-./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet address
+./target/release/vitalicals-cli -n  regtest -e 10.1.1.84:50002 wallet address
 address: bcrt1pr04tzkr2eysslnk5afvry9fp2ujy5czgeqxgpt092fyv930q79js67hj48
 ```
 
 use btc cli to give this address some btc, then we can got balance:
 
 ```bash
-./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet balance
+./target/release/vitalicals-cli -n  regtest -e 10.1.1.84:50002 wallet balance
 balance: { immature: 0, trusted_pending: 0, untrusted_pending: 0, confirmed: 10000000000 }
 ```
 
@@ -173,16 +173,16 @@ find 1 resources
 We can create different wallet by name `test_wallet`:
 
 ```bash
-./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet create test_wallet
+./target/release/vitalicals-cli -n  regtest -e 10.1.1.84:50002 wallet create test_wallet
 ```
 
 So we can create a wallet named "test". We can use other cmds like:
 
 ```bash
-./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet address --wallet test_wallet
+./target/release/vitalicals-cli -n  regtest -e 10.1.1.84:50002 wallet address --wallet test_wallet
 address: bcrt1p5hs3s9kpa3ncmwy95jkeduqntmlhyedk9huk5965gj83lggru85stsv4sd
 
-./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet balance test_wallet
+./target/release/vitalicals-cli -n  regtest -e 10.1.1.84:50002 wallet balance test_wallet
 balance: { immature: 0, trusted_pending: 0, untrusted_pending: 0, confirmed: 100000000 }
 ```
 

@@ -30,11 +30,11 @@ struct Cli {
     pub network: String,
 
     /// The url for electrum.
-    #[arg(short = 'e', long = "endpoint")]
+    #[arg(short = 'e', long = "endpoint", default_value = "127.0.0.1:50002")]
     pub endpoint: String,
 
     /// The endpoint for indexer
-    #[arg(short = 'i', long = "indexer")]
+    #[arg(short = 'i', long = "indexer", default_value = "http://localhost:9944")]
     pub indexer: String,
 
     /// Sets the wallet data directory.

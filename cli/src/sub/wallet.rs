@@ -1,10 +1,12 @@
+use std::fs::DirEntry;
+
 use anyhow::{Context, Result};
 use bdk::wallet::AddressIndex;
 use clap::Subcommand;
 
 use wallet::{
     consts::{DEFAULT_WALLET_NAME, FEE_WALLET_NAME},
-    Wallet,
+    Wallet, WalletFile,
 };
 
 use crate::Cli;
@@ -32,6 +34,9 @@ pub enum WalletSubCommands {
         #[arg(long, default_value = "default")]
         wallet: String,
     },
+
+    /// List all alive wallets.
+    List,
 }
 
 impl WalletSubCommands {
@@ -48,6 +53,9 @@ impl WalletSubCommands {
             }
             Self::Address { index, wallet: wallet_name } => {
                 address(cli, index, wallet_name)?;
+            }
+            Self::List => {
+                list(cli)?;
             }
         }
 
@@ -113,4 +121,41 @@ fn address(cli: &Cli, index: &Option<u32>, wallet_name: &str) -> Result<()> {
     println!("address: {}", address);
 
     Ok(())
+}
+
+fn list(cli: &Cli) -> Result<()> {
+    let network = cli.network();
+    let root = cli.datadir.join(network.to_core_arg());
+
+    match std::fs::read_dir(root) {
+        Ok(entries) => {
+            for entry in entries {
+                match entry {
+                    Ok(entry) => {
+                        if let Ok(Some(name)) = try_get_wallet_name(cli, &entry) {
+                            println!("{}", name);
+                        }
+                    }
+                    Err(e) => eprintln!("Error: {}", e),
+                }
+            }
+        }
+        Err(e) => eprintln!("Error: {}", e),
+    }
+
+    Ok(())
+}
+
+fn try_get_wallet_name(cli: &Cli, dir: &DirEntry) -> Result<Option<String>> {
+    let metadata = dir.metadata()?;
+    if !metadata.is_dir() {
+        return Ok(None)
+    }
+
+    let path = dir.file_name().to_string_lossy().to_string();
+    let network = cli.network();
+
+    let _wallet = WalletFile::load(&cli.datadir, &path, network)?;
+
+    Ok(Some(path))
 }
