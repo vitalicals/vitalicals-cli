@@ -4,6 +4,7 @@ use bitcoin::{hashes::Hash, OutPoint, Transaction, Txid};
 use parity_scale_codec::{Decode, Encode};
 
 use vital_script_primitives::{
+    consts::{STORAGE_KEY_METADATA, STORAGE_KEY_VRC721},
     resources::{Resource, Tag},
     traits::{context::EnvContext as EnvContextT, MetaDataType},
     H256,
@@ -12,9 +13,6 @@ use vital_script_primitives::{
 use crate::{traits::EnvFunctions, TARGET};
 
 use super::script::parse_vital_scripts;
-
-const STORAGE_KEY_METADATA: &[u8; 8] = b"metadata";
-const STORAGE_KEY_VRC721: &[u8; 6] = b"vrc721";
 
 #[derive(Clone)]
 pub struct EnvContext<Functions: EnvFunctions> {
@@ -174,10 +172,7 @@ impl<Functions: EnvFunctions> EnvContextT for EnvContext<Functions> {
     fn vrc721_had_mint(&self, hash: H256) -> Result<bool> {
         log::debug!(target: TARGET, "vrc721_had_mint {:?}", hash);
 
-        let key = [STORAGE_KEY_VRC721.to_vec(), hash.0.to_vec()].concat();
-
-        // TODO: use a storage to store [u8; 32] -> bool map
-        Ok(self.env.storage_get(&key).context("get metadata failed")?.is_some())
+        self.env.vrc721_had_mint(hash)
     }
 
     fn set_metadata<T: Encode>(&mut self, name: Tag, typ: MetaDataType, meta: T) -> Result<()> {
