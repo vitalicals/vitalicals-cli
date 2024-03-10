@@ -180,7 +180,11 @@ impl Default for VersionInfo {
 
 impl VersionInfo {
     fn print(&self) {
-        println!("{}-{}", self.git_describe, self.git_dirty);
+        if self.git_dirty == "true" {
+            println!("{}-dirty", self.git_describe);
+        } else {
+            println!("{}", self.git_describe);
+        }
     }
 }
 
