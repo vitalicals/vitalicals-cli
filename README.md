@@ -35,6 +35,8 @@ use btc cli to give this address some btc, then we can got balance:
 balance: { immature: 0, trusted_pending: 0, untrusted_pending: 0, confirmed: 10000000000 }
 ```
 
+> Note we support cli use different wallet by name, in default, the cli will use `default` wallet, we can use other, can see details in next.
+
 Now we can use cli.
 
 ## 2. Mint a name for deploy VRC20
@@ -152,17 +154,46 @@ find 4 resources
 3. find pending 769e9901de9f6ab121dfca17689f1a4ab098f0049e061e0b30fa1141157a6648:1 contain with resource vrc20([vital,98000])
 ```
 
-move to other:
-
+move to other address :
 
 ```bash
 ./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 --to bcrt1py4zy879dj5d36xzjsl4yuvzgxss8u3ha7wkxvlkctp50xqppykhs7k0ezw move vrc20 vital 210000
 ```
 
-then we can got 
+then we can got:
 
 ```bash
 ./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 query resources                                                                              
 find 1 resources
 0. find 482d8d933842d70eeebf342e20fa165ddec930342f6e9be10ddb5cbbe15339ab:1 contain with resource vrc20([vital,90000])
+```
+
+## 5. use different wallet
+
+We can create different wallet by name `test_wallet`:
+
+```bash
+./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet create test_wallet
+```
+
+So we can create a wallet named "test". We can use other cmds like:
+
+```bash
+./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet address --wallet test_wallet
+address: bcrt1p5hs3s9kpa3ncmwy95jkeduqntmlhyedk9huk5965gj83lggru85stsv4sd
+
+./target/release/vitalicals-cli --indexer http://localhost:9944  -n  regtest -e 10.1.1.84:50002 wallet balance test_wallet
+balance: { immature: 0, trusted_pending: 0, untrusted_pending: 0, confirmed: 100000000 }
+```
+
+We can mint by:
+
+```bash
+./target/release/vitalicals-cli --indexer http://localhost:9944  -n regtest -e 10.1.1.84:50002 --wallet test_wallet mint vrc20 vital
+```
+
+We also can search all wallet by:
+
+```bash
+./target/release/vitalicals-cli -n regtest wallet list
 ```
