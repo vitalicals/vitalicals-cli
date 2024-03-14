@@ -1,10 +1,10 @@
 use anyhow::{anyhow, bail, Context as AnyhowContext, Result};
 use clap::Subcommand;
-use vital_interfaces_indexer::{simulator::SimulatorEnvInterface, traits::IndexerClientT};
-use vital_script::runner::{traits::EnvFunctions, EnvContext};
-use vital_script_primitives::{resources::Name, traits::EnvContext as EnvContextT, H256};
+use vital_interfaces_indexer::simulator::SimulatorEnvInterface;
+use vital_script::runner::traits::EnvFunctions;
+use vital_script_primitives::{resources::Name, traits::EnvContext as EnvContextT};
 
-use crate::Cli;
+use crate::{sub::utils::hash_from_str, Cli};
 
 use super::context::{build_context, Context};
 
@@ -103,20 +103,7 @@ async fn mint_vrc20(context: &Context, vrc20_name: String) -> Result<()> {
 async fn mint_vrc721(context: &Context, hash_str: &str) -> Result<()> {
     use vital_script_builder::templates;
 
-    let hash_str = if hash_str.starts_with("0x") { &hash_str[2..] } else { hash_str };
-
-    let hash_bytes = hex::decode(&hash_str).context("decode hash hex value failed")?;
-    if hash_bytes.len() != H256::len_bytes() {
-        bail!(
-            "the hash should be H256, need {} bytes, got {}",
-            H256::len_bytes(),
-            hash_bytes.len()
-        );
-    }
-
-    let hash_bytes: [u8; H256::len_bytes()] = hash_bytes.try_into().expect("the len should ok");
-
-    let hash = H256::try_from(hash_bytes).context("from to h256 failed")?;
+    let hash = hash_from_str(hash_str).context("hash from string")?;
 
     // check if the hash had mint
     let interface: SimulatorEnvInterface<vital_interfaces_indexer::IndexerClient> =

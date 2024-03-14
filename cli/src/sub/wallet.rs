@@ -30,9 +30,6 @@ pub enum WalletSubCommands {
     /// Get Address for wallet.
     Address {
         index: Option<u32>,
-
-        #[arg(long, default_value = "default")]
-        wallet: String,
     },
 
     /// List all alive wallets.
@@ -43,16 +40,38 @@ impl WalletSubCommands {
     pub(crate) async fn run(&self, cli: &Cli) -> Result<()> {
         match self {
             Self::Create { wallet: wallet_name } => {
+                if cli.wallet.is_some(){
+                    panic!("should not use --wallet");
+                }
+
                 create_wallet(cli, wallet_name)?;
             }
             Self::Import { mnemonic, wallet: wallet_name } => {
+                if cli.wallet.is_some(){
+                    panic!("should not use --wallet");
+                }
+
                 import_mnemonic(cli, wallet_name, mnemonic.clone())?;
             }
             Self::Balance { wallet: wallet_name } => {
-                balance(cli, wallet_name)?;
+                let wallet = match (cli.wallet.clone(), wallet_name.clone()){
+                    (None, None) => DEFAULT_WALLET_NAME.to_string(),
+                    (Some(wallet), None) => wallet,
+                    (None, Some(wallet)) => wallet,
+                    (Some(w1), Some(w2)) => {
+                        if w1 == w2{
+                            w1
+                        }else{
+                            panic!("The `--wallet` use {}, but args use wallet {}, just use one arg to select wallet!", w1, w2);
+                        }
+                    }
+                };
+
+                balance(cli, &Some(wallet))?;
             }
-            Self::Address { index, wallet: wallet_name } => {
-                address(cli, index, wallet_name)?;
+            Self::Address { index } => {
+                let wallet = cli.wallet.clone().unwrap_or(DEFAULT_WALLET_NAME.to_string());
+                address(cli, index, &wallet)?;
             }
             Self::List => {
                 list(cli)?;
@@ -119,6 +138,8 @@ fn address(cli: &Cli, index: &Option<u32>, wallet_name: &str) -> Result<()> {
     .context("get address failed")?;
 
     println!("address: {}", address);
+
+    wallet.flush()?;
 
     Ok(())
 }

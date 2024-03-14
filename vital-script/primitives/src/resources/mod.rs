@@ -98,7 +98,7 @@ impl fmt::Display for Resource {
                 write!(f, "vrc20({})", v)
             }
             Self::VRC721(v) => {
-                write!(f, "vrc721({})", v)
+                write!(f, "vrc721({:x})", v.hash)
             }
         }
     }

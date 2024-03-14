@@ -6,9 +6,11 @@ use crate::{build_context, Cli};
 
 mod name;
 mod vrc20;
+mod vrc721;
 
 use name::*;
 use vrc20::*;
+use vrc721::*;
 
 #[derive(Debug, Subcommand)]
 pub enum MoveSubCommands {
@@ -29,6 +31,11 @@ pub enum MoveSubCommands {
         /// The amount
         amount: u128,
     },
+    /// Move vrc721 to outpoint.
+    VRC721 {
+        /// The hash
+        hash: String,
+    },
 }
 
 impl MoveSubCommands {
@@ -44,6 +51,9 @@ impl MoveSubCommands {
             }
             MoveSubCommands::VRC20 { name, amount } => {
                 move_vrc20(&mut context, name, U256::from(*amount)).await?;
+            }
+            MoveSubCommands::VRC721 { hash } => {
+                move_vrc721s(&mut context, &[hash.clone()]).await?;
             }
         }
 

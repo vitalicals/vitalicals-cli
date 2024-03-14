@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, str::FromStr};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use bdk::{
     bitcoin::{
         absolute,
@@ -20,6 +20,7 @@ use clap::Subcommand;
 
 use btc_p2tr_builder::P2trBuilder;
 use btc_script_builder::InscriptionScriptBuilder;
+use vital_script_primitives::H256;
 use wallet::consts::DEFAULT_WALLET_NAME;
 
 use crate::Cli;
@@ -409,4 +410,24 @@ fn sign_psbt_taproot(
     } else {
         psbt_input.tap_key_sig = Some(final_signature);
     }
+}
+
+pub fn hash_from_str(hash_str: &str) -> Result<H256> {
+    let hash_str = if hash_str.starts_with("0x") { &hash_str[2..] } else { hash_str };
+
+    let hash_bytes = hex::decode(&hash_str).context("decode hash hex value failed")?;
+    if hash_bytes.len() != H256::len_bytes() {
+        bail!(
+            "the hash {}, should be H256, need {} bytes, got {}",
+            hash_str,
+            H256::len_bytes(),
+            hash_bytes.len()
+        );
+    }
+
+    let hash_bytes: [u8; H256::len_bytes()] = hash_bytes.try_into().expect("the len should ok");
+
+    let hash = H256::try_from(hash_bytes).context("from to h256 failed")?;
+
+    Ok(hash)
 }

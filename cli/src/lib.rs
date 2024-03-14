@@ -59,7 +59,7 @@ struct Cli {
     replaceable: bool,
 
     /// If need forced sync
-    #[arg(long, default_value = "false")]
+    #[arg(long)]
     no_sync: bool,
 
     /// The name of wallet for vital resources

@@ -8,6 +8,7 @@ mod mint_vrc20;
 mod mint_vrc721;
 mod move_name;
 mod move_vrc20;
+mod move_vrc721;
 
 pub use deploy_vrc20::*;
 pub use mint_name::*;
@@ -15,6 +16,7 @@ pub use mint_vrc20::*;
 pub use mint_vrc721::*;
 pub use move_name::*;
 pub use move_vrc20::*;
+pub use move_vrc721::*;
 
 /// The outputs used by template
 pub type Outputs = Vec<u8>;
